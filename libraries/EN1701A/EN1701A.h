@@ -23,10 +23,10 @@ an illuminated control section of the ship*/
 #define SHUTDOWN 15
 
 /*This set maps PIN assignemnts to bit locations*/
-#define PIN_SR_LATCH 5
-#define PIN_SR_CLOCK 6
-#define PIN_SR_SECTION_DATA 4
-#define PIN_SR_SECTION_ENABLE 9
+#define PIN_SR_LATCH 15
+#define PIN_SR_CLOCK 14
+#define PIN_SR_SECTION_DATA 16
+#define PIN_SR_SECTION_ENABLE 6
 #define PIN_IR_RECEIVER 11
 #define PIN_TORPEDO 5
 #define PIN_PHASER 6
@@ -34,5 +34,6 @@ an illuminated control section of the ship*/
 #define PIN_RUNNING_LIGHTS 9
 #define PIN_IMPULSE_DECK 11
 
+#define STATE_POWER_OFF 0x000010
 
 #endif

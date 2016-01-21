@@ -73,10 +73,11 @@ class IRReader {
 }; //end IRReader
 
 //-------
-#define LATCHPIN 5
-#define CLOCKPIN 6
-#define DATAPIN 4
-#define PWMBRIGHTNESSPIN 9
+#define CLOCKPIN 14
+#define LATCHPIN 15
+#define DATAPIN 16
+
+#define PWMBRIGHTNESSPIN 6
 #define RECEIVER_PIN 11
 
 byte leds = 0;
@@ -91,8 +92,8 @@ void setup()
 {
   Serial.begin(9600);
   pinMode(LATCHPIN, OUTPUT);
-  pinMode(DATAPIN, OUTPUT);  
-  pinMode(CLOCKPIN, OUTPUT);
+  pinMode(CLOCKPIN, OUTPUT);  
+  pinMode(DATAPIN, OUTPUT);
   mIRReader = new IRReader(RECEIVER_PIN);
 
 }
@@ -126,6 +127,7 @@ void updateShiftRegister()
    shiftOut(DATAPIN, CLOCKPIN, LSBFIRST, leds);
    digitalWrite(LATCHPIN, HIGH);
 }
+
 
 
 

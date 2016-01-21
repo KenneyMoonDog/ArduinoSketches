@@ -1,19 +1,13 @@
 #include <EN1701A.h>
 #include <IRStateReader.h>
+#include <ShipOperations.h>
 
 unsigned int mCurrentShipState = 0;
 unsigned int mPreviousShipState = 0;
 
-unsigned int mCurrentPinState = 0;
-unsigned int mPreviousPinState = 0;
-
-byte leds = 0;
-byte bitToSet = 1;
-byte direction = 1;
-
 //----------
-unsigned long previousMillis = 0;
 IRStateReader *pStateReader;
+ShipOperations *pShipOperations;
 
 void setup()
 {
@@ -30,14 +24,19 @@ void setup()
   pinMode(PIN_IMPULSE_DECK, OUTPUT);
   
   pStateReader = new IRStateReader(PIN_IR_RECEIVER, &mCurrentShipState, &mPreviousShipState);
+  pShipOperations = new ShipOperations(&mCurrentShipState, &mPreviousShipState);
 }
  
 void loop() {
 
-  unsigned long currentMillis = millis();
-  pStateReader->readIRCommand();
+  //unsigned long currentMillis = millis();
+  if (pStateReader->updateShipStateViaIR()) {
+    pShipOperations->ApplyShipLogic();
+    pShipOperations->ApplySounds();
+    pShipOperations->ApplyLights();
+  }
   
-  if (currentMillis - previousMillis >= pStateReader->getLatchDelay()) {
+/*  if (currentMillis - previousMillis >= pStateReader->getLatchDelay()) {
       // save the last time you blinked the LED
       previousMillis = currentMillis;
 
@@ -52,15 +51,10 @@ void loop() {
       }
 
       bitToSet += direction;
-  }
+  } */
 }
 
-void updateShiftRegister()
-{
-   digitalWrite(PIN_SR_LATCH, LOW);
-   shiftOut(PIN_SR_SECTION_DATA, PIN_SR_CLOCK, LSBFIRST, leds);
-   digitalWrite(PIN_SR_LATCH, HIGH);
-}
+
 
 
 

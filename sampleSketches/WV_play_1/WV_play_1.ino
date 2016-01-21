@@ -102,7 +102,7 @@ void loop() {
         playcomplete("BPUP2.WAV");
         break;
       case 3:
-        playcomplete("COM1.WAV");
+        //playcomplete("COM1.WAV");
         break;
       case 4:
         playcomplete("DSTRT.WAV");
