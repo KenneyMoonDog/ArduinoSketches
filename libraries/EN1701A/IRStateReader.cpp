@@ -4,23 +4,12 @@
 IRrecv *pReceiver;
 IRdecodeNEC mDecoder;
 
-//IRStateReader::IRStateReader(int rp):mReceiver(rp) {
 IRStateReader::IRStateReader(int rp, unsigned int *currState, unsigned int *oldState) {
    pReceiver = new IRrecv(rp);
    pReceiver->enableIRIn(); // Start the receiver
    pCurrentShipState = currState;
    pOldShipState = oldState;
-
-   //bitSet(*pCurrentState, SECTION_2);
 }
-
-/*int IRStateReader::getLatchDelay(){
-  return latchDelay;
-}
-
-int IRStateReader::getBrightness() {
-  return brightness;
-}*/
 
 bool IRStateReader::updateShipStateViaIR() {
 
@@ -33,28 +22,27 @@ bool IRStateReader::updateShipStateViaIR() {
      if ( mDecoder.value == 0xffffffff ) {
         switch (lastDecodedValue) {
           case 0xffd22d: //no repeat on POWER
-            lastDecodedValue = STATE_POWER_OFF;
+          case 0xff22dd: //or torpedos
+            lastDecodedValue = 0;
             break;
         }
         mDecoder.value = lastDecodedValue;
      }
 
      Serial.println(mDecoder.value);
+     bool primary_systems_on = bitRead (*pCurrentShipState, PRIMARY_SYSTEMS);
 
      switch (mDecoder.value){
-       case STATE_POWER_OFF: //power off
+       /*case STATE_POWER_OFF: //power off
          Serial.println("POWER OFF");
          if ( bitRead (*pCurrentShipState, PRIMARY_SYSTEMS) ) {
-           updateShipState(SHUTDOWN);
+           updateShipState(true, SHUTDOWN);
          }
 
-         break;
+         break; */
        case 0xffd22d: //power on
-          Serial.println("POWER ON");
-          //if PRIMARY_SYSTEMS is not on, is a full STARTUP
-          if ( !bitRead (*pCurrentShipState, PRIMARY_SYSTEMS) ){
-            updateShipState(STARTUP);
-          }
+          Serial.println("POWER CHANGE");
+          writeShipState(true, POWER_CHANGE);
           break;
        case 0xff12ed: //down
           Serial.println("BRIGHTER");
@@ -65,8 +53,10 @@ bool IRStateReader::updateShipStateViaIR() {
           //updateShipState(30);
           break;
         case 0xff22dd: //left
-          Serial.println("FASTER");
-          //updateShipState(40);
+          Serial.println("TORPEDO");
+          if (primary_systems_on){
+            writeShipState(true, TORPEDO);
+          }
           break;
         case 0xffe01f: //right
           Serial.println("SLOWER");
@@ -83,9 +73,14 @@ bool IRStateReader::updateShipStateViaIR() {
   return isChanged;
 }
 
-void IRStateReader::updateShipState(unsigned int pinset ){
-     *pOldShipState = *pCurrentShipState;
+void IRStateReader::writeShipState(bool set, unsigned int pinset ){
+    *pOldShipState = *pCurrentShipState;
+   if (set) {
      bitSet(*pCurrentShipState, pinset);
+   }
+   else {
+     bitClear(*pCurrentShipState, pinset);
+   }
 }
 
 /*void IRStateReader::updateShipStateViaIR() {

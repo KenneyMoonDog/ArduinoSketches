@@ -7,25 +7,71 @@ ShipOperations::ShipOperations( unsigned int *currState, unsigned int *oldState 
   setupSound();
 }
 
-void ShipOperations::ApplyShipLogic() {
-  if (bitRead(*pCurrentShipState, STARTUP)){
-    mSectionData = 0xFF;
+void ShipOperations::writeShipState(bool set, unsigned int pinset ){
+  *pOldShipState = *pCurrentShipState;
+  if (set) {
+    bitSet(*pCurrentShipState, pinset);
   }
   else {
-    mSectionData = 0;
+    bitClear(*pCurrentShipState, pinset);
   }
 }
-void ShipOperations::ApplyLights(){
+
+void ShipOperations::clearAll(){
+  *pCurrentShipState = 0;
+  *pOldShipState = 0;
+  mSectionData = 0;
+  updateSectionDataRegister();
+}
+
+void ShipOperations::ApplyShipLogic() {
+
+  if (bitRead(*pCurrentShipState, POWER_CHANGE)) {
+    if ( bitRead(*pCurrentShipState, PRIMARY_SYSTEMS)) { //shutdown
+      writeShipState(false, PRIMARY_SYSTEMS);
+      mSectionData = 0;
+      playcomplete("BPD1.WAV");
+      clearAll();
+    }
+    else { //startup
+      writeShipState(true, PRIMARY_SYSTEMS);
+      mSectionData = 0xFF;
+      playcomplete("BPUP1.WAV");
+      updateSectionDataRegister();
+            analogWrite(6,240);
+    }
+    writeShipState(false, POWER_CHANGE);
+
+    return;
+  }
+
+  if (bitRead(*pCurrentShipState, TORPEDO)){
+    playcomplete("TORP1.WAV");
+    //flash torpedo lights
+    delay(100);
+    digitalWrite(PIN_TORPEDO, HIGH);
+    delay(100);
+    digitalWrite(PIN_TORPEDO, LOW);
+
+    writeShipState(false, TORPEDO);
+
+  }
+  return;
+}
+
+/*void ShipOperations::ApplyLights(){
   updateShiftRegister();
+  //TODO: add in cases for other sections being enabled/disabled
 }
 
 void ShipOperations::ApplySounds(){
-   if (bitRead(*pCurrentShipState, STARTUP)){
+   if (bitRead(*pCurrentShipState, PRIMARY_SYSTEMS) &&
+       !(bitRead(*pOldShipState, PRIMARY_SYSTEMS)){
       playcomplete("BPUP1.WAV");
    }
-}
+} */
 
-void ShipOperations::updateShiftRegister()
+void ShipOperations::updateSectionDataRegister()
 {
    Serial.println("ShipOperations::SHIFTING IN:");
    Serial.println(mSectionData);

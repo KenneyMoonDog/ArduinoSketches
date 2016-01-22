@@ -19,8 +19,8 @@ an illuminated control section of the ship*/
 #define TORPEDO 11
 #define WARP_ENGINES 12
 #define IMPULSE_ENGINES 13
-#define STARTUP 14
-#define SHUTDOWN 15
+#define POWER_CHANGE 14
+//#define SHUTDOWN 15
 
 /*This set maps PIN assignemnts to bit locations*/
 #define PIN_SR_LATCH 15
@@ -28,7 +28,7 @@ an illuminated control section of the ship*/
 #define PIN_SR_SECTION_DATA 16
 #define PIN_SR_SECTION_ENABLE 6
 #define PIN_IR_RECEIVER 11
-#define PIN_TORPEDO 5
+#define PIN_TORPEDO 7
 #define PIN_PHASER 6
 #define PIN_PRIMARY_SYSTEMS 4
 #define PIN_RUNNING_LIGHTS 9

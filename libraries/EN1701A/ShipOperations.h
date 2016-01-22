@@ -12,8 +12,9 @@ class ShipOperations {
 public:
    ShipOperations( unsigned int *currState, unsigned int *oldState );
    void ApplyShipLogic();
-   void ApplyLights();
-   void ApplySounds();
+   //void ApplyLights();
+   //void ApplySounds();
+   void clearAll();
 
  private:
    SdReader card;    // This object holds the information for the card
@@ -29,11 +30,12 @@ public:
    unsigned int mPreviousPinState = 0;
    byte mSectionData = 0; //a byte with each bit represents a different lighting section
 
-   void updateShiftRegister();
+   void updateSectionDataRegister();
    void sdErrorCheck(void);
    int freeRam(void);
    void setupSound();
    void playcomplete(char *name);
    void playfile(char *name);
+   void writeShipState(bool set, unsigned int pinset);
 };
 #endif

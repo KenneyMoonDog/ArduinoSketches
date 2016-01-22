@@ -19,7 +19,7 @@ private:
   unsigned int *pCurrentShipState;
   unsigned int *pOldShipState;
 
-  void updateShipState(unsigned int pinset);
+  void writeShipState(bool set, unsigned int pinset);
 };
 
 #endif

@@ -25,15 +25,17 @@ void setup()
   
   pStateReader = new IRStateReader(PIN_IR_RECEIVER, &mCurrentShipState, &mPreviousShipState);
   pShipOperations = new ShipOperations(&mCurrentShipState, &mPreviousShipState);
+
+  pShipOperations->clearAll();
 }
  
 void loop() {
-
+  
   //unsigned long currentMillis = millis();
   if (pStateReader->updateShipStateViaIR()) {
     pShipOperations->ApplyShipLogic();
-    pShipOperations->ApplySounds();
-    pShipOperations->ApplyLights();
+    //pShipOperations->ApplySounds();
+    //pShipOperations->ApplyLights();
   }
   
 /*  if (currentMillis - previousMillis >= pStateReader->getLatchDelay()) {
