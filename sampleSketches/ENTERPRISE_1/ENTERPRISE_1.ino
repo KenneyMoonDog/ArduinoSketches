@@ -4,6 +4,7 @@
 
 unsigned int mCurrentShipState = 0;
 unsigned int mPreviousShipState = 0;
+unsigned long previousMillis = 0;
 
 //----------
 IRStateReader *pStateReader;
@@ -31,18 +32,18 @@ void setup()
  
 void loop() {
   
-  //unsigned long currentMillis = millis();
+  unsigned long currentMillis = millis();
   if (pStateReader->updateShipStateViaIR()) {
     pShipOperations->ApplyShipLogic();
-    //pShipOperations->ApplySounds();
-    //pShipOperations->ApplyLights();
   }
   
-/*  if (currentMillis - previousMillis >= pStateReader->getLatchDelay()) {
-      // save the last time you blinked the LED
-      previousMillis = currentMillis;
-
-      analogWrite(PIN_SR_SECTION_ENABLE, pStateReader->getBrightness());
+  /*if (currentMillis - previousMillis >= 500) {
+    // save the last time you did a repeatable item clear
+    previousMillis = currentMillis;
+    pShipOperations->cleanTimeouts();
+  }*/
+      
+      /*analogWrite(PIN_SR_SECTION_ENABLE, pStateReader->getBrightness());
 
       leds = 0;
       bitSet(leds, bitToSet);

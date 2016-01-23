@@ -17,17 +17,30 @@ void ShipOperations::writeShipState(bool set, unsigned int pinset ){
   }
 }
 
+bool ShipOperations::readCurrentShipState(unsigned int pinset) {
+  return (bitRead(*pCurrentShipState, pinset));
+}
+
+bool ShipOperations::readOldShipState(unsigned int pinset) {
+  return (bitRead(*pOldShipState, pinset));
+}
+
 void ShipOperations::clearAll(){
   *pCurrentShipState = 0;
   *pOldShipState = 0;
   mSectionData = 0;
+
   updateSectionDataRegister();
+  //digitalWrite(PIN_PHASER, LOW);
+  //digitalWrite(PIN_TORPEDO, LOW);
 }
 
 void ShipOperations::ApplyShipLogic() {
 
-  if (bitRead(*pCurrentShipState, POWER_CHANGE)) {
-    if ( bitRead(*pCurrentShipState, PRIMARY_SYSTEMS)) { //shutdown
+  //if (bitRead(*pCurrentShipState, POWER_CHANGE)) {
+  //  if ( bitRead(*pCurrentShipState, PRIMARY_SYSTEMS)) { //shutdown
+  if (readCurrentShipState(POWER_CHANGE)) {
+    if (readCurrentShipState(PRIMARY_SYSTEMS)) { //shutdown
       writeShipState(false, PRIMARY_SYSTEMS);
       mSectionData = 0;
       playcomplete("BPD1.WAV");
@@ -38,14 +51,15 @@ void ShipOperations::ApplyShipLogic() {
       mSectionData = 0xFF;
       playcomplete("BPUP1.WAV");
       updateSectionDataRegister();
-            analogWrite(6,240);
+            //analogWrite(6,240);
     }
     writeShipState(false, POWER_CHANGE);
 
     return;
   }
 
-  if (bitRead(*pCurrentShipState, TORPEDO)){
+  //if (bitRead(*pCurrentShipState, TORPEDO)){
+  if (readCurrentShipState(TORPEDO)){
     playcomplete("TORP1.WAV");
     //flash torpedo lights
     delay(100);
@@ -54,11 +68,23 @@ void ShipOperations::ApplyShipLogic() {
     digitalWrite(PIN_TORPEDO, LOW);
 
     writeShipState(false, TORPEDO);
-
   }
-  return;
+
+  if (readCurrentShipState(PHASER)){
+    playcomplete("SPZER1.WAV");
+    //flash PHASER lights
+    digitalWrite(PIN_PHASER, HIGH);
+    //writeShipState(false, TORPEDO);
+  } else if (readOldShipState(PHASER)){
+    digitalWrite(PIN_PHASER, LOW);
+    wave.stop();
+    writeShipState(false, PHASER);
+  }
 }
 
+void ShipOperations::cleanTimeouts(){
+
+}
 /*void ShipOperations::ApplyLights(){
   updateShiftRegister();
   //TODO: add in cases for other sections being enabled/disabled

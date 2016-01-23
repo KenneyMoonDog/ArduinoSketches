@@ -19,6 +19,7 @@ bool IRStateReader::updateShipStateViaIR() {
      isChanged = true;
      mDecoder.decode();    //Decode the data
 
+     Serial.println(mDecoder.value);
      if ( mDecoder.value == 0xffffffff ) {
         switch (lastDecodedValue) {
           case 0xffd22d: //no repeat on POWER
@@ -30,16 +31,12 @@ bool IRStateReader::updateShipStateViaIR() {
      }
 
      Serial.println(mDecoder.value);
+     Serial.println("-----------");
+
      bool primary_systems_on = bitRead (*pCurrentShipState, PRIMARY_SYSTEMS);
-
      switch (mDecoder.value){
-       /*case STATE_POWER_OFF: //power off
-         Serial.println("POWER OFF");
-         if ( bitRead (*pCurrentShipState, PRIMARY_SYSTEMS) ) {
-           updateShipState(true, SHUTDOWN);
-         }
-
-         break; */
+       case STATE_PHASER_OFF:
+          break;
        case 0xffd22d: //power on
           Serial.println("POWER CHANGE");
           writeShipState(true, POWER_CHANGE);
@@ -59,8 +56,10 @@ bool IRStateReader::updateShipStateViaIR() {
           }
           break;
         case 0xffe01f: //right
-          Serial.println("SLOWER");
-          //updateShipState(50);
+          Serial.println("PHASER");
+          if (primary_systems_on){
+            writeShipState(true, PHASER);
+          }
           break;
        default:
           mDecoder.value = 0;

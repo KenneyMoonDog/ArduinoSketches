@@ -12,6 +12,7 @@ class ShipOperations {
 public:
    ShipOperations( unsigned int *currState, unsigned int *oldState );
    void ApplyShipLogic();
+   void cleanTimeouts();
    //void ApplyLights();
    //void ApplySounds();
    void clearAll();
@@ -37,5 +38,7 @@ public:
    void playcomplete(char *name);
    void playfile(char *name);
    void writeShipState(bool set, unsigned int pinset);
+   bool readCurrentShipState(unsigned int pinset);
+   bool readOldShipState(unsigned int pinset);
 };
 #endif

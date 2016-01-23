@@ -29,11 +29,11 @@ an illuminated control section of the ship*/
 #define PIN_SR_SECTION_ENABLE 6
 #define PIN_IR_RECEIVER 11
 #define PIN_TORPEDO 7
-#define PIN_PHASER 6
+#define PIN_PHASER 7
 #define PIN_PRIMARY_SYSTEMS 4
 #define PIN_RUNNING_LIGHTS 9
 #define PIN_IMPULSE_DECK 11
 
-#define STATE_POWER_OFF 0x000010
+#define STATE_PHASER_OFF 0x000010
 
 #endif
