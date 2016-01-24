@@ -12,7 +12,6 @@ class ShipOperations {
 public:
    ShipOperations( unsigned int *currState, unsigned int *oldState );
    void ApplyShipLogic();
-   void cleanTimeouts();
    //void ApplyLights();
    //void ApplySounds();
    void clearAll();

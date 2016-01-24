@@ -3,6 +3,7 @@
 
 IRrecv *pReceiver;
 IRdecodeNEC mDecoder;
+unsigned long mTestStartMillis = 0;
 
 IRStateReader::IRStateReader(int rp, unsigned int *currState, unsigned int *oldState) {
    pReceiver = new IRrecv(rp);
@@ -14,12 +15,23 @@ IRStateReader::IRStateReader(int rp, unsigned int *currState, unsigned int *oldS
 bool IRStateReader::updateShipStateViaIR() {
 
   bool isChanged = false;
+  bool isRepeat = false;
 
   if (pReceiver->GetResults(&mDecoder))  {
-     isChanged = true;
-     mDecoder.decode();    //Decode the data
 
+     mDecoder.decode();    //Decode the data
+     isChanged = true;
+     bool primary_systems_on = bitRead (*pCurrentShipState, PRIMARY_SYSTEMS);
+
+     if ( mDecoder.value == 0 ){
+       pReceiver->resume();
+       return false;
+     }
+
+     Serial.println("");
+     Serial.println("----DECODER BEFORE----");
      Serial.println(mDecoder.value);
+
      if ( mDecoder.value == 0xffffffff ) {
         switch (lastDecodedValue) {
           case 0xffd22d: //no repeat on POWER
@@ -28,42 +40,50 @@ bool IRStateReader::updateShipStateViaIR() {
             break;
         }
         mDecoder.value = lastDecodedValue;
+        isRepeat = true;
      }
 
      Serial.println(mDecoder.value);
-     Serial.println("-----------");
+     Serial.println("--- DECODE AFTER----");
+     mTestStartMillis = millis();
 
-     bool primary_systems_on = bitRead (*pCurrentShipState, PRIMARY_SYSTEMS);
      switch (mDecoder.value){
        case STATE_PHASER_OFF:
           break;
        case 0xffd22d: //power on
-          Serial.println("POWER CHANGE");
+          Serial.println("IRStateReader::POWER CHANGE");
           writeShipState(true, POWER_CHANGE);
           break;
        case 0xff12ed: //down
-          Serial.println("BRIGHTER");
+          Serial.println("IRStateReader::BRIGHTER");
           //updateShipState(20);
           break;
         case 0xffa25d: //up
-          Serial.println("DIMMER");
+          Serial.println("IRStateReader::DIMMER");
           //updateShipState(30);
           break;
         case 0xff22dd: //left
-          Serial.println("TORPEDO");
+          Serial.println("IRStateReader::TORPEDO");
           if (primary_systems_on){
             writeShipState(true, TORPEDO);
           }
           break;
         case 0xffe01f: //right
-          Serial.println("PHASER");
+          Serial.println("IRStateReader::PHASER");
           if (primary_systems_on){
-            writeShipState(true, PHASER);
+            if (!isRepeat){
+              writeShipState(true, PHASER);
+              mTestStartMillis = millis();
+            }
+            else {
+              isChanged = false;
+            }
           }
           break;
        default:
           mDecoder.value = 0;
           isChanged = false;
+          Serial.println("IRStateReader::ZERO");
           break;
      } // end switch
      lastDecodedValue = mDecoder.value;
@@ -82,55 +102,13 @@ void IRStateReader::writeShipState(bool set, unsigned int pinset ){
    }
 }
 
-/*void IRStateReader::updateShipStateViaIR() {
+bool IRStateReader::cleanTimeouts(unsigned long timerMillis){
+    if ( bitRead(*pCurrentShipState, PHASER)){
+       if ( timerMillis - mTestStartMillis >= 500 ) {
+         writeShipState(false, PHASER);
+         return true;
+       }
+    }
 
-  if (pReceiver->GetResults(&mDecoder))  {
-     mDecoder.decode();    //Decode the data
-
-     if ( mDecoder.value == 0xffffffff ) {
-        switch (lastDecodedValue) {
-          case 0xffd22d:
-            lastDecodedValue = 0;
-            break;
-        }
-        mDecoder.value = lastDecodedValue;
-     }
-     Serial.println(mDecoder.value);
-     Serial.println(*pCurrentShipState);
-
-     switch (mDecoder.value){
-       case 0xffd22d: //power
-          Serial.println("POWER");
-          break;
-       case 0xff12ed: //down
-          Serial.println("BRIGHTER");
-          if (brightness >= 5 ) {
-            brightness -= 5;
-          }
-          break;
-        case 0xffa25d: //up
-          Serial.println("DIMMER");
-          if (brightness <= 250){
-            brightness += 5;
-          }
-          break;
-        case 0xff22dd: //left
-          Serial.println("FASTER");
-          if (latchDelay >= 10){
-            latchDelay -= 10;
-          }
-          break;
-        case 0xffe01f: //right
-          Serial.println("SLOWER");
-          if (latchDelay <= 1000){
-            latchDelay += 10;
-          }
-          break;
-       default:
-          mDecoder.value = 0;
-          break;
-     }
-     lastDecodedValue = mDecoder.value;
-     pReceiver->resume(); //Restart the receiver
-  }
-} */
+    return false;
+}

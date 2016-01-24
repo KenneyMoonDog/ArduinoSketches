@@ -8,6 +8,7 @@ class IRStateReader {
 public:
   IRStateReader(int rp, unsigned int *currState, unsigned int *oldState);
   bool updateShipStateViaIR();
+  bool cleanTimeouts(unsigned long timerMillis);
 //  int getLatchDelay();
 //  int getBrightness();
 

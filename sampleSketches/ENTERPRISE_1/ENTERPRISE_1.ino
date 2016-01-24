@@ -4,7 +4,7 @@
 
 unsigned int mCurrentShipState = 0;
 unsigned int mPreviousShipState = 0;
-unsigned long previousMillis = 0;
+volatile unsigned long previousMillis = 0;
 
 //----------
 IRStateReader *pStateReader;
@@ -28,33 +28,32 @@ void setup()
   pShipOperations = new ShipOperations(&mCurrentShipState, &mPreviousShipState);
 
   pShipOperations->clearAll();
+
+  // Timer0 is already used for millis() - we'll just interrupt somewhere
+  // in the middle and call the "Compare A" function below
+  OCR0A = 0xAF;
+  TIMSK0 |= _BV(OCIE0A);
 }
- 
+
+SIGNAL(TIMER0_COMPA_vect) 
+{
+  unsigned long currentMillis = millis();
+
+  if (currentMillis - previousMillis >= 250) {
+    // save the last time you did a repeatable item clear
+    previousMillis = currentMillis;
+    if (pStateReader->cleanTimeouts(currentMillis)){
+      pShipOperations->ApplyShipLogic();
+    }
+  }
+} 
+
 void loop() {
   
-  unsigned long currentMillis = millis();
   if (pStateReader->updateShipStateViaIR()) {
     pShipOperations->ApplyShipLogic();
   }
   
-  /*if (currentMillis - previousMillis >= 500) {
-    // save the last time you did a repeatable item clear
-    previousMillis = currentMillis;
-    pShipOperations->cleanTimeouts();
-  }*/
-      
-      /*analogWrite(PIN_SR_SECTION_ENABLE, pStateReader->getBrightness());
-
-      leds = 0;
-      bitSet(leds, bitToSet);
-      updateShiftRegister();
-
-      if ( bitToSet >= 7 || bitToSet <= 0) {
-        direction = direction * -1;
-      }
-
-      bitToSet += direction;
-  } */
 }
 
 

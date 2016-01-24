@@ -31,8 +31,8 @@ void ShipOperations::clearAll(){
   mSectionData = 0;
 
   updateSectionDataRegister();
-  //digitalWrite(PIN_PHASER, LOW);
-  //digitalWrite(PIN_TORPEDO, LOW);
+  digitalWrite(PIN_PHASER, LOW);
+  digitalWrite(PIN_TORPEDO, LOW);
 }
 
 void ShipOperations::ApplyShipLogic() {
@@ -51,6 +51,7 @@ void ShipOperations::ApplyShipLogic() {
       mSectionData = 0xFF;
       playcomplete("BPUP1.WAV");
       updateSectionDataRegister();
+      //TODO: write out to the appropriate lighting ports
             //analogWrite(6,240);
     }
     writeShipState(false, POWER_CHANGE);
@@ -68,34 +69,31 @@ void ShipOperations::ApplyShipLogic() {
     digitalWrite(PIN_TORPEDO, LOW);
 
     writeShipState(false, TORPEDO);
+
+    return;
   }
 
   if (readCurrentShipState(PHASER)){
-    playcomplete("SPZER1.WAV");
-    //flash PHASER lights
-    digitalWrite(PIN_PHASER, HIGH);
-    //writeShipState(false, TORPEDO);
+      Serial.println("ShipOperations::START PHASER");
+      playcomplete("SPZER1.WAV");
+      //flash PHASER lights
+      delay(500);
+      digitalWrite(PIN_PHASER, HIGH);
+      writeShipState(true, PHASER);
+      return;
   } else if (readOldShipState(PHASER)){
-    digitalWrite(PIN_PHASER, LOW);
+    Serial.println("ShipOperations::STOP PHASER");
     wave.stop();
+    digitalWrite(PIN_PHASER, LOW);
     writeShipState(false, PHASER);
+    return;
   }
 }
 
-void ShipOperations::cleanTimeouts(){
-
-}
 /*void ShipOperations::ApplyLights(){
   updateShiftRegister();
   //TODO: add in cases for other sections being enabled/disabled
-}
-
-void ShipOperations::ApplySounds(){
-   if (bitRead(*pCurrentShipState, PRIMARY_SYSTEMS) &&
-       !(bitRead(*pOldShipState, PRIMARY_SYSTEMS)){
-      playcomplete("BPUP1.WAV");
-   }
-} */
+}*/
 
 void ShipOperations::updateSectionDataRegister()
 {
