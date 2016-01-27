@@ -28,7 +28,6 @@ public:
    byte* pAudioIndex;
    unsigned int mCurrentPinState = 0;
    unsigned int mPreviousPinState = 0;
-   byte mSectionData = 0; //a byte with each bit represents a different lighting section
 
    void updateSectionDataRegister();
    void sdErrorCheck(void);

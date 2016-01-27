@@ -30,11 +30,20 @@ bool ShipOperations::readOldShipState(unsigned int pinset) {
 void ShipOperations::clearAll(){
   *pCurrentShipState = 0;
   *pOldShipState = 0;
-  mSectionData = 0;
 
   updateSectionDataRegister();
   digitalWrite(PIN_PHASER, LOW);
   digitalWrite(PIN_TORPEDO, LOW);
+}
+
+void ShipOperations::updateSectionDataRegister()
+{
+   Serial.println("ShipOperations::SHIFTING IN:");
+   Serial.println(*pCurrentShipState & 0xFF);
+
+   digitalWrite(PIN_SR_LATCH, LOW);
+   shiftOut(PIN_SR_SECTION_DATA, PIN_SR_CLOCK, LSBFIRST, (*pCurrentShipState & 0xFF));
+   digitalWrite(PIN_SR_LATCH, HIGH);
 }
 
 void ShipOperations::ApplyShipLogic() {
@@ -42,13 +51,12 @@ void ShipOperations::ApplyShipLogic() {
   if (readCurrentShipState(POWER_CHANGE)) {
     if (readCurrentShipState(PRIMARY_SYSTEMS)) { //shutdown
       writeShipState(false, PRIMARY_SYSTEMS);
-      mSectionData = 0;
       playcomplete(pAudioEffectFiles[AUDIO_INDEX_POWER_DOWN]);
       clearAll();
     }
     else { //startup
       writeShipState(true, PRIMARY_SYSTEMS);
-      mSectionData = 0xFF;
+      *pCurrentShipState |= 0xFF;
       playcomplete(pAudioEffectFiles[AUDIO_INDEX_POWER_UP]);
       updateSectionDataRegister();
       //TODO: write out to the appropriate lighting ports
@@ -59,13 +67,22 @@ void ShipOperations::ApplyShipLogic() {
   }
 
   if (readCurrentShipState(AUDIO_EFFECT)) {
+    //Serial.println("ShipOperations::Play Audio effect");
     if (*pAudioIndex == AUDIO_INDEX_CANCEL) {
+      //Serial.println("ShipOperations::Play Audio CANCEL");
       wave.stop();
-      writeShipState(false, AUDIO_EFFECT);
     }
     else {
+      //Serial.println("ShipOperations::Play Audio Index:");
+      //Serial.println(pAudioEffectFiles[*pAudioIndex]);
       playcomplete(pAudioEffectFiles[*pAudioIndex]);
     }
+    writeShipState(false, AUDIO_EFFECT);
+    return;
+  }
+
+  if (readCurrentShipState(PRIMARY_SYSTEMS)){
+
   }
 
   if (readCurrentShipState(TORPEDO)){
@@ -76,23 +93,23 @@ void ShipOperations::ApplyShipLogic() {
     delay(100);
     digitalWrite(PIN_TORPEDO, LOW);
     writeShipState(false, TORPEDO);
-    return;
+    //return;
   }
 
   if (readCurrentShipState(PHASER)){
-      Serial.println("ShipOperations::START PHASER");
-      playcomplete(pAudioEffectFiles[AUDIO_INDEX_PHASER]);
-      //flash PHASER lights
-      delay(500);
-      digitalWrite(PIN_PHASER, HIGH);
-      writeShipState(true, PHASER);
-      return;
+    Serial.println("ShipOperations::START PHASER");
+    playcomplete(pAudioEffectFiles[AUDIO_INDEX_PHASER]);
+    //flash PHASER lights
+    delay(500);
+    digitalWrite(PIN_PHASER, HIGH);
+    writeShipState(true, PHASER);
+    //return;
   } else if (readOldShipState(PHASER)){
     Serial.println("ShipOperations::STOP PHASER");
     wave.stop();
     digitalWrite(PIN_PHASER, LOW);
     writeShipState(false, PHASER);
-    return;
+    //return;
   }
 }
 
@@ -100,16 +117,6 @@ void ShipOperations::ApplyShipLogic() {
   updateShiftRegister();
   //TODO: add in cases for other sections being enabled/disabled
 }*/
-
-void ShipOperations::updateSectionDataRegister()
-{
-   Serial.println("ShipOperations::SHIFTING IN:");
-   Serial.println(mSectionData);
-
-   digitalWrite(PIN_SR_LATCH, LOW);
-   shiftOut(PIN_SR_SECTION_DATA, PIN_SR_CLOCK, LSBFIRST, mSectionData);
-   digitalWrite(PIN_SR_LATCH, HIGH);
-}
 
 void ShipOperations::setupSound() {
   putstring_nl("WaveHC with 6 buttons");

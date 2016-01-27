@@ -37,6 +37,7 @@ bool IRStateReader::updateShipStateViaIR() {
           case 0xffd22d: //no repeat on POWER
           case 0xff22dd: //or torpedos
           case 0xff40bf: //or red alert
+          case 0xff30cf: //or P1 Message
             lastDecodedValue = 0;
             break;
         }
@@ -78,14 +79,16 @@ bool IRStateReader::updateShipStateViaIR() {
             }
             break;
          case 0xff40bf: //title
-            Serial.println("IRStateReader::RED ALERT");
+
             if ( *pAudioIndex == AUDIO_INDEX_RED_ALERT ) {
+              Serial.println("IRStateReader::RED ALERT OFF");
                *pAudioIndex = AUDIO_INDEX_CANCEL;
             }
             else {
+              Serial.println("IRStateReader::RED ALERT ON");
               *pAudioIndex = AUDIO_INDEX_RED_ALERT;
-              writeShipState(true, AUDIO_EFFECT);
             }
+            writeShipState(true, AUDIO_EFFECT);
             break;
 
          case 0xff30cf: //menu

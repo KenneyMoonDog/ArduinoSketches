@@ -10,7 +10,7 @@ volatile unsigned long previousMillis = 0;
 IRStateReader *pStateReader;
 ShipOperations *pShipOperations;
 char* mAudioEffects[]={"KLAX.WAV", "P1MSG.WAV", "TORP1.WAV", "SPZER1.WAV", "BPD1.WAV", "BPUP1.WAV"};
-byte mAudioIndex;
+byte mAudioIndex = AUDIO_INDEX_CANCEL;
 
 void setup()
 {
@@ -41,7 +41,7 @@ SIGNAL(TIMER0_COMPA_vect)
 {
   unsigned long currentMillis = millis();
 
-  if (currentMillis - previousMillis >= 250) {
+  if (currentMillis - previousMillis >= 250) {  //clean up any timeout states every 250ms
     // save the last time you did a repeatable item clear
     previousMillis = currentMillis;
     if (pStateReader->cleanTimeouts(currentMillis)){
