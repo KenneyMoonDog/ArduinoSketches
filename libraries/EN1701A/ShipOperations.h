@@ -10,7 +10,7 @@
 
 class ShipOperations {
 public:
-   ShipOperations( unsigned int *currState, unsigned int *oldState );
+   ShipOperations( unsigned int *currState, unsigned int *oldState, char* audioEffectFiles[] );
    void ApplyShipLogic();
    //void ApplyLights();
    //void ApplySounds();
@@ -26,6 +26,8 @@ public:
 
    unsigned int *pCurrentShipState;
    unsigned int *pOldShipState;
+   //char* pAudioEffectFiles[2];
+   char** pAudioEffectFiles;
    unsigned int mCurrentPinState = 0;
    unsigned int mPreviousPinState = 0;
    byte mSectionData = 0; //a byte with each bit represents a different lighting section

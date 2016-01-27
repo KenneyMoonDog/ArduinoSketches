@@ -1,9 +1,10 @@
 #include "Arduino.h"
 #include <ShipOperations.h>
 
-ShipOperations::ShipOperations( unsigned int *currState, unsigned int *oldState ) {
+ShipOperations::ShipOperations( unsigned int *currState, unsigned int *oldState, char* audioEffectFiles[] ) {
   pCurrentShipState = currState;
   pOldShipState = oldState;
+  pAudioEffectFiles = audioEffectFiles;
   setupSound();
 }
 
@@ -37,45 +38,50 @@ void ShipOperations::clearAll(){
 
 void ShipOperations::ApplyShipLogic() {
 
-  //if (bitRead(*pCurrentShipState, POWER_CHANGE)) {
-  //  if ( bitRead(*pCurrentShipState, PRIMARY_SYSTEMS)) { //shutdown
   if (readCurrentShipState(POWER_CHANGE)) {
     if (readCurrentShipState(PRIMARY_SYSTEMS)) { //shutdown
       writeShipState(false, PRIMARY_SYSTEMS);
       mSectionData = 0;
-      playcomplete("BPD1.WAV");
+      //playcomplete("BPD1.WAV");
+      playcomplete(pAudioEffectFiles[AUDIO_INDEX_POWER_DOWN]);
       clearAll();
     }
     else { //startup
       writeShipState(true, PRIMARY_SYSTEMS);
       mSectionData = 0xFF;
-      playcomplete("BPUP1.WAV");
+      playcomplete(pAudioEffectFiles[AUDIO_INDEX_POWER_UP]);
       updateSectionDataRegister();
       //TODO: write out to the appropriate lighting ports
             //analogWrite(6,240);
     }
     writeShipState(false, POWER_CHANGE);
-
     return;
   }
 
+  if (readCurrentShipState(AUDIO_EFFECT)) {
+    if (readOldShipState(AUDIO_EFFECT)) {
+      wave.stop();
+      writeShipState(false, AUDIO_EFFECT);
+    }
+    else {
+      playcomplete(pAudioEffectFiles[AUDIO_INDEX_RED_ALERT]);
+    }
+  }
   //if (bitRead(*pCurrentShipState, TORPEDO)){
   if (readCurrentShipState(TORPEDO)){
-    playcomplete("TORP1.WAV");
+    playcomplete(pAudioEffectFiles[AUDIO_INDEX_TORPEDO]);
     //flash torpedo lights
     delay(100);
     digitalWrite(PIN_TORPEDO, HIGH);
     delay(100);
     digitalWrite(PIN_TORPEDO, LOW);
-
     writeShipState(false, TORPEDO);
-
     return;
   }
 
   if (readCurrentShipState(PHASER)){
       Serial.println("ShipOperations::START PHASER");
-      playcomplete("SPZER1.WAV");
+      playcomplete(pAudioEffectFiles[AUDIO_INDEX_PHASER]);
       //flash PHASER lights
       delay(500);
       digitalWrite(PIN_PHASER, HIGH);

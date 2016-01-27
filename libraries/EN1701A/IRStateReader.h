@@ -9,6 +9,8 @@ public:
   IRStateReader(int rp, unsigned int *currState, unsigned int *oldState);
   bool updateShipStateViaIR();
   bool cleanTimeouts(unsigned long timerMillis);
+  byte getAudioIndex();
+
 //  int getLatchDelay();
 //  int getBrightness();
 
@@ -19,6 +21,7 @@ private:
 
   unsigned int *pCurrentShipState;
   unsigned int *pOldShipState;
+  byte mAudioIndex;
 
   void writeShipState(bool set, unsigned int pinset);
 };

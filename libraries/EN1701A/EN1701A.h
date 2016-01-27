@@ -20,7 +20,14 @@ an illuminated control section of the ship*/
 #define WARP_ENGINES 12
 #define IMPULSE_ENGINES 13
 #define POWER_CHANGE 14
-//#define SHUTDOWN 15
+#define AUDIO_EFFECT 15
+
+#define AUDIO_INDEX_RED_ALERT 0
+#define AUDIO_INDEX_P1_MESSAGE 1
+#define AUDIO_INDEX_TORPEDO 2
+#define AUDIO_INDEX_PHASER 3
+#define AUDIO_INDEX_POWER_DOWN 4
+#define AUDIO_INDEX_POWER_UP 5
 
 /*This set maps PIN assignemnts to bit locations*/
 #define PIN_SR_LATCH 15
