@@ -9,7 +9,8 @@ volatile unsigned long previousMillis = 0;
 //----------
 IRStateReader *pStateReader;
 ShipOperations *pShipOperations;
-char* mAudioEffects[]={"KLAX.WAV", "P1_MESSAGE.WAV", "TORP1.WAV", "SPZER1.WAV", "BPD1.WAV", "BPUP1.WAV"};
+char* mAudioEffects[]={"KLAX.WAV", "P1MSG.WAV", "TORP1.WAV", "SPZER1.WAV", "BPD1.WAV", "BPUP1.WAV"};
+byte mAudioIndex;
 
 void setup()
 {
@@ -25,8 +26,8 @@ void setup()
   pinMode(PIN_RUNNING_LIGHTS, OUTPUT);  
   pinMode(PIN_IMPULSE_DECK, OUTPUT);
   
-  pStateReader = new IRStateReader(PIN_IR_RECEIVER, &mCurrentShipState, &mPreviousShipState);
-  pShipOperations = new ShipOperations(&mCurrentShipState, &mPreviousShipState, mAudioEffects);
+  pStateReader = new IRStateReader(PIN_IR_RECEIVER, &mCurrentShipState, &mPreviousShipState, &mAudioIndex);
+  pShipOperations = new ShipOperations(&mCurrentShipState, &mPreviousShipState, mAudioEffects, &mAudioIndex);
 
   pShipOperations->clearAll();
 

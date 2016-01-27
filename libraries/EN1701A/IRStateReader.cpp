@@ -5,15 +5,12 @@ IRrecv *pReceiver;
 IRdecodeNEC mDecoder;
 unsigned long mTestStartMillis = 0;
 
-IRStateReader::IRStateReader(int rp, unsigned int *currState, unsigned int *oldState) {
+IRStateReader::IRStateReader(int rp, unsigned int *currState, unsigned int *oldState, byte *audioIndex) {
    pReceiver = new IRrecv(rp);
    pReceiver->enableIRIn(); // Start the receiver
    pCurrentShipState = currState;
    pOldShipState = oldState;
-}
-
-byte IRStateReader::getAudioIndex(){
-  return mAudioIndex;
+   pAudioIndex = audioIndex;
 }
 
 bool IRStateReader::updateShipStateViaIR() {
@@ -82,13 +79,18 @@ bool IRStateReader::updateShipStateViaIR() {
             break;
          case 0xff40bf: //title
             Serial.println("IRStateReader::RED ALERT");
-            mAudioIndex = AUDIO_INDEX_RED_ALERT;
-            writeShipState(true, AUDIO_EFFECT);
+            if ( *pAudioIndex == AUDIO_INDEX_RED_ALERT ) {
+               *pAudioIndex = AUDIO_INDEX_CANCEL;
+            }
+            else {
+              *pAudioIndex = AUDIO_INDEX_RED_ALERT;
+              writeShipState(true, AUDIO_EFFECT);
+            }
             break;
 
          case 0xff30cf: //menu
             Serial.println("IRStateReader::P1 MSG");
-            //mAudioEffect = WAV_P1_MESSAGE;
+            *pAudioIndex = AUDIO_INDEX_P1_MESSAGE;
             writeShipState(true, AUDIO_EFFECT);
             break;
 

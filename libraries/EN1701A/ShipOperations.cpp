@@ -1,10 +1,11 @@
 #include "Arduino.h"
 #include <ShipOperations.h>
 
-ShipOperations::ShipOperations( unsigned int *currState, unsigned int *oldState, char* audioEffectFiles[] ) {
+ShipOperations::ShipOperations( unsigned int *currState, unsigned int *oldState, char* audioEffectFiles[], byte *audioIndex ) {
   pCurrentShipState = currState;
   pOldShipState = oldState;
   pAudioEffectFiles = audioEffectFiles;
+  pAudioIndex = audioIndex;
   setupSound();
 }
 
@@ -42,7 +43,6 @@ void ShipOperations::ApplyShipLogic() {
     if (readCurrentShipState(PRIMARY_SYSTEMS)) { //shutdown
       writeShipState(false, PRIMARY_SYSTEMS);
       mSectionData = 0;
-      //playcomplete("BPD1.WAV");
       playcomplete(pAudioEffectFiles[AUDIO_INDEX_POWER_DOWN]);
       clearAll();
     }
@@ -59,15 +59,15 @@ void ShipOperations::ApplyShipLogic() {
   }
 
   if (readCurrentShipState(AUDIO_EFFECT)) {
-    if (readOldShipState(AUDIO_EFFECT)) {
+    if (*pAudioIndex == AUDIO_INDEX_CANCEL) {
       wave.stop();
       writeShipState(false, AUDIO_EFFECT);
     }
     else {
-      playcomplete(pAudioEffectFiles[AUDIO_INDEX_RED_ALERT]);
+      playcomplete(pAudioEffectFiles[*pAudioIndex]);
     }
   }
-  //if (bitRead(*pCurrentShipState, TORPEDO)){
+
   if (readCurrentShipState(TORPEDO)){
     playcomplete(pAudioEffectFiles[AUDIO_INDEX_TORPEDO]);
     //flash torpedo lights

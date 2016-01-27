@@ -22,6 +22,7 @@ an illuminated control section of the ship*/
 #define POWER_CHANGE 14
 #define AUDIO_EFFECT 15
 
+#define AUDIO_INDEX_CANCEL -1
 #define AUDIO_INDEX_RED_ALERT 0
 #define AUDIO_INDEX_P1_MESSAGE 1
 #define AUDIO_INDEX_TORPEDO 2

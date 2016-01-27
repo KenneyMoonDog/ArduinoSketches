@@ -6,22 +6,15 @@
 
 class IRStateReader {
 public:
-  IRStateReader(int rp, unsigned int *currState, unsigned int *oldState);
+  IRStateReader(int rp, unsigned int *currState, unsigned int *oldState, byte *audioIndex);
   bool updateShipStateViaIR();
   bool cleanTimeouts(unsigned long timerMillis);
-  byte getAudioIndex();
-
-//  int getLatchDelay();
-//  int getBrightness();
 
 private:
   long lastDecodedValue = 0;
-//  int latchDelay = 500;
-//  int brightness = 0;
-
   unsigned int *pCurrentShipState;
   unsigned int *pOldShipState;
-  byte mAudioIndex;
+  byte *pAudioIndex;
 
   void writeShipState(bool set, unsigned int pinset);
 };
