@@ -4,6 +4,7 @@
 IRrecv *pReceiver;
 IRdecodeNEC mDecoder;
 unsigned long mTestStartMillis = 0;
+byte changeCounter=0;
 
 IRStateReader::IRStateReader(int rp, unsigned int *currState, unsigned int *oldState, byte *audioIndex) {
    pReceiver = new IRrecv(rp);
@@ -14,6 +15,8 @@ IRStateReader::IRStateReader(int rp, unsigned int *currState, unsigned int *oldS
 }
 
 bool IRStateReader::updateShipStateViaIR() {
+
+  //int test = rand() % 10 + 1;
 
   bool isChanged = false;
   bool isRepeat = false;
@@ -71,12 +74,14 @@ bool IRStateReader::updateShipStateViaIR() {
           case 0xffe01f: //right
             Serial.println("IRStateReader::PHASER");
             if (!isRepeat){
+              Serial.println("IRStateReader::PHASER fire");
               writeShipState(true, PHASER);
-              mTestStartMillis = millis();
             }
             else {
+              Serial.println("IRStateReader::PHASER repeat");
               isChanged = false;
             }
+            mTestStartMillis = millis();
             break;
          case 0xff40bf: //title
 
@@ -126,13 +131,24 @@ void IRStateReader::writeShipState(bool set, unsigned int pinset ){
    }
 }
 
-bool IRStateReader::cleanTimeouts(unsigned long timerMillis){
+bool IRStateReader::executeTimedOperations(unsigned long currentMillis){ //called every 250ms
+
+    bool rc = false;
     if ( bitRead(*pCurrentShipState, PHASER)){
-       if ( timerMillis - mTestStartMillis >= 500 ) {
+       if ( currentMillis - mTestStartMillis >= 500 ) {
          writeShipState(false, PHASER);
-         return true;
+         Serial.println("IRStateReader::interrupt PHASER");
+         rc = true;
        }
     }
 
-    return false;
+    if (changeCounter++ > 2){ //@40, 10 sec has elasped
+      changeCounter=0;
+      *pCurrentShipState &= 0xFF00;
+      *pCurrentShipState |= (0xFF & rand() % 254 + 1);
+      //writeShipState(true, (0xFF & rand() % 254 + 1));
+      rc = true;
+    }
+
+    return rc;
 }

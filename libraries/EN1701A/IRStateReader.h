@@ -8,7 +8,7 @@ class IRStateReader {
 public:
   IRStateReader(int rp, unsigned int *currState, unsigned int *oldState, byte *audioIndex);
   bool updateShipStateViaIR();
-  bool cleanTimeouts(unsigned long timerMillis);
+  bool executeTimedOperations(unsigned long currentMillis);
 
 private:
   long lastDecodedValue = 0;

@@ -30,11 +30,11 @@ public:
    unsigned int mPreviousPinState = 0;
 
    void updateSectionDataRegister();
-   void sdErrorCheck(void);
+   //void sdErrorCheck(void);
    int freeRam(void);
    void setupSound();
-   void playcomplete(char *name);
-   void playfile(char *name);
+   //void playcomplete(char *name);
+   void playFile(char *name);
    void writeShipState(bool set, unsigned int pinset);
    bool readCurrentShipState(unsigned int pinset);
    bool readOldShipState(unsigned int pinset);
