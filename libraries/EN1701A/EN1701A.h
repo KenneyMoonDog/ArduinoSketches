@@ -29,6 +29,8 @@ an illuminated control section of the ship*/
 #define AUDIO_INDEX_PHASER 3
 #define AUDIO_INDEX_POWER_DOWN 4
 #define AUDIO_INDEX_POWER_UP 5
+#define AUDIO_INDEX_DESTRUCT 6
+#define AUDIO_INDEX_HIT 7
 
 /*This set maps PIN assignemnts to bit locations*/
 #define PIN_SR_LATCH 15
@@ -44,7 +46,7 @@ an illuminated control section of the ship*/
 
 #define STATE_PHASER_OFF 0x000010
 
-static char* scAudioEffects[]={"KLAX.WAV", "P1MSG.WAV", "TORP1.WAV", "SPZER1.WAV", "BPD1.WAV", "BPUP1.WAV"};
+static char* scAudioEffects[]={"KLAX.WAV", "P1MSG.WAV", "TORP1.WAV", "SPZER1.WAV", "BPD1.WAV", "BPUP1.WAV", "DSTRT.WAV", "HULHIT.WAV"};
 
 class EN1701A
 {

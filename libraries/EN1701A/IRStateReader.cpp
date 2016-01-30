@@ -35,6 +35,8 @@ bool IRStateReader::updateShipStateViaIR() {
           case 0xff22dd: //or torpedos
           case 0xff40bf: //or red alert
           case 0xff30cf: //or P1 Message
+          case 0xff58a7: //or destruct
+          case  0xff52ad: //or hull hit
             lastDecodedValue = 0;
             break;
         }
@@ -99,10 +101,17 @@ bool IRStateReader::updateShipStateViaIR() {
             break;
 
          case 0xff58a7: //STOP
+            Serial.println(F("IRStateReader::DESTRUCT"));
+            EN1701A::sbAudioIndex = AUDIO_INDEX_DESTRUCT;
+            EN1701A::svWriteShipState(true, AUDIO_EFFECT);
             break;
 
          case 0xff52ad: //enter
+            Serial.println(F("IRStateReader::HIT"));
+            EN1701A::sbAudioIndex = AUDIO_INDEX_HIT;
+            EN1701A::svWriteShipState(true, AUDIO_EFFECT);
             break;
+
          default:
             mDecoder.value = 0;
             isChanged = false;
