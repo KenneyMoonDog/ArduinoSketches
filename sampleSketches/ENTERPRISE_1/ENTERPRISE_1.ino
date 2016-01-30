@@ -2,15 +2,26 @@
 #include <IRStateReader.h>
 #include <ShipOperations.h>
 
-unsigned int mCurrentShipState = 0;
-unsigned int mPreviousShipState = 0;
 volatile unsigned long previousMillis = 0;
 
 //----------
 IRStateReader *pStateReader;
 ShipOperations *pShipOperations;
-char* mAudioEffects[]={"KLAX.WAV", "P1MSG.WAV", "TORP1.WAV", "SPZER1.WAV", "BPD1.WAV", "BPUP1.WAV"};
-byte mAudioIndex = AUDIO_INDEX_CANCEL;
+
+byte          EN1701A::sbAudioIndex = 0;
+unsigned int  EN1701A::suiCurrentShipState = 0;
+unsigned int  EN1701A::suiPreviousShipState = 0;
+
+void EN1701A::svWriteShipState(bool set, unsigned int pinset )
+{
+  suiPreviousShipState = suiCurrentShipState;
+  if (set) {
+    bitSet(suiCurrentShipState, pinset);
+  }
+  else {
+    bitClear(suiCurrentShipState, pinset);
+  }
+}
 
 void setup()
 {
@@ -26,8 +37,8 @@ void setup()
   pinMode(PIN_RUNNING_LIGHTS, OUTPUT);  
   pinMode(PIN_IMPULSE_DECK, OUTPUT);
   
-  pStateReader = new IRStateReader(PIN_IR_RECEIVER, &mCurrentShipState, &mPreviousShipState, &mAudioIndex);
-  pShipOperations = new ShipOperations(&mCurrentShipState, &mPreviousShipState, mAudioEffects, &mAudioIndex);
+  pStateReader = new IRStateReader(PIN_IR_RECEIVER);
+  pShipOperations = new ShipOperations();
 
   pShipOperations->clearAll();
 

@@ -6,33 +6,27 @@ IRdecodeNEC mDecoder;
 unsigned long mTestStartMillis = 0;
 byte changeCounter=0;
 
-IRStateReader::IRStateReader(int rp, unsigned int *currState, unsigned int *oldState, byte *audioIndex) {
+IRStateReader::IRStateReader(int rp) {
    pReceiver = new IRrecv(rp);
    pReceiver->enableIRIn(); // Start the receiver
-   pCurrentShipState = currState;
-   pOldShipState = oldState;
-   pAudioIndex = audioIndex;
 }
 
 bool IRStateReader::updateShipStateViaIR() {
-
-  //int test = rand() % 10 + 1;
-
   bool isChanged = false;
   bool isRepeat = false;
 
   if (pReceiver->GetResults(&mDecoder))  {
 
      mDecoder.decode();    //Decode the data
-     bool primary_systems_on = bitRead (*pCurrentShipState, PRIMARY_SYSTEMS);
+     bool primary_systems_on = bitRead (EN1701A::suiCurrentShipState, PRIMARY_SYSTEMS);
 
      if ( mDecoder.value == 0 ){
        pReceiver->resume();
        return false;
      }
 
-     Serial.println("");
-     Serial.println("----DECODER BEFORE----");
+     Serial.println(F(""));
+     Serial.println(F("----DECODER BEFORE----"));
      Serial.println(mDecoder.value);
 
      if ( mDecoder.value == 0xffffffff ) {
@@ -49,7 +43,7 @@ bool IRStateReader::updateShipStateViaIR() {
      }
 
      Serial.println(mDecoder.value);
-     Serial.println("--- DECODE AFTER----");
+     Serial.println(F("--- DECODE AFTER----"));
      mTestStartMillis = millis();
 
      if ( primary_systems_on || mDecoder.value == 0xffd22d ) {
@@ -58,48 +52,50 @@ bool IRStateReader::updateShipStateViaIR() {
          //case STATE_PHASER_OFF:
         //    break;
          case 0xffd22d: //power on
-            Serial.println("IRStateReader::POWER CHANGE");
-            writeShipState(true, POWER_CHANGE);
+            Serial.println(F("IRStateReader::POWER CHANGE"));
+            EN1701A::svWriteShipState(true, POWER_CHANGE);
             break;
          case 0xff12ed: //down
-            Serial.println("IRStateReader::ENGINES DOWN");
+            Serial.println(F("IRStateReader::ENGINES DOWN"));
             break;
           case 0xffa25d: //up
-            Serial.println("IRStateReader::ENGINES UP");
+            Serial.println(F("IRStateReader::ENGINES UP"));
             break;
           case 0xff22dd: //left
-            Serial.println("IRStateReader::TORPEDO");
-            writeShipState(true, TORPEDO);
+            Serial.println(F("IRStateReader::TORPEDO"));
+            EN1701A::svWriteShipState(true, TORPEDO);
             break;
           case 0xffe01f: //right
-            Serial.println("IRStateReader::PHASER");
+            Serial.println(F("IRStateReader::PHASER"));
             if (!isRepeat){
-              Serial.println("IRStateReader::PHASER fire");
-              writeShipState(true, PHASER);
+              Serial.println(F("IRStateReader::PHASER fire"));
+              EN1701A::svWriteShipState(true, PHASER);
             }
             else {
-              Serial.println("IRStateReader::PHASER repeat");
+              Serial.println(F("IRStateReader::PHASER repeat"));
               isChanged = false;
             }
             mTestStartMillis = millis();
             break;
          case 0xff40bf: //title
 
-            if ( *pAudioIndex == AUDIO_INDEX_RED_ALERT ) {
-              Serial.println("IRStateReader::RED ALERT OFF");
-               *pAudioIndex = AUDIO_INDEX_CANCEL;
+            if ( EN1701A::sbAudioIndex == AUDIO_INDEX_RED_ALERT ) {
+              Serial.println(F("IRStateReader::RED ALERT OFF"));
+               //setAudioIndex(AUDIO_INDEX_CANCEL);
+               EN1701A::sbAudioIndex = AUDIO_INDEX_CANCEL;
             }
             else {
-              Serial.println("IRStateReader::RED ALERT ON");
-              *pAudioIndex = AUDIO_INDEX_RED_ALERT;
+              Serial.println(F("IRStateReader::RED ALERT ON"));
+              EN1701A::sbAudioIndex = AUDIO_INDEX_RED_ALERT;
+              //setAudioIndex(AUDIO_INDEX_RED_ALERT);
             }
-            writeShipState(true, AUDIO_EFFECT);
+            EN1701A::svWriteShipState(true, AUDIO_EFFECT);
             break;
 
          case 0xff30cf: //menu
-            Serial.println("IRStateReader::P1 MSG");
-            *pAudioIndex = AUDIO_INDEX_P1_MESSAGE;
-            writeShipState(true, AUDIO_EFFECT);
+            Serial.println(F("IRStateReader::P1 MSG"));
+            EN1701A::sbAudioIndex = AUDIO_INDEX_P1_MESSAGE;
+            EN1701A::svWriteShipState(true, AUDIO_EFFECT);
             break;
 
          case 0xff58a7: //STOP
@@ -110,7 +106,6 @@ bool IRStateReader::updateShipStateViaIR() {
          default:
             mDecoder.value = 0;
             isChanged = false;
-            Serial.println("IRStateReader::ZERO");
             break;
        } // end switch
      } //end if primary_systems_on
@@ -121,32 +116,21 @@ bool IRStateReader::updateShipStateViaIR() {
   return isChanged;
 }
 
-void IRStateReader::writeShipState(bool set, unsigned int pinset ){
-    *pOldShipState = *pCurrentShipState;
-   if (set) {
-     bitSet(*pCurrentShipState, pinset);
-   }
-   else {
-     bitClear(*pCurrentShipState, pinset);
-   }
-}
-
 bool IRStateReader::executeTimedOperations(unsigned long currentMillis){ //called every 250ms
 
     bool rc = false;
-    if ( bitRead(*pCurrentShipState, PHASER)){
+    if ( bitRead(EN1701A::suiCurrentShipState, PHASER)){
        if ( currentMillis - mTestStartMillis >= 500 ) {
-         writeShipState(false, PHASER);
-         Serial.println("IRStateReader::interrupt PHASER");
+         EN1701A::svWriteShipState(false, PHASER);
+         //Serial.println("IRStateReader::interrupt PHASER");
          rc = true;
        }
     }
 
     if (changeCounter++ > 2){ //@40, 10 sec has elasped
       changeCounter=0;
-      *pCurrentShipState &= 0xFF00;
-      *pCurrentShipState |= (0xFF & rand() % 254 + 1);
-      //writeShipState(true, (0xFF & rand() % 254 + 1));
+      EN1701A::suiCurrentShipState &= 0xFF00;
+      EN1701A::suiCurrentShipState |= (0xFF & rand() % 254 + 1);
       rc = true;
     }
 

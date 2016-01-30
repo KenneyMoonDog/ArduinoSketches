@@ -6,17 +6,13 @@
 
 class IRStateReader {
 public:
-  IRStateReader(int rp, unsigned int *currState, unsigned int *oldState, byte *audioIndex);
+  //IRStateReader(int rp, unsigned int *currState, unsigned int *oldState, byte *audioIndex);
+  IRStateReader(int rp);
   bool updateShipStateViaIR();
   bool executeTimedOperations(unsigned long currentMillis);
 
 private:
   long lastDecodedValue = 0;
-  unsigned int *pCurrentShipState;
-  unsigned int *pOldShipState;
-  byte *pAudioIndex;
-
-  void writeShipState(bool set, unsigned int pinset);
 };
 
 #endif

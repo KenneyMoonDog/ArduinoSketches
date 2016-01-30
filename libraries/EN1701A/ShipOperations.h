@@ -10,7 +10,7 @@
 
 class ShipOperations {
 public:
-   ShipOperations( unsigned int *currState, unsigned int *oldState, char* audioEffectFiles[], byte *audioIndex );
+   ShipOperations();
    void ApplyShipLogic();
    void clearAll();
 
@@ -22,10 +22,6 @@ public:
 
    WaveHC wave;      // This is the only wave (audio) object, since we will only play one at a time
 
-   unsigned int *pCurrentShipState;
-   unsigned int *pOldShipState;
-   char** pAudioEffectFiles;
-   byte* pAudioIndex;
    unsigned int mCurrentPinState = 0;
    unsigned int mPreviousPinState = 0;
 
@@ -33,9 +29,7 @@ public:
    //void sdErrorCheck(void);
    int freeRam(void);
    void setupSound();
-   //void playcomplete(char *name);
    void playFile(char *name);
-   void writeShipState(bool set, unsigned int pinset);
    bool readCurrentShipState(unsigned int pinset);
    bool readOldShipState(unsigned int pinset);
 };

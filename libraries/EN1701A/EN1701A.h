@@ -44,4 +44,15 @@ an illuminated control section of the ship*/
 
 #define STATE_PHASER_OFF 0x000010
 
+static char* scAudioEffects[]={"KLAX.WAV", "P1MSG.WAV", "TORP1.WAV", "SPZER1.WAV", "BPD1.WAV", "BPUP1.WAV"};
+
+class EN1701A
+{
+  public:
+    static byte sbAudioIndex;
+    static unsigned int suiCurrentShipState;
+    static unsigned int suiPreviousShipState;
+    static void svWriteShipState(bool set, unsigned int pinset );
+};
+
 #endif
