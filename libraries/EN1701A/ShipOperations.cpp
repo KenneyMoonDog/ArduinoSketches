@@ -57,7 +57,7 @@ void ShipOperations::ApplyShipLogic() {
     //Serial.println("ShipOperations::Play Audio effect");
     if (EN1701A::sbAudioIndex == AUDIO_INDEX_CANCEL) {
       //Serial.println("ShipOperations::Play Audio CANCEL");
-      wave.stop();
+      stopPlaying();
     }
     else {
       //Serial.println("ShipOperations::Play Audio Index:");
@@ -80,8 +80,8 @@ void ShipOperations::ApplyShipLogic() {
   }
 
   if (readCurrentShipState(PHASER)){
-    if (!readOldShipState(PHASER)){
-      //Serial.println("ShipOperations::START PHASER");
+    if ( strcmp (pCurrentFilePlaying, scAudioEffects[AUDIO_INDEX_PHASER]) != 0) {
+      Serial.println(F("ShipOperations::START PHASER"));
       playFile(scAudioEffects[AUDIO_INDEX_PHASER]);
       //flash PHASER lights
       delay(500);
@@ -89,8 +89,8 @@ void ShipOperations::ApplyShipLogic() {
       EN1701A::svWriteShipState(true, PHASER);
     }
   } else if (readOldShipState(PHASER)){
-    //Serial.println("ShipOperations::STOP PHASER");
-    wave.stop();
+    Serial.println(F("ShipOperations::STOP PHASER"));
+    stopPlaying();
     digitalWrite(PIN_PHASER, LOW);
     EN1701A::svWriteShipState(false, PHASER);
   }
@@ -161,6 +161,10 @@ int ShipOperations::freeRam(void)
   return free_memory;
 }
 
+void ShipOperations::stopPlaying(){
+  pCurrentFilePlaying = NULL;
+  wave.stop();
+}
 /*void ShipOperations::sdErrorCheck(void)
 {
   if (!card.errorCode()) return;
@@ -176,21 +180,25 @@ int ShipOperations::freeRam(void)
   // call our helper to find and play this name
   playfile(name);
 }*/
-
 void ShipOperations::playFile(char *name) {
+
+  pCurrentFilePlaying = NULL;
+
   // see if the wave object is currently doing something
   if (wave.isplaying) {// already playing something, so stop it!
-    wave.stop(); // stop it
+    stopPlaying();
   }
   // look in the root directory and open the file
   if (!f.open(root, name)) {
     putstring("Couldn't open file "); Serial.print(name); return;
   }
+
   // OK read the file and turn it into a wave object
   if (!wave.create(f)) {
     putstring_nl("Not a valid WAV"); return;
   }
 
+  pCurrentFilePlaying = name;
   // ok time to play! start playback
   wave.play();
 }

@@ -4,7 +4,7 @@
 IRrecv *pReceiver;
 IRdecodeNEC mDecoder;
 unsigned long mTestStartMillis = 0;
-byte changeCounter=0;
+//byte changeCounter=0;
 
 IRStateReader::IRStateReader(int rp) {
    pReceiver = new IRrecv(rp);
@@ -128,18 +128,22 @@ bool IRStateReader::updateShipStateViaIR() {
 bool IRStateReader::executeTimedOperations(unsigned long currentMillis){ //called every 250ms
 
     bool rc = false;
+    static byte changeCounter=0;
+    static byte changeLimit = 2;
+
     if ( bitRead(EN1701A::suiCurrentShipState, PHASER)){
-       if ( currentMillis - mTestStartMillis >= 500 ) {
+       if ( currentMillis - mTestStartMillis >= (POLLING_FREQUENCY + 200) ) {
          EN1701A::svWriteShipState(false, PHASER);
          //Serial.println("IRStateReader::interrupt PHASER");
          rc = true;
        }
     }
 
-    if (changeCounter++ > 2){ //@40, 10 sec has elasped
+    //after some random elasped time, toggle one of the sections on or off at random
+    if (changeCounter++ > changeLimit){
       changeCounter=0;
-      EN1701A::suiCurrentShipState &= 0xFF00;
-      EN1701A::suiCurrentShipState |= (0xFF & rand() % 254 + 1);
+      changeLimit = random(1,5);
+      EN1701A::suiCurrentShipState ^= (0x0001 << random(0,8));
       rc = true;
     }
 

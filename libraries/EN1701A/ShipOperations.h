@@ -19,6 +19,7 @@ public:
    FatVolume vol;    // This holds the information for the partition on the card
    FatReader root;   // This holds the information for the filesystem on the card
    FatReader f;      // This holds the information for the file we're play
+   char* pCurrentFilePlaying = NULL;
 
    WaveHC wave;      // This is the only wave (audio) object, since we will only play one at a time
 
@@ -30,6 +31,7 @@ public:
    int freeRam(void);
    void setupSound();
    void playFile(char *name);
+   void stopPlaying();
    bool readCurrentShipState(unsigned int pinset);
    bool readOldShipState(unsigned int pinset);
 };

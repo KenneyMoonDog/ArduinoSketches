@@ -52,7 +52,7 @@ SIGNAL(TIMER0_COMPA_vect)
 {
   unsigned long currentMillis = millis();
 
-  if (currentMillis - previousMillis >= 250) {  //execute any timed operations every 250ms
+  if (currentMillis - previousMillis >= POLLING_FREQUENCY) {  //execute any timed operations every 250ms
     // save the last time you did a repeatable item clear
     previousMillis = currentMillis;
     if (pStateReader->executeTimedOperations(currentMillis)){
