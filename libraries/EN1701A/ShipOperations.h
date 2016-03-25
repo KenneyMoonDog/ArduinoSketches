@@ -30,7 +30,7 @@ public:
    //void sdErrorCheck(void);
    int freeRam(void);
    void setupSound();
-   void playFile(char *name);
+   void playFile();
    void stopPlaying();
    bool readCurrentShipState(unsigned int pinset);
    bool readOldShipState(unsigned int pinset);

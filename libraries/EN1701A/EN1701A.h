@@ -36,7 +36,7 @@ an illuminated control section of the ship*/
 #define PIN_SR_LATCH 15
 #define PIN_SR_CLOCK 14
 #define PIN_SR_SECTION_DATA 16
-#define PIN_SR_SECTION_ENABLE 6
+//#define PIN_SR_SECTION_ENABLE 6
 #define PIN_IR_RECEIVER 11
 #define PIN_TORPEDO 7
 #define PIN_PHASER 7

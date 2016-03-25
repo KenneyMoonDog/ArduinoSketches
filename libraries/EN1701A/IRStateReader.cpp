@@ -3,7 +3,7 @@
 
 IRrecv *pReceiver;
 IRdecodeNEC mDecoder;
-unsigned long mTestStartMillis = 0;
+//unsigned long mTestStartMillis = 0;
 //byte changeCounter=0;
 
 IRStateReader::IRStateReader(int rp) {
@@ -36,7 +36,8 @@ bool IRStateReader::updateShipStateViaIR() {
           case 0xff40bf: //or red alert
           case 0xff30cf: //or P1 Message
           case 0xff58a7: //or destruct
-          case  0xff52ad: //or hull hit
+          case 0xff52ad: //or hull hit
+          case 0xffe01f: //or phaser
             lastDecodedValue = 0;
             break;
         }
@@ -46,7 +47,7 @@ bool IRStateReader::updateShipStateViaIR() {
 
      Serial.println(mDecoder.value);
      Serial.println(F("--- DECODE AFTER----"));
-     mTestStartMillis = millis();
+     //mTestStartMillis = millis();
 
      if ( primary_systems_on || mDecoder.value == 0xffd22d ) {
        isChanged = true;
@@ -69,6 +70,15 @@ bool IRStateReader::updateShipStateViaIR() {
             break;
           case 0xffe01f: //right
             Serial.println(F("IRStateReader::PHASER"));
+            if ( bitRead(EN1701A::suiCurrentShipState, PHASER) ) {
+              EN1701A::svWriteShipState(false, PHASER);
+            }
+            else {
+              EN1701A::svWriteShipState(true, PHASER);
+            }
+            break;
+          /*case 0xffe01f: //right
+            Serial.println(F("IRStateReader::PHASER"));
             if (!isRepeat){
               Serial.println(F("IRStateReader::PHASER fire"));
               EN1701A::svWriteShipState(true, PHASER);
@@ -78,7 +88,7 @@ bool IRStateReader::updateShipStateViaIR() {
               isChanged = false;
             }
             mTestStartMillis = millis();
-            break;
+            break;*/
          case 0xff40bf: //title
 
             if ( EN1701A::sbAudioIndex == AUDIO_INDEX_RED_ALERT ) {
@@ -131,13 +141,13 @@ bool IRStateReader::executeTimedOperations(unsigned long currentMillis){ //calle
     static byte changeCounter=0;
     static byte changeLimit = 2;
 
-    if ( bitRead(EN1701A::suiCurrentShipState, PHASER)){
+    /*if ( bitRead(EN1701A::suiCurrentShipState, PHASER)){
        if ( currentMillis - mTestStartMillis >= (POLLING_FREQUENCY + 200) ) {
          EN1701A::svWriteShipState(false, PHASER);
          //Serial.println("IRStateReader::interrupt PHASER");
          rc = true;
        }
-    }
+    }*/
 
     //after some random elasped time, toggle one of the sections on or off at random
     if (changeCounter++ > changeLimit){

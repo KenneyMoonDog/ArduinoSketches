@@ -34,17 +34,20 @@ void ShipOperations::ApplyShipLogic() {
   if (readCurrentShipState(POWER_CHANGE)) {
     if (readCurrentShipState(PRIMARY_SYSTEMS)) { //shutdown
       EN1701A::svWriteShipState(false, PRIMARY_SYSTEMS);
-      playFile(scAudioEffects[AUDIO_INDEX_POWER_DOWN]);
+      //playFile(scAudioEffects[AUDIO_INDEX_POWER_DOWN]);
+      EN1701A::sbAudioIndex = AUDIO_INDEX_POWER_DOWN;
       clearAll();
     }
     else { //startup
       EN1701A::svWriteShipState(true, PRIMARY_SYSTEMS);
       EN1701A::suiCurrentShipState |= 0xFF & rand() % 254 + 1;
-      playFile(scAudioEffects[AUDIO_INDEX_POWER_UP]);
+      //playFile(scAudioEffects[AUDIO_INDEX_POWER_UP]);
+      EN1701A::sbAudioIndex = AUDIO_INDEX_POWER_UP;
       updateSectionDataRegister();
       //TODO: write out to the appropriate lighting ports
             //analogWrite(6,240);
     }
+    playFile();
     EN1701A::svWriteShipState(false, POWER_CHANGE);
     return;
   }
@@ -62,14 +65,16 @@ void ShipOperations::ApplyShipLogic() {
     else {
       //Serial.println("ShipOperations::Play Audio Index:");
       //Serial.println(scAudioEffects[EN1701A::sbAudioIndex]);
-      playFile(scAudioEffects[EN1701A::sbAudioIndex]);
+      playFile();
     }
     EN1701A::svWriteShipState(false, AUDIO_EFFECT);
     //return;
   }
 
   if (readCurrentShipState(TORPEDO)){
-    playFile(scAudioEffects[AUDIO_INDEX_TORPEDO]);
+    EN1701A::sbAudioIndex = AUDIO_INDEX_TORPEDO;
+    playFile();
+
     //flash torpedo lights
     delay(100);
     digitalWrite(PIN_TORPEDO, HIGH);
@@ -80,6 +85,19 @@ void ShipOperations::ApplyShipLogic() {
   }
 
   if (readCurrentShipState(PHASER)){
+    if ( strcmp (pCurrentFilePlaying, scAudioEffects[AUDIO_INDEX_PHASER]) != 0) {
+      EN1701A::sbAudioIndex = AUDIO_INDEX_PHASER;
+      playFile();
+      //flash PHASER lights
+      delay(500);
+      digitalWrite(PIN_PHASER, HIGH);
+    }
+  }
+  else if (readOldShipState(PHASER)){
+    stopPlaying();
+    digitalWrite(PIN_PHASER, LOW);
+  }
+  /*if (readCurrentShipState(PHASER)){
     if ( strcmp (pCurrentFilePlaying, scAudioEffects[AUDIO_INDEX_PHASER]) != 0) {
       Serial.println(F("ShipOperations::START PHASER"));
       playFile(scAudioEffects[AUDIO_INDEX_PHASER]);
@@ -93,7 +111,7 @@ void ShipOperations::ApplyShipLogic() {
     stopPlaying();
     digitalWrite(PIN_PHASER, LOW);
     EN1701A::svWriteShipState(false, PHASER);
-  }
+  }*/
 }
 
 void ShipOperations::setupSound() {
@@ -180,25 +198,28 @@ void ShipOperations::stopPlaying(){
   // call our helper to find and play this name
   playfile(name);
 }*/
-void ShipOperations::playFile(char *name) {
+//void ShipOperations::playFile(char *name) {
+void ShipOperations::playFile() {
 
-  pCurrentFilePlaying = NULL;
+  pCurrentFilePlaying = scAudioEffects[EN1701A::sbAudioIndex];;
 
   // see if the wave object is currently doing something
   if (wave.isplaying) {// already playing something, so stop it!
     stopPlaying();
   }
   // look in the root directory and open the file
-  if (!f.open(root, name)) {
-    putstring("Couldn't open file "); Serial.print(name); return;
+  if (!f.open(root, pCurrentFilePlaying)) {
+    putstring("Couldn't open file "); Serial.print(pCurrentFilePlaying);
+    return;
   }
 
   // OK read the file and turn it into a wave object
   if (!wave.create(f)) {
-    putstring_nl("Not a valid WAV"); return;
+    putstring_nl("Not a valid WAV");
+    return;
   }
 
-  pCurrentFilePlaying = name;
+  //pCurrentFilePlaying = name;
   // ok time to play! start playback
   wave.play();
 }
