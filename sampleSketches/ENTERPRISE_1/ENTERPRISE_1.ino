@@ -55,6 +55,8 @@ SIGNAL(TIMER0_COMPA_vect)
   if (currentMillis - previousMillis >= POLLING_FREQUENCY) {  //execute any timed operations every 250ms
     // save the last time you did a repeatable item clear
     previousMillis = currentMillis;
+
+    pShipOperations->audioCheck();
     if (pStateReader->executeTimedOperations(currentMillis)){
       pShipOperations->ApplyShipLogic();
     }

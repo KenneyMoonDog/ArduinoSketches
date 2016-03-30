@@ -12,6 +12,7 @@ class ShipOperations {
 public:
    ShipOperations();
    void ApplyShipLogic();
+   void audioCheck();
    void clearAll();
 
  private:

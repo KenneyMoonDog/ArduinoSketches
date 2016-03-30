@@ -71,6 +71,7 @@ bool IRStateReader::updateShipStateViaIR() {
           case 0xffe01f: //right
             Serial.println(F("IRStateReader::PHASER"));
             if ( bitRead(EN1701A::suiCurrentShipState, PHASER) ) {
+              EN1701A::sbAudioIndex = AUDIO_INDEX_CANCEL;
               EN1701A::svWriteShipState(false, PHASER);
             }
             else {
@@ -93,15 +94,14 @@ bool IRStateReader::updateShipStateViaIR() {
 
             if ( EN1701A::sbAudioIndex == AUDIO_INDEX_RED_ALERT ) {
               Serial.println(F("IRStateReader::RED ALERT OFF"));
-               //setAudioIndex(AUDIO_INDEX_CANCEL);
                EN1701A::sbAudioIndex = AUDIO_INDEX_CANCEL;
+               EN1701A::svWriteShipState(false, AUDIO_EFFECT);
             }
             else {
               Serial.println(F("IRStateReader::RED ALERT ON"));
               EN1701A::sbAudioIndex = AUDIO_INDEX_RED_ALERT;
-              //setAudioIndex(AUDIO_INDEX_RED_ALERT);
+              EN1701A::svWriteShipState(true, AUDIO_EFFECT);
             }
-            EN1701A::svWriteShipState(true, AUDIO_EFFECT);
             break;
 
          case 0xff30cf: //menu

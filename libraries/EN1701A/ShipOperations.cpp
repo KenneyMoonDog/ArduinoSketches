@@ -56,19 +56,14 @@ void ShipOperations::ApplyShipLogic() {
     updateSectionDataRegister();
   }
 
+  if (EN1701A::sbAudioIndex == AUDIO_INDEX_CANCEL) {
+    //Serial.println("ShipOperations::Play Audio CANCEL");
+    stopPlaying();
+  }
+
   if (readCurrentShipState(AUDIO_EFFECT)) {
-    //Serial.println("ShipOperations::Play Audio effect");
-    if (EN1701A::sbAudioIndex == AUDIO_INDEX_CANCEL) {
-      //Serial.println("ShipOperations::Play Audio CANCEL");
-      stopPlaying();
-    }
-    else {
-      //Serial.println("ShipOperations::Play Audio Index:");
-      //Serial.println(scAudioEffects[EN1701A::sbAudioIndex]);
-      playFile();
-    }
+    playFile();
     EN1701A::svWriteShipState(false, AUDIO_EFFECT);
-    //return;
   }
 
   if (readCurrentShipState(TORPEDO)){
@@ -96,6 +91,7 @@ void ShipOperations::ApplyShipLogic() {
   else if (readOldShipState(PHASER)){
     stopPlaying();
     digitalWrite(PIN_PHASER, LOW);
+    EN1701A::svWriteShipState(false, PHASER);
   }
   /*if (readCurrentShipState(PHASER)){
     if ( strcmp (pCurrentFilePlaying, scAudioEffects[AUDIO_INDEX_PHASER]) != 0) {
@@ -193,6 +189,16 @@ void ShipOperations::stopPlaying(){
   while(1);
 }*/
 
+void ShipOperations::audioCheck() {
+  if (readCurrentShipState(PRIMARY_SYSTEMS)){
+    if (!wave.isplaying) {
+       Serial.println(F("NO WAVE PLAYING"));
+       EN1701A::sbAudioIndex = AUDIO_INDEX_POWER_UP;
+       playFile();
+    }
+  }
+}
+
 // Plays a full file from beginning to end with no pause.
 /*void ShipOperations::playcomplete(char *name) {
   // call our helper to find and play this name
@@ -201,15 +207,16 @@ void ShipOperations::stopPlaying(){
 //void ShipOperations::playFile(char *name) {
 void ShipOperations::playFile() {
 
-  pCurrentFilePlaying = scAudioEffects[EN1701A::sbAudioIndex];;
+  pCurrentFilePlaying = NULL;
 
   // see if the wave object is currently doing something
   if (wave.isplaying) {// already playing something, so stop it!
     stopPlaying();
   }
   // look in the root directory and open the file
-  if (!f.open(root, pCurrentFilePlaying)) {
-    putstring("Couldn't open file "); Serial.print(pCurrentFilePlaying);
+  if (!f.open(root, scAudioEffects[EN1701A::sbAudioIndex])) {
+    putstring("Couldn't open file ");
+    Serial.print(scAudioEffects[EN1701A::sbAudioIndex]);
     return;
   }
 
@@ -219,7 +226,7 @@ void ShipOperations::playFile() {
     return;
   }
 
-  //pCurrentFilePlaying = name;
+  pCurrentFilePlaying = scAudioEffects[EN1701A::sbAudioIndex];
   // ok time to play! start playback
   wave.play();
 }
