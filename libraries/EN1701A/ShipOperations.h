@@ -24,16 +24,14 @@ public:
 
    WaveHC wave;      // This is the only wave (audio) object, since we will only play one at a time
 
-   unsigned int mCurrentPinState = 0;
-   unsigned int mPreviousPinState = 0;
+   void updateSection_DataRegister();
 
-   void updateSectionDataRegister();
    //void sdErrorCheck(void);
    int freeRam(void);
    void setupSound();
    void playFile();
    void stopPlaying();
-   bool readCurrentShipState(unsigned int pinset);
-   bool readOldShipState(unsigned int pinset);
+   bool readCurrentShipState(byte pinset);
+   bool readOldShipState(byte pinset);
 };
 #endif

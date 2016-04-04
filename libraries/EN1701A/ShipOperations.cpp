@@ -5,27 +5,30 @@ ShipOperations::ShipOperations() {
   setupSound();
 }
 
-bool ShipOperations::readCurrentShipState(unsigned int pinset) {
+bool ShipOperations::readCurrentShipState(byte pinset) {
   return (bitRead(EN1701A::suiCurrentShipState, pinset));
+  //return EN1701A::suiCurrentShipState & ( 0x1 << pinset );
 }
 
-bool ShipOperations::readOldShipState(unsigned int pinset) {
+bool ShipOperations::readOldShipState(byte pinset) {
   return (bitRead(EN1701A::suiPreviousShipState, pinset));
+  //return EN1701A::suiPreviousShipState & ( 0x1 << pinset );
 }
 
 void ShipOperations::clearAll(){
   EN1701A::suiCurrentShipState = 0;
   EN1701A::suiPreviousShipState = 0;
 
-  updateSectionDataRegister();
+  updateSection_DataRegister();
   digitalWrite(PIN_PHASER, LOW);
   digitalWrite(PIN_TORPEDO, LOW);
 }
 
-void ShipOperations::updateSectionDataRegister()
+void ShipOperations::updateSection_DataRegister()
 {
    digitalWrite(PIN_SR_LATCH, LOW);
    shiftOut(PIN_SR_SECTION_DATA, PIN_SR_CLOCK, LSBFIRST, (EN1701A::suiCurrentShipState & 0xFF));
+   shiftOut(PIN_SR_SECTION_DATA, PIN_SR_CLOCK, LSBFIRST, (EN1701A::suiCurrentShipState & 0xFF0000) >> 16);
    digitalWrite(PIN_SR_LATCH, HIGH);
 }
 
@@ -34,26 +37,22 @@ void ShipOperations::ApplyShipLogic() {
   if (readCurrentShipState(POWER_CHANGE)) {
     if (readCurrentShipState(PRIMARY_SYSTEMS)) { //shutdown
       EN1701A::svWriteShipState(false, PRIMARY_SYSTEMS);
-      //playFile(scAudioEffects[AUDIO_INDEX_POWER_DOWN]);
       EN1701A::sbAudioIndex = AUDIO_INDEX_POWER_DOWN;
       clearAll();
     }
     else { //startup
       EN1701A::svWriteShipState(true, PRIMARY_SYSTEMS);
       EN1701A::suiCurrentShipState |= 0xFF & rand() % 254 + 1;
-      //playFile(scAudioEffects[AUDIO_INDEX_POWER_UP]);
       EN1701A::sbAudioIndex = AUDIO_INDEX_POWER_UP;
-      updateSectionDataRegister();
-      //TODO: write out to the appropriate lighting ports
-            //analogWrite(6,240);
+      updateSection_DataRegister();
     }
     playFile();
     EN1701A::svWriteShipState(false, POWER_CHANGE);
     return;
   }
 
-  if (readCurrentShipState(PRIMARY_SYSTEMS)){
-    updateSectionDataRegister();
+  if (readCurrentShipState(PRIMARY_SYSTEMS) && !readCurrentShipState(SR_PHASER)){
+    updateSection_DataRegister();
   }
 
   if (EN1701A::sbAudioIndex == AUDIO_INDEX_CANCEL) {
@@ -79,35 +78,23 @@ void ShipOperations::ApplyShipLogic() {
     return;
   }
 
-  if (readCurrentShipState(PHASER)){
+  if (readCurrentShipState(SR_PHASER)){
     if ( strcmp (pCurrentFilePlaying, scAudioEffects[AUDIO_INDEX_PHASER]) != 0) {
       EN1701A::sbAudioIndex = AUDIO_INDEX_PHASER;
       playFile();
       //flash PHASER lights
       delay(500);
-      digitalWrite(PIN_PHASER, HIGH);
+      //digitalWrite(PIN_PHASER, HIGH);
+      updateSection_DataRegister();
     }
   }
-  else if (readOldShipState(PHASER)){
+  else if (readOldShipState(SR_PHASER)){
     stopPlaying();
-    digitalWrite(PIN_PHASER, LOW);
-    EN1701A::svWriteShipState(false, PHASER);
+    //digitalWrite(PIN_PHASER, LOW);
+    //EN1701A::svWriteShipState(false, PHASER);
+    EN1701A::svWriteShipState(false, SR_PHASER);
+    updateSection_DataRegister();
   }
-  /*if (readCurrentShipState(PHASER)){
-    if ( strcmp (pCurrentFilePlaying, scAudioEffects[AUDIO_INDEX_PHASER]) != 0) {
-      Serial.println(F("ShipOperations::START PHASER"));
-      playFile(scAudioEffects[AUDIO_INDEX_PHASER]);
-      //flash PHASER lights
-      delay(500);
-      digitalWrite(PIN_PHASER, HIGH);
-      EN1701A::svWriteShipState(true, PHASER);
-    }
-  } else if (readOldShipState(PHASER)){
-    Serial.println(F("ShipOperations::STOP PHASER"));
-    stopPlaying();
-    digitalWrite(PIN_PHASER, LOW);
-    EN1701A::svWriteShipState(false, PHASER);
-  }*/
 }
 
 void ShipOperations::setupSound() {
@@ -192,7 +179,7 @@ void ShipOperations::stopPlaying(){
 void ShipOperations::audioCheck() {
   if (readCurrentShipState(PRIMARY_SYSTEMS)){
     if (!wave.isplaying) {
-       Serial.println(F("NO WAVE PLAYING"));
+       //Serial.println(F("NO WAVE PLAYING"));
        EN1701A::sbAudioIndex = AUDIO_INDEX_POWER_UP;
        playFile();
     }
@@ -200,11 +187,6 @@ void ShipOperations::audioCheck() {
 }
 
 // Plays a full file from beginning to end with no pause.
-/*void ShipOperations::playcomplete(char *name) {
-  // call our helper to find and play this name
-  playfile(name);
-}*/
-//void ShipOperations::playFile(char *name) {
 void ShipOperations::playFile() {
 
   pCurrentFilePlaying = NULL;

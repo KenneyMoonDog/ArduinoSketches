@@ -70,12 +70,17 @@ bool IRStateReader::updateShipStateViaIR() {
             break;
           case 0xffe01f: //right
             Serial.println(F("IRStateReader::PHASER"));
-            if ( bitRead(EN1701A::suiCurrentShipState, PHASER) ) {
+            if ( bitRead(EN1701A::suiCurrentShipState, SR_PHASER) ) {
+            //if ( EN1701A::suiCurrentShipState & ( 0x1 << SR_PHASER )) {
               EN1701A::sbAudioIndex = AUDIO_INDEX_CANCEL;
-              EN1701A::svWriteShipState(false, PHASER);
+              EN1701A::svWriteShipState(false, SR_PHASER);
+              //EN1701A::svWriteShipState(false, PHASER);
+              //EN1701A::suiCurrentShipState &= 0xFFFEFFFF;
             }
             else {
-              EN1701A::svWriteShipState(true, PHASER);
+              //EN1701A::svWriteShipState(true, PHASER);
+              //EN1701A::suiCurrentShipState |= 0x010000;
+              EN1701A::svWriteShipState(true, SR_PHASER);
             }
             break;
           /*case 0xffe01f: //right

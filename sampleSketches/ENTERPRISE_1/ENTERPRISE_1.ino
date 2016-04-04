@@ -9,28 +9,34 @@ IRStateReader *pStateReader;
 ShipOperations *pShipOperations;
 
 byte          EN1701A::sbAudioIndex = 0;
-unsigned int  EN1701A::suiCurrentShipState = 0;
-unsigned int  EN1701A::suiPreviousShipState = 0;
+unsigned long  EN1701A::suiCurrentShipState = 0;
+unsigned long  EN1701A::suiPreviousShipState = 0;
 
-void EN1701A::svWriteShipState(bool set, unsigned int pinset )
+void EN1701A::svWriteShipState(bool set, byte pinset )
 {
-  suiPreviousShipState = suiCurrentShipState;
+  EN1701A::suiPreviousShipState = EN1701A::suiCurrentShipState;
+
+  Serial.println(F("PREVIOUS:"));
+  Serial.println(suiPreviousShipState);
+  
   if (set) {
     bitSet(suiCurrentShipState, pinset);
   }
   else {
     bitClear(suiCurrentShipState, pinset);
   }
+
+  Serial.println(F("CURRENT:"));
+  Serial.println(suiCurrentShipState);
 }
 
 void setup()
 {
-  Serial.begin(9600);
+  Serial.begin(9600); 
   
-  pinMode(PIN_SR_LATCH, OUTPUT);
-  pinMode(PIN_SR_SECTION_DATA, OUTPUT);  
   pinMode(PIN_SR_CLOCK, OUTPUT);
   pinMode(PIN_SR_LATCH, OUTPUT);
+  pinMode(PIN_SR_SECTION_DATA, OUTPUT); 
   pinMode(PIN_TORPEDO, OUTPUT);  
   pinMode(PIN_PHASER, OUTPUT);
   pinMode(PIN_PRIMARY_SYSTEMS, OUTPUT);
