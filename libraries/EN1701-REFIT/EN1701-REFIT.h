@@ -1,5 +1,5 @@
-#ifndef EN1701A_h
-#define EN1701A_h
+#ifndef EN1701-REFIT_h
+#define EN1701-REFIT_h
 
 #include "Arduino.h"
 
@@ -21,7 +21,7 @@ an illuminated control section of the ship*/
 #define IMPULSE_ENGINES 13
 #define POWER_CHANGE 14
 #define AUDIO_EFFECT 15
-#define SR_PHASER 16 
+#define SR_PHASER 16
 #define SR_TORPEDO 17                    //byte3
 //17
 //18
