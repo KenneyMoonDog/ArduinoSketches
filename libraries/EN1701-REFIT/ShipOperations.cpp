@@ -7,12 +7,10 @@ ShipOperations::ShipOperations() {
 
 bool ShipOperations::readCurrentShipState(byte pinset) {
   return (bitRead(EN1701A::suiCurrentShipState, pinset));
-  //return EN1701A::suiCurrentShipState & ( 0x1 << pinset );
 }
 
 bool ShipOperations::readOldShipState(byte pinset) {
   return (bitRead(EN1701A::suiPreviousShipState, pinset));
-  //return EN1701A::suiPreviousShipState & ( 0x1 << pinset );
 }
 
 void ShipOperations::clearAll(){
@@ -20,8 +18,6 @@ void ShipOperations::clearAll(){
   EN1701A::suiPreviousShipState = 0;
 
   updateSection_DataRegister();
-  digitalWrite(PIN_PHASER, LOW);
-  digitalWrite(PIN_TORPEDO, LOW);
 }
 
 void ShipOperations::updateSection_DataRegister()
@@ -37,12 +33,14 @@ void ShipOperations::ApplyShipLogic() {
   if (readCurrentShipState(POWER_CHANGE)) {
     if (readCurrentShipState(PRIMARY_SYSTEMS)) { //shutdown
       EN1701A::svWriteShipState(false, PRIMARY_SYSTEMS);
+      Serial.write(SERIAL_COMM_POWER_OFF);
       EN1701A::sbAudioIndex = AUDIO_INDEX_POWER_DOWN;
       clearAll();
     }
     else { //startup
       EN1701A::svWriteShipState(true, PRIMARY_SYSTEMS);
       EN1701A::suiCurrentShipState |= 0xFF & rand() % 254 + 1;
+      Serial.write(SERIAL_COMM_POWER_ON);
       EN1701A::sbAudioIndex = AUDIO_INDEX_POWER_UP;
       updateSection_DataRegister();
     }
@@ -71,10 +69,8 @@ void ShipOperations::ApplyShipLogic() {
 
     //flash torpedo lights
     delay(100);
-    //digitalWrite(PIN_TORPEDO, HIGH);
     updateSection_DataRegister();
     delay(100);
-    //digitalWrite(PIN_TORPEDO, LOW);
 
     EN1701A::svWriteShipState(false, SR_TORPEDO);
     updateSection_DataRegister();
@@ -87,14 +83,11 @@ void ShipOperations::ApplyShipLogic() {
       playFile();
       //flash PHASER lights
       delay(500);
-      //digitalWrite(PIN_PHASER, HIGH);
       updateSection_DataRegister();
     }
   }
   else if (readOldShipState(SR_PHASER)){
     stopPlaying();
-    //digitalWrite(PIN_PHASER, LOW);
-    //EN1701A::svWriteShipState(false, PHASER);
     EN1701A::svWriteShipState(false, SR_PHASER);
     updateSection_DataRegister();
   }

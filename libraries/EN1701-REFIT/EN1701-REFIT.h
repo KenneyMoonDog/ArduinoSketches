@@ -2,6 +2,7 @@
 #define EN1701-REFIT_h
 
 #include "Arduino.h"
+#include "SERIAL_COMM.h"
 
 /*This set maps bits in an unsigned int to
 an illuminated control section of the ship*/
@@ -23,21 +24,7 @@ an illuminated control section of the ship*/
 #define AUDIO_EFFECT 15
 #define SR_PHASER 16
 #define SR_TORPEDO 17                    //byte3
-//17
-//18
-//19
-#define SR_TEST_20 20
-#define SR_TEST_21 21
-#define SR_TEST_22 22
-//23
-//24                   //byte4
-//25
-//26
-//27
-//28
-//29
-//30
-//31
+
 
 #define AUDIO_INDEX_CANCEL 100
 #define AUDIO_INDEX_RED_ALERT 0
@@ -50,18 +37,12 @@ an illuminated control section of the ship*/
 #define AUDIO_INDEX_HIT 7
 
 /*This set maps PIN assignemnts to bit locations*/
-#define PIN_SR_SECTION_DATA 16
-#define PIN_SR_LATCH 15
 #define PIN_SR_CLOCK 14
+#define PIN_SR_LATCH 15
+#define PIN_SR_SECTION_DATA 16
 
 //#define PIN_SR_SECTION_ENABLE 6
 #define PIN_IR_RECEIVER 11
-
-#define PIN_TORPEDO 7
-#define PIN_PHASER 7
-#define PIN_PRIMARY_SYSTEMS 4
-#define PIN_RUNNING_LIGHTS 9
-#define PIN_IMPULSE_DECK 11
 
 #define POLLING_FREQUENCY 250
 
@@ -70,6 +51,7 @@ static char* scAudioEffects[]={"KLAX.WAV", "P1MSG.WAV", "TORP1.WAV", "SPZER1.WAV
 class EN1701A
 {
   public:
+    static byte sendByte;
     static byte sbAudioIndex;
     static unsigned long suiCurrentShipState;
     static unsigned long suiPreviousShipState;

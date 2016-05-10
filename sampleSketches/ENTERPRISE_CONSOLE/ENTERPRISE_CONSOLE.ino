@@ -37,11 +37,9 @@ void setup()
   pinMode(PIN_SR_CLOCK, OUTPUT);
   pinMode(PIN_SR_LATCH, OUTPUT);
   pinMode(PIN_SR_SECTION_DATA, OUTPUT); 
-  pinMode(PIN_TORPEDO, OUTPUT);  
-  pinMode(PIN_PHASER, OUTPUT);
-  pinMode(PIN_PRIMARY_SYSTEMS, OUTPUT);
-  pinMode(PIN_RUNNING_LIGHTS, OUTPUT);  
-  pinMode(PIN_IMPULSE_DECK, OUTPUT);
+
+  //pinMode(8, OUTPUT);
+  //digitalWrite(8, HIGH);
   
   pStateReader = new IRStateReader(PIN_IR_RECEIVER);
   pShipOperations = new ShipOperations();
