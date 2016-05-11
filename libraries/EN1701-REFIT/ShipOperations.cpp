@@ -66,14 +66,14 @@ void ShipOperations::ApplyShipLogic() {
   if (readCurrentShipState(SR_TORPEDO)){
     EN1701A::sbAudioIndex = AUDIO_INDEX_TORPEDO;
     playFile();
-
+    delay(100);
+    Serial.write(SERIAL_COMM_TORPEDO);
     //flash torpedo lights
-    delay(100);
-    updateSection_DataRegister();
-    delay(100);
+    /*delay(100);
+    updateSection_DataRegister();*/
 
     EN1701A::svWriteShipState(false, SR_TORPEDO);
-    updateSection_DataRegister();
+    //updateSection_DataRegister();*/
     return;
   }
 
@@ -81,15 +81,18 @@ void ShipOperations::ApplyShipLogic() {
     if ( strcmp (pCurrentFilePlaying, scAudioEffects[AUDIO_INDEX_PHASER]) != 0) {
       EN1701A::sbAudioIndex = AUDIO_INDEX_PHASER;
       playFile();
+      delay(300);
+      Serial.write(SERIAL_COMM_PHASER_ON);
       //flash PHASER lights
-      delay(500);
-      updateSection_DataRegister();
+      //delay(500);
+      //updateSection_DataRegister();
     }
   }
   else if (readOldShipState(SR_PHASER)){
     stopPlaying();
+    Serial.write(SERIAL_COMM_PHASER_OFF);
     EN1701A::svWriteShipState(false, SR_PHASER);
-    updateSection_DataRegister();
+    //updateSection_DataRegister();
   }
 }
 
@@ -193,7 +196,7 @@ void ShipOperations::playFile() {
   }
   // look in the root directory and open the file
   if (!f.open(root, scAudioEffects[EN1701A::sbAudioIndex])) {
-    putstring("Couldn't open file ");
+//    putstring("Couldn't open file ");
 //    Serial.print(scAudioEffects[EN1701A::sbAudioIndex]);
     return;
   }

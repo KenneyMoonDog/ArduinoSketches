@@ -3,6 +3,8 @@
 
 int incomingByte = 0;   // for incoming serial data
 unsigned long sectionData = 0;
+#define SR_PHASER 16
+#define SR_TORPEDO 17  
 
 #define POLLING_FREQUENCY 250
 
@@ -98,6 +100,24 @@ void updateSectionDataRegister()
    digitalWrite(PIN_SR_LATCH, HIGH);
 }
 
+void fireTorpedo() {
+  bitSet(sectionData, SR_TORPEDO);
+  updateSectionDataRegister();
+  delay(200);
+  bitClear(sectionData, SR_TORPEDO);
+  updateSectionDataRegister();  
+}
+
+void firePhaser(boolean bOn) {
+  if (bOn){
+    bitSet(sectionData, SR_PHASER);
+  }
+  else {
+    bitClear(sectionData, SR_PHASER);
+  }
+  updateSectionDataRegister();
+}
+
 void loop() {
 
    if (Serial.available() > 0) {
@@ -110,6 +130,15 @@ void loop() {
           break;
        case SERIAL_COMM_POWER_ON: //power on
           bPowerOn = true;
+          break;
+       case SERIAL_COMM_TORPEDO:
+          fireTorpedo();
+          break;
+       case SERIAL_COMM_PHASER_ON:
+          firePhaser(true);
+          break;
+       case SERIAL_COMM_PHASER_OFF:
+          firePhaser(false);
           break;
      }
    }
