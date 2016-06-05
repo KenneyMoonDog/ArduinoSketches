@@ -144,7 +144,7 @@ bool IRStateReader::updateShipStateViaIR() {
   return isChanged;
 }
 
-bool IRStateReader::executeTimedOperations(unsigned long currentMillis){ //called every 250ms
+/*bool IRStateReader::executeTimedOperations(unsigned long currentMillis){ //called every 250ms
 
     bool rc = false;
     static byte changeCounter=0;
@@ -159,4 +159,4 @@ bool IRStateReader::executeTimedOperations(unsigned long currentMillis){ //calle
     }
 
     return rc;
-}
+}*/

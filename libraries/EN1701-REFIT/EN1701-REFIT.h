@@ -14,16 +14,19 @@ an illuminated control section of the ship*/
 #define SECTION_5 5
 #define SECTION_6 6
 #define SECTION_7 7
-#define PRIMARY_SYSTEMS 8   //byte2
-#define RUNNING_LIGHTS 9
+#define SR_PHASER 8  //byte2
+#define SR_TORPEDO 9
+
+#define PRIMARY_SYSTEMS 10   //byte3
+#define RUNNING_LIGHTS 11
 //#define PHASER 10
 
 #define WARP_ENGINES 12
 #define IMPULSE_ENGINES 13
 #define POWER_CHANGE 14
 #define AUDIO_EFFECT 15
-#define SR_PHASER 16
-#define SR_TORPEDO 17                    //byte3
+//#define SR_PHASER 16
+//#define SR_TORPEDO 17                    //byte3
 
 
 #define AUDIO_INDEX_CANCEL 100
@@ -37,9 +40,9 @@ an illuminated control section of the ship*/
 #define AUDIO_INDEX_HIT 7
 
 /*This set maps PIN assignemnts to bit locations*/
-#define PIN_SR_CLOCK 14
-#define PIN_SR_LATCH 15
-#define PIN_SR_SECTION_DATA 16
+//define PIN_SR_CLOCK 14
+//#define PIN_SR_LATCH 15
+//#define PIN_SR_SECTION_DATA 16
 
 //#define PIN_SR_SECTION_ENABLE 6
 #define PIN_IR_RECEIVER 11

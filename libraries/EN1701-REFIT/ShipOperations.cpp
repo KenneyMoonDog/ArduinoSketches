@@ -17,16 +17,16 @@ void ShipOperations::clearAll(){
   EN1701A::suiCurrentShipState = 0;
   EN1701A::suiPreviousShipState = 0;
 
-  updateSection_DataRegister();
+  //updateSection_DataRegister();
 }
 
-void ShipOperations::updateSection_DataRegister()
+/*void ShipOperations::updateSection_DataRegister()
 {
    digitalWrite(PIN_SR_LATCH, LOW);
    shiftOut(PIN_SR_SECTION_DATA, PIN_SR_CLOCK, LSBFIRST, (EN1701A::suiCurrentShipState & 0xFF));
    shiftOut(PIN_SR_SECTION_DATA, PIN_SR_CLOCK, LSBFIRST, (EN1701A::suiCurrentShipState & 0xFF0000) >> 16);
    digitalWrite(PIN_SR_LATCH, HIGH);
-}
+}*/
 
 void ShipOperations::ApplyShipLogic() {
 
@@ -42,16 +42,16 @@ void ShipOperations::ApplyShipLogic() {
       EN1701A::suiCurrentShipState |= 0xFF & rand() % 254 + 1;
       Serial.write(SERIAL_COMM_POWER_ON);
       EN1701A::sbAudioIndex = AUDIO_INDEX_POWER_UP;
-      updateSection_DataRegister();
+      //updateSection_DataRegister();
     }
     playFile();
     EN1701A::svWriteShipState(false, POWER_CHANGE);
     return;
   }
 
-  if (readCurrentShipState(PRIMARY_SYSTEMS) && !readCurrentShipState(SR_PHASER)){
+  /*if (readCurrentShipState(PRIMARY_SYSTEMS) && !readCurrentShipState(SR_PHASER)){
     updateSection_DataRegister();
-  }
+  }*/
 
   if (EN1701A::sbAudioIndex == AUDIO_INDEX_CANCEL) {
     //Serial.println("ShipOperations::Play Audio CANCEL");

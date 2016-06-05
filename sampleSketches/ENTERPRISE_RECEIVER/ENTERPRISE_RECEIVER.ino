@@ -1,13 +1,15 @@
+#include <EN1701-REFIT.h>
+#include <SERIAL_COMM.h>
 
+#include <EN1701-REFIT.h>
 #include <SERIAL_COMM.h>
 
 int incomingByte = 0;   // for incoming serial data
 unsigned long sectionData = 0;
-#define SR_PHASER 16
-#define SR_TORPEDO 17  
 
 #define POLLING_FREQUENCY 250
 
+//pin assignments
 #define PIN_NAVIGATION_BEACON 4
 #define PIN_SR_CLOCK 8
 #define PIN_SR_LATCH 12
@@ -39,7 +41,6 @@ SIGNAL(TIMER0_COMPA_vect)
     updateBeacon(bPowerOn);
     randomSectionUpdate(bPowerOn);
     updateSectionDataRegister();
-
   } //end if timer
 } 
 
@@ -94,7 +95,7 @@ void updateSectionDataRegister()
 {
    digitalWrite(PIN_SR_LATCH, LOW);
    shiftOut(PIN_SR_SECTION_DATA, PIN_SR_CLOCK, LSBFIRST, (sectionData & 0xFF));
-   shiftOut(PIN_SR_SECTION_DATA, PIN_SR_CLOCK, LSBFIRST, (sectionData & 0xFF0000) >> 16);
+   shiftOut(PIN_SR_SECTION_DATA, PIN_SR_CLOCK, LSBFIRST, (sectionData & 0xFF00) >> 8);
    //shiftOut(PIN_SR_SECTION_DATA, PIN_SR_CLOCK, LSBFIRST, sectionData);
    //shiftOut(PIN_SR_SECTION_DATA, PIN_SR_CLOCK, LSBFIRST, sectionData);
    digitalWrite(PIN_SR_LATCH, HIGH);

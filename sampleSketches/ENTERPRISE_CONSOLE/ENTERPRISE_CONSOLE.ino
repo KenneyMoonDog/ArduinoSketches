@@ -34,9 +34,9 @@ void setup()
 {
   Serial.begin(9600); 
   
-  pinMode(PIN_SR_CLOCK, OUTPUT);
-  pinMode(PIN_SR_LATCH, OUTPUT);
-  pinMode(PIN_SR_SECTION_DATA, OUTPUT); 
+//  pinMode(PIN_SR_CLOCK, OUTPUT);
+//  pinMode(PIN_SR_LATCH, OUTPUT);
+//  pinMode(PIN_SR_SECTION_DATA, OUTPUT); 
 
   //pinMode(8, OUTPUT);
   //digitalWrite(8, HIGH);
@@ -61,9 +61,9 @@ SIGNAL(TIMER0_COMPA_vect)
     previousMillis = currentMillis;
 
     pShipOperations->audioCheck();
-    if (pStateReader->executeTimedOperations(currentMillis)){
+  /*  if (pStateReader->executeTimedOperations(currentMillis)){
       pShipOperations->ApplyShipLogic();
-    }
+    }*/  
   }
 } 
 
