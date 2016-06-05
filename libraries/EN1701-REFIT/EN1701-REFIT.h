@@ -14,17 +14,23 @@ an illuminated control section of the ship*/
 #define SECTION_5 5
 #define SECTION_6 6
 #define SECTION_7 7
-#define SR_PHASER 8  //byte2
-#define SR_TORPEDO 9
+//#define SECTION_8 8
+//#define SECTION_9 9
+//#define SECTION_10 10
+//#define SECTION_11 11
+//#define SECTION_12 12
+//#define SECTION_13 13
+#define SR_PHASER 14  //byte2
+#define SR_TORPEDO 15
 
-#define PRIMARY_SYSTEMS 10   //byte3
-#define RUNNING_LIGHTS 11
+#define PRIMARY_SYSTEMS 16   //byte3
+#define RUNNING_LIGHTS 17
 //#define PHASER 10
 
-#define WARP_ENGINES 12
-#define IMPULSE_ENGINES 13
-#define POWER_CHANGE 14
-#define AUDIO_EFFECT 15
+#define WARP_ENGINES 18
+#define IMPULSE_ENGINES 19
+#define POWER_CHANGE 20
+#define AUDIO_EFFECT 21
 //#define SR_PHASER 16
 //#define SR_TORPEDO 17                    //byte3
 
@@ -47,7 +53,7 @@ an illuminated control section of the ship*/
 //#define PIN_SR_SECTION_ENABLE 6
 #define PIN_IR_RECEIVER 11
 
-#define POLLING_FREQUENCY 250
+//#define POLLING_FREQUENCY 250
 
 static char* scAudioEffects[]={"KLAX.WAV", "P1MSG.WAV", "TORP1.WAV", "SPZER1.WAV", "BPD1.WAV", "BPUP1.WAV", "DSTRT.WAV", "HULHIT.WAV"};
 

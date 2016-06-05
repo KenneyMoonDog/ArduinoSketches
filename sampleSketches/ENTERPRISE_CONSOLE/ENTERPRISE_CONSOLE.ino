@@ -2,6 +2,7 @@
 #include <IRStateReader.h>
 #include <ShipOperations.h>
 
+#define CONSOLE_POLLING_FREQUENCY 250 //ms
 volatile unsigned long previousMillis = 0;
 
 //----------
@@ -56,7 +57,7 @@ SIGNAL(TIMER0_COMPA_vect)
 {
   unsigned long currentMillis = millis();
 
-  if (currentMillis - previousMillis >= POLLING_FREQUENCY) {  //execute any timed operations every 250ms
+  if (currentMillis - previousMillis >= CONSOLE_POLLING_FREQUENCY) {  //execute any timed operations every 250ms
     // save the last time you did a repeatable item clear
     previousMillis = currentMillis;
 
