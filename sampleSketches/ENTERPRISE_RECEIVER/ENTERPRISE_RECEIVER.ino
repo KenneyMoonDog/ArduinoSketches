@@ -7,12 +7,17 @@
 int incomingByte = 0;   // for incoming serial data
 unsigned long sectionData = 0;
 
+
 //pin assignments
 #define PIN_NAVIGATION_BEACON 4
 #define PIN_NAVIGATION_FLASHER 8
 #define PIN_SR_CLOCK 11
 #define PIN_SR_LATCH 12
 #define PIN_SR_SECTION_DATA 13
+#define PIN_SR_ENABLE 14
+#define PIN_DEFLECTOR 6
+#define PIN_WARP_ENGINE 5
+#define PIN_IMPULSE_ENGINE 4
 
 //timer constants
 #define RECEIVER_INTERRUPT_FREQUENCY 100 //ms
@@ -26,12 +31,21 @@ boolean bNavBeaconOn = false;
 boolean bNavFlasherOn = false;
 
 void setup() {
+  pinMode(PIN_SR_ENABLE, OUTPUT);
+  digitalWrite(PIN_SR_ENABLE,HIGH);
+    
   Serial.begin(9600);
   pinMode(PIN_NAVIGATION_BEACON, OUTPUT); 
   pinMode(PIN_NAVIGATION_FLASHER, OUTPUT);   
   pinMode(PIN_SR_CLOCK, OUTPUT);  
   pinMode(PIN_SR_LATCH, OUTPUT);
   pinMode(PIN_SR_SECTION_DATA, OUTPUT);
+  pinMode(PIN_DEFLECTOR, OUTPUT);
+  pinMode(PIN_WARP_ENGINE, OUTPUT);
+  pinMode(PIN_IMPULSE_ENGINE, OUTPUT);
+  
+  updateSectionDataRegister();
+  digitalWrite(PIN_SR_ENABLE,LOW);
  
   OCR0A = 0xAF;
   TIMSK0 |= _BV(OCIE0A);
@@ -45,8 +59,8 @@ SIGNAL(TIMER0_COMPA_vect)
     // save the last time you did a repeatable item clear
     previousMillis = currentMillis;
 
-    updateNavBeacon(bPowerOn);
-    updateNavFlasher(bPowerOn);
+    updateNavBeacon(bNavBeaconOn);
+    updateNavFlasher(bNavFlasherOn);
     randomSectionUpdate(bPowerOn);
     updateSectionDataRegister();
   } //end if timer
@@ -55,23 +69,24 @@ SIGNAL(TIMER0_COMPA_vect)
 void updateNavBeacon(boolean bPowerOn){
 
   static byte changeBeaconCounter=0;
+  static boolean bBeaconState=false;
 
   if (bPowerOn) {
      if (changeBeaconCounter++ > beaconPeriod){
         changeBeaconCounter=0;
-        if ( bNavBeaconOn ){
-          bNavBeaconOn = false;
+        if ( bBeaconState ){
+          bBeaconState = false;
           digitalWrite(PIN_NAVIGATION_BEACON, LOW);
         }
         else {
-          bNavBeaconOn=true;
+          bBeaconState=true;
           digitalWrite(PIN_NAVIGATION_BEACON, HIGH);
         }
      }
   }
   else {  //power is off
-    if ( bNavBeaconOn ){
-      bNavBeaconOn = false;
+    if ( bBeaconState ){
+      bBeaconState = false;
       digitalWrite(PIN_NAVIGATION_BEACON, LOW);     
     }
   }
@@ -81,23 +96,24 @@ void updateNavFlasher(boolean bPowerOn){
 
   static byte flashPeriodCounter=0;
   static byte flashDurationCounter=0;
+  static boolean bFlasherState=false;
 
   if (bPowerOn) {
      if (flashPeriodCounter++ > flashPeriod){
         flashPeriodCounter=0;
         digitalWrite(PIN_NAVIGATION_FLASHER, HIGH);
-        bNavFlasherOn = true;
+        bFlasherState = true;
      }
 
-     if ( bNavFlasherOn && (flashDurationCounter++ > flashDuration)){ 
+     if ( bFlasherState && (flashDurationCounter++ > flashDuration)){ 
         flashDurationCounter=0;
         digitalWrite(PIN_NAVIGATION_FLASHER, LOW);
-        bNavFlasherOn = false;  
+        bFlasherState = false;  
      }
   }
   else {  //power is off
-    if ( bNavFlasherOn ){
-      bNavFlasherOn = false;
+    if ( bFlasherState ){
+      bFlasherState = false;
       digitalWrite(PIN_NAVIGATION_FLASHER, LOW);     
     }
   }
@@ -150,6 +166,45 @@ void firePhaser(boolean bOn) {
   updateSectionDataRegister();
 }
 
+void deflectorOn(boolean bOn){
+   if (bOn) {
+      for (int brightness=0; brightness<=255; brightness+=5){
+         analogWrite(PIN_DEFLECTOR, brightness);
+         delay(50);
+      }
+   }
+   else {
+      for (int brightness=255; brightness>=0; brightness-=5){
+         analogWrite(PIN_DEFLECTOR, brightness);
+         delay(50);
+      }
+   }
+}
+
+void runShutdownSequence(){
+  deflectorOn( false );
+  delay(2000);
+  bNavBeaconOn=false;
+  bNavFlasherOn=false;
+}
+
+void runStartUpSequence() {
+  //enable 'always on' lights
+  //enable random sections
+  //start nav lights
+  bNavBeaconOn=true;
+  bNavFlasherOn=true;
+  //start dome
+  //start impulse engines
+  //start warp engines 
+  //fade in deflector
+  delay(2000); 
+  deflectorOn( true );
+  //start running lights
+  //start random section updates
+  //increase warp engines
+}
+
 void loop() {
 
    if (Serial.available() > 0) {
@@ -159,9 +214,11 @@ void loop() {
      switch (incomingByte) {
        case SERIAL_COMM_POWER_OFF: 
           bPowerOn = false;
+          runShutdownSequence();
           break;
        case SERIAL_COMM_POWER_ON: //power on
           bPowerOn = true;
+          runStartUpSequence();
           break;
        case SERIAL_COMM_TORPEDO:
           fireTorpedo();
