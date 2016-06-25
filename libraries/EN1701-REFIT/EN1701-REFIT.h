@@ -6,34 +6,29 @@
 
 /*This set maps bits in an unsigned int to
 an illuminated control section of the ship*/
-#define SECTION_0 0      //byte1
-#define SECTION_1 1
-#define SECTION_2 2
-#define SECTION_3 3
-#define SECTION_4 4
-#define SECTION_5 5
-#define SECTION_6 6
-#define SECTION_7 7
-//#define SECTION_8 8
-//#define SECTION_9 9
-//#define SECTION_10 10
-//#define SECTION_11 11
-//#define SECTION_12 12
-//#define SECTION_13 13
-#define SR_PHASER 14  //byte2
-#define SR_TORPEDO 15
+#define SR_RUNNING_LIGHTS_ 0  //byte 1
+#define SR_RUNNING_LIGHTS_ 1
+#define SR_RUNNING_LIGHTS_ 2
+#define SR_RUNNING_LIGHTS_ 3
+#define SR_RUNNING_LIGHTS_ 4
+#define SR_MAIN_POWER 5
+#define SR_PHASER 6
+#define SR_TORPEDO 7
+#define SR_SECTION_0 8      //byte2
+#define SR_SECTION_1 9
+#define SR_SECTION_2 10
+#define SR_SECTION_3 11
+#define SR_SECTION_4 12
+#define SR_SECTION_5 13
+#define SR_SECTION_6 14
+#define SR_SECTION_7 15
 
-#define PRIMARY_SYSTEMS 16   //byte3
+#define PRIMARY_SYSTEMS 16
 #define RUNNING_LIGHTS 17
-//#define PHASER 10
-
 #define WARP_ENGINES 18
 #define IMPULSE_ENGINES 19
 #define POWER_CHANGE 20
 #define AUDIO_EFFECT 21
-//#define SR_PHASER 16
-//#define SR_TORPEDO 17                    //byte3
-
 
 #define AUDIO_INDEX_CANCEL 100
 #define AUDIO_INDEX_RED_ALERT 0
@@ -45,12 +40,6 @@ an illuminated control section of the ship*/
 #define AUDIO_INDEX_DESTRUCT 6
 #define AUDIO_INDEX_HIT 7
 
-/*This set maps PIN assignemnts to bit locations*/
-//define PIN_SR_CLOCK 14
-//#define PIN_SR_LATCH 15
-//#define PIN_SR_SECTION_DATA 16
-
-//#define PIN_SR_SECTION_ENABLE 6
 #define PIN_IR_RECEIVER 11
 
 //#define POLLING_FREQUENCY 250

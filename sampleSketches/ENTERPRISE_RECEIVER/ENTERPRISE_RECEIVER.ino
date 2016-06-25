@@ -1,12 +1,8 @@
 #include <EN1701-REFIT.h>
 #include <SERIAL_COMM.h>
 
-//#include <EN1701-REFIT.h>
-//#include <SERIAL_COMM.h>
-
 int incomingByte = 0;   // for incoming serial data
 unsigned long sectionData = 0;
-
 
 //pin assignments
 #define PIN_NAVIGATION_BEACON 4
@@ -18,10 +14,12 @@ unsigned long sectionData = 0;
 #define PIN_DEFLECTOR 6
 #define PIN_WARP_ENGINE 5
 #define PIN_IMPULSE_ENGINE 4
+#define PIN_DILITHIUM_CRYSTAL 10
+#define PIN_PHOTON_TORPEDO 9 //still on shift register
 
 //timer constants
 #define RECEIVER_INTERRUPT_FREQUENCY 100 //ms
-#define flashPeriod 30
+#define flashPeriod 20
 #define flashDuration 1
 #define beaconPeriod 10
 
@@ -43,6 +41,8 @@ void setup() {
   pinMode(PIN_DEFLECTOR, OUTPUT);
   pinMode(PIN_WARP_ENGINE, OUTPUT);
   pinMode(PIN_IMPULSE_ENGINE, OUTPUT);
+  pinMode(PIN_DILITHIUM_CRYSTAL, OUTPUT); 
+  pinMode(PIN_PHOTON_TORPEDO, OUTPUT);
   
   updateSectionDataRegister();
   digitalWrite(PIN_SR_ENABLE,LOW);
@@ -62,7 +62,6 @@ SIGNAL(TIMER0_COMPA_vect)
     updateNavBeacon(bNavBeaconOn);
     updateNavFlasher(bNavFlasherOn);
     randomSectionUpdate(bPowerOn);
-    updateSectionDataRegister();
   } //end if timer
 } 
 
@@ -120,24 +119,18 @@ void updateNavFlasher(boolean bPowerOn){
 }
 
 void randomSectionUpdate(boolean bPowerOn) { //called every POLLING_FREQUENCY ms
-    static byte changeCounter=0; //increments every INTERRUPT_FREQ duration
-    static byte changeLimit=50; //INTERRUPT_FREQ*changeLimit = ms duration
+   static byte changeCounter=0; //increments every INTERRUPT_FREQ duration
+   static byte changeLimit=50; //INTERRUPT_FREQ*changeLimit = ms duration
 
-    if (bPowerOn) {
+   if (bPowerOn) {
     //after some random elasped time, toggle one of the sections on or off at random
       if (changeCounter++ > changeLimit){
         changeCounter=0;
         changeLimit = random(20,80);
-        sectionData ^= (0x0001 << random(0,8));
-      //updateSectionDataRegister();
+        sectionData ^= (0x0001 << random(0,8)) << 8;
       }
-    }
-    else {
-      if (sectionData != 0 ){
-         sectionData = 0;
-         updateSectionDataRegister();
-      }
-    }
+      updateSectionDataRegister();
+   }
 }
 
 void updateSectionDataRegister()
@@ -181,17 +174,43 @@ void deflectorOn(boolean bOn){
    }
 }
 
+void powerSaucerSectionUp(){
+  bitSet(sectionData, SR_MAIN_POWER);
+  updateSectionDataRegister();
+
+  for (int section=8; section<16; section++){
+    bitSet(sectionData, section);
+    updateSectionDataRegister();
+    delay(750);
+  }
+}
+
+void powerSaucerSectionDown(){
+
+  for (int section=8; section<16; section++){
+    bitClear(sectionData, section);
+    updateSectionDataRegister();
+    delay(750);
+  }
+  
+  bitClear(sectionData, SR_MAIN_POWER);
+  updateSectionDataRegister();
+}
+
 void runShutdownSequence(){
-  deflectorOn( false );
-  delay(2000);
   bNavBeaconOn=false;
   bNavFlasherOn=false;
+  bPowerOn = false;
+  powerSaucerSectionDown();
+  deflectorOn( false );
 }
 
 void runStartUpSequence() {
-  //enable 'always on' lights
-  //enable random sections
+
+  powerSaucerSectionUp();
+
   //start nav lights
+  bPowerOn = true;
   bNavBeaconOn=true;
   bNavFlasherOn=true;
   //start dome
@@ -213,11 +232,9 @@ void loop() {
 
      switch (incomingByte) {
        case SERIAL_COMM_POWER_OFF: 
-          bPowerOn = false;
           runShutdownSequence();
           break;
        case SERIAL_COMM_POWER_ON: //power on
-          bPowerOn = true;
           runStartUpSequence();
           break;
        case SERIAL_COMM_TORPEDO:
