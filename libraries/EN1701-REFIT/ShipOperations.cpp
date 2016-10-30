@@ -66,7 +66,7 @@ void ShipOperations::ApplyShipLogic() {
   if (readCurrentShipState(SR_TORPEDO)){
     EN1701A::sbAudioIndex = AUDIO_INDEX_TORPEDO;
     playFile();
-    delay(100);
+    //delay(100);
     Serial.write(SERIAL_COMM_TORPEDO);
     //flash torpedo lights
     /*delay(100);
@@ -81,7 +81,7 @@ void ShipOperations::ApplyShipLogic() {
     if ( strcmp (pCurrentFilePlaying, scAudioEffects[AUDIO_INDEX_PHASER]) != 0) {
       EN1701A::sbAudioIndex = AUDIO_INDEX_PHASER;
       playFile();
-      delay(300);
+      //delay(300);
       Serial.write(SERIAL_COMM_PHASER_ON);
       //flash PHASER lights
       //delay(500);

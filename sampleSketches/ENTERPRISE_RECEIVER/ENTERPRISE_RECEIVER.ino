@@ -19,9 +19,10 @@ unsigned long sectionData = 0;
 
 //timer constants
 #define RECEIVER_INTERRUPT_FREQUENCY 100 //ms
-#define flashPeriod 20
-#define flashDuration 1
-#define beaconPeriod 10
+#define flashTimeOn 10
+#define flashTimeOff 11
+#define beaconTimeOn 25
+#define beaconTimeOff 35
 
 volatile unsigned long previousMillis = 0;
 boolean bPowerOn = false;
@@ -60,38 +61,58 @@ SIGNAL(TIMER0_COMPA_vect)
     previousMillis = currentMillis;
 
     updateNavBeacon(bNavBeaconOn);
-    updateNavFlasher(bNavFlasherOn);
+    //updateNavFlasher(bNavFlasherOn);
     randomSectionUpdate(bPowerOn);
   } //end if timer
 } 
 
 void updateNavBeacon(boolean bPowerOn){
 
-  static byte changeBeaconCounter=0;
-  static boolean bBeaconState=false;
-
+  static byte bCounter=0;
+  static boolean bBeaconOn=false;
+  static boolean bFlasherOn=false;
+  
   if (bPowerOn) {
-     if (changeBeaconCounter++ > beaconPeriod){
-        changeBeaconCounter=0;
-        if ( bBeaconState ){
-          bBeaconState = false;
-          digitalWrite(PIN_NAVIGATION_BEACON, LOW);
-        }
-        else {
-          bBeaconState=true;
+     if (bCounter >= beaconTimeOn && bCounter < beaconTimeOff ){
+        if ( !bBeaconOn ) {
           digitalWrite(PIN_NAVIGATION_BEACON, HIGH);
+          bBeaconOn = true;
         }
      }
+
+     if (bBeaconOn && bCounter >= beaconTimeOff ){
+        digitalWrite(PIN_NAVIGATION_BEACON, LOW);
+        bCounter = -1;
+        bBeaconOn = false;
+     } 
+
+     if (bCounter >= flashTimeOn && bCounter < flashTimeOff ){
+        if ( !bFlasherOn ){
+          digitalWrite(PIN_NAVIGATION_FLASHER, HIGH);
+          bFlasherOn = true;
+        }
+     }
+
+     if ( bFlasherOn && bCounter >= flashTimeOff ) {
+        digitalWrite(PIN_NAVIGATION_FLASHER, LOW);
+        bFlasherOn = false;  
+     }  
+
+     bCounter++;
   }
   else {  //power is off
-    if ( bBeaconState ){
-      bBeaconState = false;
-      digitalWrite(PIN_NAVIGATION_BEACON, LOW);     
+    if ( bBeaconOn ){
+      bBeaconOn = false;
+      digitalWrite(PIN_NAVIGATION_BEACON, LOW);
+    }
+    if ( bFlasherOn ){
+      bFlasherOn = false;
+      digitalWrite(PIN_NAVIGATION_FLASHER, LOW);
     }
   }
 }
 
-void updateNavFlasher(boolean bPowerOn){
+/*void updateNavFlasher(boolean bPowerOn){
 
   static byte flashPeriodCounter=0;
   static byte flashDurationCounter=0;
@@ -116,7 +137,7 @@ void updateNavFlasher(boolean bPowerOn){
       digitalWrite(PIN_NAVIGATION_FLASHER, LOW);     
     }
   }
-}
+}*/
 
 void randomSectionUpdate(boolean bPowerOn) { //called every POLLING_FREQUENCY ms
    static byte changeCounter=0; //increments every INTERRUPT_FREQ duration
@@ -141,16 +162,33 @@ void updateSectionDataRegister()
    digitalWrite(PIN_SR_LATCH, HIGH);
 }
 
-void fireTorpedo() {
+/*void fireTorpedo() {
   bitSet(sectionData, SR_TORPEDO);
   updateSectionDataRegister();
   delay(200);
   bitClear(sectionData, SR_TORPEDO);
   updateSectionDataRegister();  
+}*/
+
+void fireTorpedo() {
+   //for (int brightness=0; brightness<=10; brightness+=1){
+   //   analogWrite(PIN_PHOTON_TORPEDO, brightness);
+   //   delay(5);
+   //}  
+   analogWrite(PIN_PHOTON_TORPEDO, 10);
+   delay(100);
+   digitalWrite(PIN_PHOTON_TORPEDO, HIGH);
+   delay(250);
+   
+   for (int brightness=10; brightness>=0; brightness-=1){
+      analogWrite(PIN_PHOTON_TORPEDO, brightness);
+      delay(100);
+   }  
 }
 
 void firePhaser(boolean bOn) {
   if (bOn){
+    delay(300);
     bitSet(sectionData, SR_PHASER);
   }
   else {
