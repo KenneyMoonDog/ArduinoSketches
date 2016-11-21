@@ -97,7 +97,6 @@ void updateNavBeacon(boolean bPowerOn){
         digitalWrite(PIN_NAVIGATION_FLASHER, LOW);
         bFlasherOn = false;  
      }  
-
      bCounter++;
   }
   else {  //power is off
@@ -148,7 +147,7 @@ void randomSectionUpdate(boolean bPowerOn) { //called every POLLING_FREQUENCY ms
       if (changeCounter++ > changeLimit){
         changeCounter=0;
         changeLimit = random(20,80);
-        sectionData ^= (0x0001 << random(0,8)) << 8;
+        sectionData ^= (0x0001 << random(0,7));
       }
       updateSectionDataRegister();
    }
@@ -216,7 +215,7 @@ void powerSaucerSectionUp(){
   bitSet(sectionData, SR_MAIN_POWER);
   updateSectionDataRegister();
 
-  for (int section=8; section<16; section++){
+  for (int section=0; section<8; section++){
     bitSet(sectionData, section);
     updateSectionDataRegister();
     delay(750);
@@ -225,7 +224,7 @@ void powerSaucerSectionUp(){
 
 void powerSaucerSectionDown(){
 
-  for (int section=8; section<16; section++){
+  for (int section=0; section<8; section++){
     bitClear(sectionData, section);
     updateSectionDataRegister();
     delay(750);

@@ -30,7 +30,7 @@ bool IRStateReader::updateShipStateViaIR() {
      //Serial.println(mDecoder.value);
 
      if ( mDecoder.value == 0xffffffff ) {
-        switch (lastDecodedValue) {
+        /*switch (lastDecodedValue) {
           case 0xffd22d: //no repeat on POWER
           case 0xff22dd: //or torpedos
           case 0xff40bf: //or red alert
@@ -40,7 +40,8 @@ bool IRStateReader::updateShipStateViaIR() {
           case 0xffe01f: //or phaser
             lastDecodedValue = 0;
             break;
-        }
+        }*/
+        lastDecodedValue = 0; //remove if the above switch is put back in
         mDecoder.value = lastDecodedValue;
         isRepeat = true;
      }
@@ -129,6 +130,47 @@ bool IRStateReader::updateShipStateViaIR() {
             EN1701A::svWriteShipState(true, AUDIO_EFFECT);
             //TEST:SERIAL COMMUNICATION
             //Serial.write(50);  //turn off
+            break;
+
+         case 0xff38c7:  //#1
+            EN1701A::sbAudioIndex = AUDIO_INDEX_BTS1;
+            EN1701A::svWriteShipState(true, AUDIO_EFFECT);
+            break;
+         case 0xff18e7:  //#2
+            EN1701A::sbAudioIndex = AUDIO_INDEX_BTS2;
+            EN1701A::svWriteShipState(true, AUDIO_EFFECT);
+            break;
+         case 0xffa857:  //#3
+            EN1701A::sbAudioIndex = AUDIO_INDEX_BTS3;
+            EN1701A::svWriteShipState(true, AUDIO_EFFECT);
+            break;
+         case 0xff48b7:  //#4
+            EN1701A::sbAudioIndex = AUDIO_INDEX_BT4;
+            EN1701A::svWriteShipState(true, AUDIO_EFFECT);
+         break;
+         case 0xffc837:  //#5
+            EN1701A::sbAudioIndex = AUDIO_INDEX_BT5;
+            EN1701A::svWriteShipState(true, AUDIO_EFFECT);
+            break;
+         case 0xff28d7:  //#6
+            EN1701A::sbAudioIndex = AUDIO_INDEX_BT6;
+            EN1701A::svWriteShipState(true, AUDIO_EFFECT);
+            break;
+         case 0xffd827:  //#7
+            EN1701A::sbAudioIndex = AUDIO_INDEX_BTS1;
+            EN1701A::svWriteShipState(true, AUDIO_EFFECT);
+            break;
+         case 0xff7a85:  //#8
+            EN1701A::sbAudioIndex = AUDIO_INDEX_BTS2;
+            EN1701A::svWriteShipState(true, AUDIO_EFFECT);
+            break;
+         case 0xffaa55:  //#9
+            EN1701A::sbAudioIndex = AUDIO_INDEX_BTS3;
+            EN1701A::svWriteShipState(true, AUDIO_EFFECT);
+            break;
+         case 0xff906f:  //#0
+            EN1701A::sbAudioIndex = AUDIO_INDEX_BT4;
+            EN1701A::svWriteShipState(true, AUDIO_EFFECT);
             break;
 
          default:

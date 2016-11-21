@@ -39,12 +39,18 @@ an illuminated control section of the ship*/
 #define AUDIO_INDEX_POWER_UP 5
 #define AUDIO_INDEX_DESTRUCT 6
 #define AUDIO_INDEX_HIT 7
+#define AUDIO_INDEX_BTS1 8
+#define AUDIO_INDEX_BTS2 9
+#define AUDIO_INDEX_BTS3 10
+#define AUDIO_INDEX_BT4 11
+#define AUDIO_INDEX_BT5 12
+#define AUDIO_INDEX_BT6 13
 
 #define PIN_IR_RECEIVER 11
 
 //#define POLLING_FREQUENCY 250
 
-static char* scAudioEffects[]={"KLAX.WAV", "P1MSG.WAV", "TORP1.WAV", "SPZER1.WAV", "BPD1.WAV", "BPUP1.WAV", "DSTRT.WAV", "HULHIT.WAV"};
+static char* scAudioEffects[]={"KLAX.WAV", "P1MSG.WAV", "TORP1.WAV", "SPZER1.WAV", "BPD1.WAV", "BPUP1.WAV", "DSTRT.WAV", "HULHIT.WAV", "BTS1.WAV", "BTS2.WAV", "BTS3.WAV", "BT4.WAV", "BT5.WAV", "BT6.WAV"};
 
 class EN1701A
 {
