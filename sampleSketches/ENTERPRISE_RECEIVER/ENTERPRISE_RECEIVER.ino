@@ -11,10 +11,12 @@ unsigned long sectionData = 0;
 #define PIN_SR_LATCH 12
 #define PIN_SR_SECTION_DATA 13
 #define PIN_SR_ENABLE 14
-#define PIN_DEFLECTOR 6
-#define PIN_WARP_ENGINE 5
-#define PIN_IMPULSE_ENGINE 4
-#define PIN_DILITHIUM_CRYSTAL 10
+#define PIN_DEFLECTOR_R 6
+#define PIN_DEFLECTOR_G 5
+#define PIN_DEFLECTOR_B 3
+//#define PIN_WARP_ENGINE 5
+//#define PIN_IMPULSE_ENGINE 4
+//#define PIN_DILITHIUM_CRYSTAL 10
 #define PIN_PHOTON_TORPEDO 9 //still on shift register
 
 //timer constants
@@ -39,10 +41,10 @@ void setup() {
   pinMode(PIN_SR_CLOCK, OUTPUT);  
   pinMode(PIN_SR_LATCH, OUTPUT);
   pinMode(PIN_SR_SECTION_DATA, OUTPUT);
-  pinMode(PIN_DEFLECTOR, OUTPUT);
-  pinMode(PIN_WARP_ENGINE, OUTPUT);
-  pinMode(PIN_IMPULSE_ENGINE, OUTPUT);
-  pinMode(PIN_DILITHIUM_CRYSTAL, OUTPUT); 
+  pinMode(PIN_DEFLECTOR_R, OUTPUT);
+  pinMode(PIN_DEFLECTOR_G, OUTPUT);
+  pinMode(PIN_DEFLECTOR_B, OUTPUT);
+  //pinMode(PIN_DILITHIUM_CRYSTAL, OUTPUT); 
   pinMode(PIN_PHOTON_TORPEDO, OUTPUT);
   
   updateSectionDataRegister();
@@ -199,13 +201,17 @@ void firePhaser(boolean bOn) {
 void deflectorOn(boolean bOn){
    if (bOn) {
       for (int brightness=0; brightness<=255; brightness+=5){
-         analogWrite(PIN_DEFLECTOR, brightness);
+         analogWrite(PIN_DEFLECTOR_R, brightness);
+         analogWrite(PIN_DEFLECTOR_G, brightness);
+         analogWrite(PIN_DEFLECTOR_B, brightness);
          delay(50);
       }
    }
    else {
       for (int brightness=255; brightness>=0; brightness-=5){
-         analogWrite(PIN_DEFLECTOR, brightness);
+         analogWrite(PIN_DEFLECTOR_R, brightness);
+         analogWrite(PIN_DEFLECTOR_G, brightness);
+         analogWrite(PIN_DEFLECTOR_B, brightness);
          delay(50);
       }
    }
