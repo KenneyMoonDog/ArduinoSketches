@@ -149,7 +149,7 @@ void randomSectionUpdate(boolean bPowerOn) { //called every POLLING_FREQUENCY ms
       if (changeCounter++ > changeLimit){
         changeCounter=0;
         changeLimit = random(20,80);
-        sectionData ^= (0x0001 << random(0,7));
+        sectionData ^= (0x0001 << random(0,6));
       }
       updateSectionDataRegister();
    }
@@ -200,7 +200,7 @@ void firePhaser(boolean bOn) {
 
 void deflectorOn(boolean bOn){
    if (bOn) {
-      for (int brightness=0; brightness<=255; brightness+=5){
+      for (int brightness=0; brightness<=100; brightness+=5){
          analogWrite(PIN_DEFLECTOR_R, brightness);
          analogWrite(PIN_DEFLECTOR_G, brightness);
          analogWrite(PIN_DEFLECTOR_B, brightness);
@@ -208,7 +208,7 @@ void deflectorOn(boolean bOn){
       }
    }
    else {
-      for (int brightness=255; brightness>=0; brightness-=5){
+      for (int brightness=100; brightness>=0; brightness-=5){
          analogWrite(PIN_DEFLECTOR_R, brightness);
          analogWrite(PIN_DEFLECTOR_G, brightness);
          analogWrite(PIN_DEFLECTOR_B, brightness);
