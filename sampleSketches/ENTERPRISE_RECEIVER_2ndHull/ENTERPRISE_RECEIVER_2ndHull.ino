@@ -5,7 +5,7 @@ int incomingByte = 0;   // for incoming serial data
 unsigned long sectionData = 0;
 
 //pin assignments
-#define PIN_NAVIGATION_BEACON 4
+//#define PIN_NAVIGATION_BEACON 4
 #define PIN_NAVIGATION_FLASHER 8
 #define PIN_SR_CLOCK 11
 #define PIN_SR_LATCH 12
@@ -36,7 +36,7 @@ void setup() {
   digitalWrite(PIN_SR_ENABLE,HIGH);
     
   Serial.begin(9600);
-  pinMode(PIN_NAVIGATION_BEACON, OUTPUT); 
+  //pinMode(PIN_NAVIGATION_BEACON, OUTPUT); 
   pinMode(PIN_NAVIGATION_FLASHER, OUTPUT);   
   pinMode(PIN_SR_CLOCK, OUTPUT);  
   pinMode(PIN_SR_LATCH, OUTPUT);
@@ -61,9 +61,7 @@ SIGNAL(TIMER0_COMPA_vect)
   if (currentMillis - previousMillis >= RECEIVER_INTERRUPT_FREQUENCY) {  //execute any timed operations every INTERRRUPT FREQ ms
     // save the last time you did a repeatable item clear
     previousMillis = currentMillis;
-
     updateNavBeacon(bNavBeaconOn);
-    //updateNavFlasher(bNavFlasherOn);
     randomSectionUpdate(bPowerOn);
   } //end if timer
 } 
@@ -77,13 +75,15 @@ void updateNavBeacon(boolean bPowerOn){
   if (bPowerOn) {
      if (bCounter >= beaconTimeOn && bCounter < beaconTimeOff ){
         if ( !bBeaconOn ) {
-          digitalWrite(PIN_NAVIGATION_BEACON, HIGH);
+          //digitalWrite(PIN_NAVIGATION_BEACON, HIGH);
+          Serial.write(SERIAL_COMM_NAV_BEACON_ON);
           bBeaconOn = true;
         }
      }
 
      if (bBeaconOn && bCounter >= beaconTimeOff ){
-        digitalWrite(PIN_NAVIGATION_BEACON, LOW);
+        //digitalWrite(PIN_NAVIGATION_BEACON, LOW);
+        Serial.write(SERIAL_COMM_NAV_BEACON_OFF);
         bCounter = -1;
         bBeaconOn = false;
      } 
@@ -91,12 +91,14 @@ void updateNavBeacon(boolean bPowerOn){
      if (bCounter >= flashTimeOn && bCounter < flashTimeOff ){
         if ( !bFlasherOn ){
           digitalWrite(PIN_NAVIGATION_FLASHER, HIGH);
+          Serial.write(SERIAL_COMM_NAV_FLASHER_ON);
           bFlasherOn = true;
         }
      }
 
      if ( bFlasherOn && bCounter >= flashTimeOff ) {
         digitalWrite(PIN_NAVIGATION_FLASHER, LOW);
+        Serial.write(SERIAL_COMM_NAV_FLASHER_OFF);
         bFlasherOn = false;  
      }  
      bCounter++;
@@ -104,7 +106,8 @@ void updateNavBeacon(boolean bPowerOn){
   else {  //power is off
     if ( bBeaconOn ){
       bBeaconOn = false;
-      digitalWrite(PIN_NAVIGATION_BEACON, LOW);
+      Serial.write(SERIAL_COMM_NAV_BEACON_OFF);
+      //digitalWrite(PIN_NAVIGATION_BEACON, LOW);
     }
     if ( bFlasherOn ){
       bFlasherOn = false;
@@ -112,33 +115,6 @@ void updateNavBeacon(boolean bPowerOn){
     }
   }
 }
-
-/*void updateNavFlasher(boolean bPowerOn){
-
-  static byte flashPeriodCounter=0;
-  static byte flashDurationCounter=0;
-  static boolean bFlasherState=false;
-
-  if (bPowerOn) {
-     if (flashPeriodCounter++ > flashPeriod){
-        flashPeriodCounter=0;
-        digitalWrite(PIN_NAVIGATION_FLASHER, HIGH);
-        bFlasherState = true;
-     }
-
-     if ( bFlasherState && (flashDurationCounter++ > flashDuration)){ 
-        flashDurationCounter=0;
-        digitalWrite(PIN_NAVIGATION_FLASHER, LOW);
-        bFlasherState = false;  
-     }
-  }
-  else {  //power is off
-    if ( bFlasherState ){
-      bFlasherState = false;
-      digitalWrite(PIN_NAVIGATION_FLASHER, LOW);     
-    }
-  }
-}*/
 
 void randomSectionUpdate(boolean bPowerOn) { //called every POLLING_FREQUENCY ms
    static byte changeCounter=0; //increments every INTERRUPT_FREQ duration
@@ -163,13 +139,6 @@ void updateSectionDataRegister()
    digitalWrite(PIN_SR_LATCH, HIGH);
 }
 
-/*void fireTorpedo() {
-  bitSet(sectionData, SR_TORPEDO);
-  updateSectionDataRegister();
-  delay(200);
-  bitClear(sectionData, SR_TORPEDO);
-  updateSectionDataRegister();  
-}*/
 
 void fireTorpedo() {
    //for (int brightness=0; brightness<=10; brightness+=1){
@@ -185,17 +154,6 @@ void fireTorpedo() {
       analogWrite(PIN_PHOTON_TORPEDO, brightness);
       delay(100);
    }  
-}
-
-void firePhaser(boolean bOn) {
-  if (bOn){
-    delay(300);
-    bitSet(sectionData, SR_PHASER);
-  }
-  else {
-    bitClear(sectionData, SR_PHASER);
-  }
-  updateSectionDataRegister();
 }
 
 void deflectorOn(boolean bOn){
@@ -258,6 +216,7 @@ void runStartUpSequence() {
   bNavFlasherOn=true;
   //start dome
   //start impulse engines
+  
   //start warp engines 
   //fade in deflector
   delay(2000); 
@@ -287,11 +246,9 @@ void loop() {
           break;
        case SERIAL_COMM_PHASER_ON:
           Serial.write(SERIAL_COMM_PHASER_ON);
-          //firePhaser(true);
           break;
        case SERIAL_COMM_PHASER_OFF:
           Serial.write(SERIAL_COMM_PHASER_OFF);
-          //firePhaser(false);
           break;
      }
    }
