@@ -24,7 +24,7 @@ public:
 
    WaveHC wave;      // This is the only wave (audio) object, since we will only play one at a time
 
-   void updateSection_DataRegister();
+   //void updateSection_DataRegister();
 
    //void sdErrorCheck(void);
    int freeRam(void);

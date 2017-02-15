@@ -16,17 +16,7 @@ bool ShipOperations::readOldShipState(byte pinset) {
 void ShipOperations::clearAll(){
   EN1701A::suiCurrentShipState = 0;
   EN1701A::suiPreviousShipState = 0;
-
-  //updateSection_DataRegister();
 }
-
-/*void ShipOperations::updateSection_DataRegister()
-{
-   digitalWrite(PIN_SR_LATCH, LOW);
-   shiftOut(PIN_SR_SECTION_DATA, PIN_SR_CLOCK, LSBFIRST, (EN1701A::suiCurrentShipState & 0xFF));
-   shiftOut(PIN_SR_SECTION_DATA, PIN_SR_CLOCK, LSBFIRST, (EN1701A::suiCurrentShipState & 0xFF0000) >> 16);
-   digitalWrite(PIN_SR_LATCH, HIGH);
-}*/
 
 void ShipOperations::ApplyShipLogic() {
 
@@ -42,19 +32,13 @@ void ShipOperations::ApplyShipLogic() {
       EN1701A::suiCurrentShipState |= 0xFF & rand() % 254 + 1;
       Serial.write(SERIAL_COMM_POWER_ON);
       EN1701A::sbAudioIndex = AUDIO_INDEX_POWER_UP;
-      //updateSection_DataRegister();
     }
     playFile();
     EN1701A::svWriteShipState(false, POWER_CHANGE);
     return;
   }
 
-  /*if (readCurrentShipState(PRIMARY_SYSTEMS) && !readCurrentShipState(SR_PHASER)){
-    updateSection_DataRegister();
-  }*/
-
   if (EN1701A::sbAudioIndex == AUDIO_INDEX_CANCEL) {
-    //Serial.println("ShipOperations::Play Audio CANCEL");
     stopPlaying();
   }
 
@@ -66,14 +50,8 @@ void ShipOperations::ApplyShipLogic() {
   if (readCurrentShipState(SR_TORPEDO)){
     EN1701A::sbAudioIndex = AUDIO_INDEX_TORPEDO;
     playFile();
-    //delay(100);
     Serial.write(SERIAL_COMM_TORPEDO);
-    //flash torpedo lights
-    /*delay(100);
-    updateSection_DataRegister();*/
-
     EN1701A::svWriteShipState(false, SR_TORPEDO);
-    //updateSection_DataRegister();*/
     return;
   }
 
@@ -81,18 +59,13 @@ void ShipOperations::ApplyShipLogic() {
     if ( strcmp (pCurrentFilePlaying, scAudioEffects[AUDIO_INDEX_PHASER]) != 0) {
       EN1701A::sbAudioIndex = AUDIO_INDEX_PHASER;
       playFile();
-      //delay(300);
       Serial.write(SERIAL_COMM_PHASER_ON);
-      //flash PHASER lights
-      //delay(500);
-      //updateSection_DataRegister();
     }
   }
   else if (readOldShipState(SR_PHASER)){
     stopPlaying();
     Serial.write(SERIAL_COMM_PHASER_OFF);
     EN1701A::svWriteShipState(false, SR_PHASER);
-    //updateSection_DataRegister();
   }
 }
 

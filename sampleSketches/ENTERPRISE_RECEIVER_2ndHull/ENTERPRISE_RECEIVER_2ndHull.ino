@@ -5,7 +5,6 @@ int incomingByte = 0;   // for incoming serial data
 unsigned long sectionData = 0;
 
 //pin assignments
-//#define PIN_NAVIGATION_BEACON 4
 #define PIN_NAVIGATION_FLASHER 8
 #define PIN_SR_CLOCK 11
 #define PIN_SR_LATCH 12
@@ -14,9 +13,6 @@ unsigned long sectionData = 0;
 #define PIN_DEFLECTOR_R 6
 #define PIN_DEFLECTOR_G 5
 #define PIN_DEFLECTOR_B 3
-//#define PIN_WARP_ENGINE 5
-//#define PIN_IMPULSE_ENGINE 4
-//#define PIN_DILITHIUM_CRYSTAL 10
 #define PIN_PHOTON_TORPEDO 9 
 
 //timer constants
@@ -31,12 +27,15 @@ boolean bPowerOn = false;
 boolean bNavBeaconOn = false;
 boolean bNavFlasherOn = false;
 
+byte crystalSignal[4];
+byte colorWhite[] = {10, 10, 10};
+byte colorAmber[] = {250, 85, 0};
+
 void setup() {
   pinMode(PIN_SR_ENABLE, OUTPUT);
   digitalWrite(PIN_SR_ENABLE,HIGH);
     
   Serial.begin(9600);
-  //pinMode(PIN_NAVIGATION_BEACON, OUTPUT); 
   pinMode(PIN_NAVIGATION_FLASHER, OUTPUT);   
   pinMode(PIN_SR_CLOCK, OUTPUT);  
   pinMode(PIN_SR_LATCH, OUTPUT);
@@ -44,7 +43,6 @@ void setup() {
   pinMode(PIN_DEFLECTOR_R, OUTPUT);
   pinMode(PIN_DEFLECTOR_G, OUTPUT);
   pinMode(PIN_DEFLECTOR_B, OUTPUT);
-  //pinMode(PIN_DILITHIUM_CRYSTAL, OUTPUT); 
   pinMode(PIN_PHOTON_TORPEDO, OUTPUT);
   
   updateSectionDataRegister();
@@ -75,14 +73,12 @@ void updateNavBeacon(boolean bPowerOn){
   if (bPowerOn) {
      if (bCounter >= beaconTimeOn && bCounter < beaconTimeOff ){
         if ( !bBeaconOn ) {
-          //digitalWrite(PIN_NAVIGATION_BEACON, HIGH);
           Serial.write(SERIAL_COMM_NAV_BEACON_ON);
           bBeaconOn = true;
         }
      }
 
      if (bBeaconOn && bCounter >= beaconTimeOff ){
-        //digitalWrite(PIN_NAVIGATION_BEACON, LOW);
         Serial.write(SERIAL_COMM_NAV_BEACON_OFF);
         bCounter = -1;
         bBeaconOn = false;
@@ -107,7 +103,6 @@ void updateNavBeacon(boolean bPowerOn){
     if ( bBeaconOn ){
       bBeaconOn = false;
       Serial.write(SERIAL_COMM_NAV_BEACON_OFF);
-      //digitalWrite(PIN_NAVIGATION_BEACON, LOW);
     }
     if ( bFlasherOn ){
       bFlasherOn = false;
@@ -141,10 +136,6 @@ void updateSectionDataRegister()
 
 
 void fireTorpedo() {
-   //for (int brightness=0; brightness<=10; brightness+=1){
-   //   analogWrite(PIN_PHOTON_TORPEDO, brightness);
-   //   delay(5);
-   //}  
    analogWrite(PIN_PHOTON_TORPEDO, 10);
    delay(100);
    digitalWrite(PIN_PHOTON_TORPEDO, HIGH);
@@ -226,6 +217,14 @@ void runStartUpSequence() {
   //increase warp engines
 }
 
+void setCrystal(byte pRGB[]) {
+   crystalSignal[0] = SERIAL_COMM_CRYSTAL_COLOR;
+   crystalSignal[1] = pRGB[0];
+   crystalSignal[2] = pRGB[1];
+   crystalSignal[3] = pRGB[2];
+   Serial.write(crystalSignal, 4); 
+}
+
 void loop() {
 
    if (Serial.available() > 0) {
@@ -236,9 +235,11 @@ void loop() {
        case SERIAL_COMM_POWER_OFF: 
           Serial.write(SERIAL_COMM_POWER_OFF);
           runShutdownSequence();
+          setCrystal(colorWhite);
           break;
        case SERIAL_COMM_POWER_ON: //power on
           Serial.write(SERIAL_COMM_POWER_ON);
+          setCrystal(colorAmber);
           runStartUpSequence();
           break;
        case SERIAL_COMM_TORPEDO:
