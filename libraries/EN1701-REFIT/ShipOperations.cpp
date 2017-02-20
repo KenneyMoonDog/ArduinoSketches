@@ -75,6 +75,85 @@ void ShipOperations::ApplyShipLogic() {
     return;
   }
 
+  if(readCurrentShipState(SR_BUTTON_1)){
+    EN1701A::sbAudioIndex = AUDIO_INDEX_BTS4;
+    playFile();
+    EN1701A::svWriteShipState(false, SR_BUTTON_1);
+    Serial.write(SERIAL_COMM_BUTTON_1);
+    return;
+  }
+
+  if(readCurrentShipState(SR_BUTTON_2)){
+    EN1701A::sbAudioIndex = AUDIO_INDEX_BTS5;
+    playFile();
+    EN1701A::svWriteShipState(false, SR_BUTTON_2);
+    Serial.write(SERIAL_COMM_BUTTON_2);
+    return;
+  }
+
+  if(readCurrentShipState(SR_BUTTON_3)){
+    EN1701A::sbAudioIndex = AUDIO_INDEX_BTS6;
+    playFile();
+    EN1701A::svWriteShipState(false, SR_BUTTON_3);
+    Serial.write(SERIAL_COMM_BUTTON_3);
+    return;
+  }
+
+  if(readCurrentShipState(SR_BUTTON_4)){
+    EN1701A::sbAudioIndex = AUDIO_INDEX_BTS5;
+    playFile();
+    EN1701A::svWriteShipState(false, SR_BUTTON_4);
+    Serial.write(SERIAL_COMM_BUTTON_4);
+    return;
+  }
+
+  if(readCurrentShipState(SR_BUTTON_5)){
+    EN1701A::sbAudioIndex = AUDIO_INDEX_BTS4;
+    playFile();
+    EN1701A::svWriteShipState(false, SR_BUTTON_5);
+    Serial.write(SERIAL_COMM_BUTTON_5);
+    return;
+  }
+
+  if(readCurrentShipState(SR_BUTTON_6)){
+    EN1701A::sbAudioIndex = AUDIO_INDEX_BTS6;
+    playFile();
+    EN1701A::svWriteShipState(false, SR_BUTTON_6);
+    Serial.write(SERIAL_COMM_BUTTON_6);
+    return;
+  }
+
+  if(readCurrentShipState(SR_BUTTON_7)){
+    EN1701A::sbAudioIndex = AUDIO_INDEX_BTS4;
+    playFile();
+    EN1701A::svWriteShipState(false, SR_BUTTON_7);
+    Serial.write(SERIAL_COMM_BUTTON_7);
+    return;
+  }
+  if(readCurrentShipState(SR_BUTTON_8)){
+    EN1701A::sbAudioIndex = AUDIO_INDEX_BTS6;
+    playFile();
+    EN1701A::svWriteShipState(false, SR_BUTTON_8);
+    Serial.write(SERIAL_COMM_BUTTON_8);
+    return;
+  }
+
+  if(readCurrentShipState(SR_BUTTON_9)){
+    EN1701A::sbAudioIndex = AUDIO_INDEX_BTS5;
+    playFile();
+    EN1701A::svWriteShipState(false, SR_BUTTON_9);
+    Serial.write(SERIAL_COMM_BUTTON_9);
+    return;
+  }
+
+  if(readCurrentShipState(SR_BUTTON_0)){
+    EN1701A::sbAudioIndex = AUDIO_INDEX_BTS4;
+    playFile();
+    EN1701A::svWriteShipState(false, SR_BUTTON_0);
+    Serial.write(SERIAL_COMM_BUTTON_0);
+    return;
+  }
+
   if (readCurrentShipState(SR_PHASER)){
     if ( strcmp (pCurrentFilePlaying, scAudioEffects[AUDIO_INDEX_PHASER]) != 0) {
       EN1701A::sbAudioIndex = AUDIO_INDEX_PHASER;

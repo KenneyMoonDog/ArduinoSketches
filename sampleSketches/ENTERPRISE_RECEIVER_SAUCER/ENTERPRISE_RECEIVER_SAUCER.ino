@@ -4,7 +4,7 @@
 int incomingByte = 0;   // for incoming serial data
 
 unsigned int sectionData = 0;
-byte sectionSignal[] = {0,0,0,0,0,0,0,0,0,0};
+byte sectionSignalIn = 0;
 
 byte newCrystalRGB[] = {25,25,25};
 byte oldCrystalRGB[] = {0,0,0};
@@ -49,7 +49,6 @@ void setup() {
 void updateSectionDataRegister() {  
    digitalWrite(PIN_SR_LATCH, LOW);
    shiftOut(PIN_SR_SECTION_DATA, PIN_SR_CLOCK, LSBFIRST, (sectionData & 0xFF));
-   //shiftOut(PIN_SR_SECTION_DATA, PIN_SR_CLOCK, LSBFIRST, (sectionData & 0xFF00) >> 8);
    digitalWrite(PIN_SR_LATCH, HIGH);
 }
 
@@ -70,9 +69,6 @@ void setCrystal() {
     bool oper_B = (oldCrystalRGB[2] >= newCrystalRGB[2]) ? 0:1;
       
     for (int analogCount=0; analogCount<=255; analogCount++){
-         //if (Serial.available() > 0) {
-         //    incomingByte = Serial.read();
-         //}
         
         if ( oldCrystalRGB[0] != newCrystalRGB[0] ) {
            if ( oper_R ) {
@@ -104,7 +100,7 @@ void setCrystal() {
     }  
 }
 
-void powerSaucerSectionUp(){
+/*void powerSaucerSectionUp(){
   for (int section=0; section<8; section++){
     bitSet(sectionData, section);
     updateSectionDataRegister();
@@ -119,7 +115,7 @@ void powerSaucerSectionDown(){
     updateSectionDataRegister();
     delay(750);
   }
-}
+}*/
 
 void runShutdownSequence(){
   bPowerOn = false;
@@ -142,17 +138,11 @@ void runStartUpSequence() {
   //start impulse engines
   //start warp engines 
   //fade in deflector
-  delay(2000); 
+  //delay(2000); 
 
   //start running lights
   //start random section updates
   //increase warp engines
-}
-
-void updateDataSectionRegister() {
-   digitalWrite(PIN_SR_LATCH, LOW);
-   shiftOut(PIN_SR_SECTION_DATA, PIN_SR_CLOCK, LSBFIRST, sectionData & 0xFF);
-   digitalWrite(PIN_SR_LATCH, HIGH);
 }
 
 void loop() {
@@ -191,9 +181,9 @@ void loop() {
           setCrystal();       
           break;
        case SERIAL_COMM_SAUCER_SECTION:
-          Serial.readBytes(sectionSignal,8);
+          Serial.readBytes(&sectionSignalIn,1);
           for (int set=0; set<8; set++){
-             if (sectionSignal[set]==1){
+             if (bitRead(sectionSignalIn,set)==1){
                 bitSet(sectionData, set);
              }
              else {

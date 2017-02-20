@@ -42,9 +42,11 @@ bool IRStateReader::updateShipStateViaIR() {
             lastDecodedValue = 0;
             break;
         }*/
-        lastDecodedValue = 0; //remove if the above switch is put back in
-        mDecoder.value = lastDecodedValue;
-        isRepeat = true;
+      //  lastDecodedValue = 0; //remove if the above switch is put back in
+      //  mDecoder.value = lastDecodedValue;
+      //  isRepeat = true;
+      pReceiver->resume();
+      return false;
      }
 
      //Serial.println(mDecoder.value);
@@ -110,44 +112,44 @@ bool IRStateReader::updateShipStateViaIR() {
             break;
 
          case 0xff38c7:  //#1
-            EN1701A::sbAudioIndex = AUDIO_INDEX_BTS1;
-            EN1701A::svWriteShipState(true, AUDIO_EFFECT);
+            //EN1701A::sbAudioIndex = AUDIO_INDEX_BTS4;
+            EN1701A::svWriteShipState(true, SR_BUTTON_1);
             break;
          case 0xff18e7:  //#2
-            EN1701A::sbAudioIndex = AUDIO_INDEX_BTS2;
-            EN1701A::svWriteShipState(true, AUDIO_EFFECT);
+            //EN1701A::sbAudioIndex = AUDIO_INDEX_BTS5;
+            EN1701A::svWriteShipState(true, SR_BUTTON_2);
             break;
          case 0xffa857:  //#3
-            EN1701A::sbAudioIndex = AUDIO_INDEX_BTS3;
-            EN1701A::svWriteShipState(true, AUDIO_EFFECT);
+            //EN1701A::sbAudioIndex = AUDIO_INDEX_BTS6;
+            EN1701A::svWriteShipState(true, SR_BUTTON_3);
             break;
          case 0xff48b7:  //#4
-            EN1701A::sbAudioIndex = AUDIO_INDEX_BT4;
-            EN1701A::svWriteShipState(true, AUDIO_EFFECT);
-         break;
+            //EN1701A::sbAudioIndex = AUDIO_INDEX_BTS5;
+            EN1701A::svWriteShipState(true, SR_BUTTON_4);
+            break;
          case 0xffc837:  //#5
-            EN1701A::sbAudioIndex = AUDIO_INDEX_BT5;
-            EN1701A::svWriteShipState(true, AUDIO_EFFECT);
+            //EN1701A::sbAudioIndex = AUDIO_INDEX_BTS4;
+            EN1701A::svWriteShipState(true, SR_BUTTON_5);
             break;
          case 0xff28d7:  //#6
-            EN1701A::sbAudioIndex = AUDIO_INDEX_BT6;
-            EN1701A::svWriteShipState(true, AUDIO_EFFECT);
+            //EN1701A::sbAudioIndex = AUDIO_INDEX_BTS6;
+            EN1701A::svWriteShipState(true, SR_BUTTON_6);
             break;
          case 0xffd827:  //#7
-            EN1701A::sbAudioIndex = AUDIO_INDEX_BTS1;
-            EN1701A::svWriteShipState(true, AUDIO_EFFECT);
+            //EN1701A::sbAudioIndex = AUDIO_INDEX_BTS4;
+            EN1701A::svWriteShipState(true, SR_BUTTON_7);
             break;
          case 0xff7a85:  //#8
-            EN1701A::sbAudioIndex = AUDIO_INDEX_BTS2;
-            EN1701A::svWriteShipState(true, AUDIO_EFFECT);
+            //EN1701A::sbAudioIndex = AUDIO_INDEX_BTS6;
+            EN1701A::svWriteShipState(true, SR_BUTTON_8);
             break;
          case 0xffaa55:  //#9
-            EN1701A::sbAudioIndex = AUDIO_INDEX_BTS3;
-            EN1701A::svWriteShipState(true, AUDIO_EFFECT);
+            //EN1701A::sbAudioIndex = AUDIO_INDEX_BTS5;
+            EN1701A::svWriteShipState(true, SR_BUTTON_9);
             break;
          case 0xff906f:  //#0
-            EN1701A::sbAudioIndex = AUDIO_INDEX_BT4;
-            EN1701A::svWriteShipState(true, AUDIO_EFFECT);
+            //EN1701A::sbAudioIndex = AUDIO_INDEX_BT4;
+            EN1701A::svWriteShipState(true, SR_BUTTON_0);
             break;
 
          default:
@@ -156,7 +158,7 @@ bool IRStateReader::updateShipStateViaIR() {
             break;
        } // end switch
      } //end if primary_systems_on
-     lastDecodedValue = mDecoder.value;
+     //lastDecodedValue = mDecoder.value;
      pReceiver->resume(); //Restart the receiver
 
   } //end code received

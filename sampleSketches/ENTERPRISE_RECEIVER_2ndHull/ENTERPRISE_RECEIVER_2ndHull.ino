@@ -24,13 +24,13 @@ unsigned long hullSectionData = 0;
 #define beaconTimeOn 25
 #define beaconTimeOff 35
 
-byte sectionSignal[] = {0,0,0,0,0,0,0,0,0,0};
+byte sectionSignal[] = {0,0};
 volatile unsigned long previousMillis = 0;
 boolean bPowerOn = false;
 boolean bNavBeaconOn = false;
 boolean bNavFlasherOn = false;
 
-byte crystalSignal[] = {0,0,0,0,0,0};
+byte crystalSignal[] = {0,0,0,0};
 byte newDeflectorRGB[] = {10,10,10};
 byte oldDeflectorRGB[] = {10,10,10};
 
@@ -67,7 +67,7 @@ SIGNAL(TIMER0_COMPA_vect)
     // save the last time you did a repeatable item clear
     previousMillis = currentMillis;
     updateNavBeacon(bNavBeaconOn);
-   //randomSaucerSectionUpdate(bPowerOn);
+    randomSaucerSectionUpdate(bPowerOn);
   } //end if timer
 } 
 
@@ -176,27 +176,9 @@ void randomSaucerSectionUpdate(boolean bPowerOn) { //called every POLLING_FREQUE
 }
 
 void updateSaucerSectionDataRegister(){
-   /*sectionSignal[0] = SERIAL_COMM_SAUCER_SECTION;
-   sectionSignal[1] = (saucerSectionData & 0xFF);
-   Serial.write(sectionSignal, 2); */
    sectionSignal[0] = SERIAL_COMM_SAUCER_SECTION;
-   byte mask = 0;
-
-   for (int set=0; set<8; set++){
-      mask = 0x1 << set;
-      if ((saucerSectionData & mask) == 0){
-        sectionSignal[set+1]=0;
-      }
-      else {
-        sectionSignal[set+1]=1;
-      }
-      mask =0;
-   }
-
-   Serial.write(sectionSignal,9);
-   //Serial.write(SERIAL_COMM_SAUCER_SECTION);
-   //byte out = (byte)saucerSectionData & 0xFF;
-   //Serial.write(out);
+   sectionSignal[1] = (saucerSectionData & 0xFF);
+   Serial.write(sectionSignal, 2); 
 }
 
 void updateHullSectionDataRegister()
@@ -220,13 +202,11 @@ void fireTorpedo() {
 }
 
 void powerSaucerSectionUp(){
-  //bitSet(sectionData, SR_MAIN_POWER);
-  //updateSectionDataRegister();
 
   for (int section=0; section<8; section++){
     bitSet(saucerSectionData, section);
     updateSaucerSectionDataRegister();
-    delay(1000);
+    delay(750);
   }
 }
 
@@ -235,11 +215,8 @@ void powerSaucerSectionDown(){
   for (int section=0; section<8; section++){
     bitClear(saucerSectionData, section);
     updateSaucerSectionDataRegister();
-    delay(1000);
+    delay(750);
   }
-  
-  //bitClear(saucerSectionData, SR_MAIN_POWER);
-  //updateSectionDataRegister();
 }
 
 void runShutdownSequence(){
@@ -284,29 +261,36 @@ void setCrystal(byte pRGB[]) {
    Serial.write(crystalSignal, 4); 
 }
 
+void buttonPressAction(byte button){
+    int sectionNumber = button - 1;
+    if (bPowerOn) {
+       if (bitRead(saucerSectionData, sectionNumber) == 1){
+          bitClear(saucerSectionData, sectionNumber);
+       }
+       else {
+          bitSet(saucerSectionData, sectionNumber);
+       }
+       updateSaucerSectionDataRegister();
+    }  
+}
+
 void loop() {
 
    if (Serial.available() > 0) {
+
+     bool forwardByte = true;
      // read the incoming byte:
      incomingByte = Serial.read();
 
      switch (incomingByte) {
        case SERIAL_COMM_POWER_OFF: 
-          Serial.write(SERIAL_COMM_POWER_OFF);
           runShutdownSequence();
           break;
        case SERIAL_COMM_POWER_ON: //power on
-          Serial.write(SERIAL_COMM_POWER_ON);
           runStartUpSequence();
           break;
        case SERIAL_COMM_TORPEDO:
           fireTorpedo();
-          break;
-       case SERIAL_COMM_PHASER_ON:
-          Serial.write(SERIAL_COMM_PHASER_ON);
-          break;
-       case SERIAL_COMM_PHASER_OFF:
-          Serial.write(SERIAL_COMM_PHASER_OFF);
           break;
        case SERIAL_COMM_WARP_DRIVE:
           setCrystal(colorBlue);
@@ -316,6 +300,42 @@ void loop() {
           setCrystal(colorAmber);
           setDeflector(colorAmber);
           break;
+       case SERIAL_COMM_BUTTON_1:
+          buttonPressAction(1);
+          forwardByte= false;
+          break;
+       case SERIAL_COMM_BUTTON_2:
+          buttonPressAction(2);
+          forwardByte= false;
+          break;
+       case SERIAL_COMM_BUTTON_3:
+          buttonPressAction(3);
+          forwardByte= false;
+          break;
+       case SERIAL_COMM_BUTTON_4:
+          buttonPressAction(4);
+          forwardByte= false;
+          break;
+       case SERIAL_COMM_BUTTON_5:
+          buttonPressAction(5);
+          forwardByte= false;
+          break;
+       case SERIAL_COMM_BUTTON_6:
+          buttonPressAction(6);
+          forwardByte= false;
+          break;
+       case SERIAL_COMM_BUTTON_7:
+          buttonPressAction(7);
+          forwardByte= false;
+          break;
+       case SERIAL_COMM_BUTTON_8:
+          buttonPressAction(8);
+          forwardByte= false;
+          break;
+     } ///end switch
+
+     if (forwardByte){
+       Serial.write(incomingByte);
      }
-   }
-}
+   } //if serial
+}  //loop
