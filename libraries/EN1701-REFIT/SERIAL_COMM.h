@@ -1,5 +1,5 @@
 #ifndef SERIAL_COMM_h
-#define EN1701-REFIT_h
+#define SERIAL_COMM_h
 
 // #include "Arduino.h"
 #define SERIAL_COMM_POWER_OFF 10
@@ -21,6 +21,7 @@
 #define SERIAL_COMM_NAV_FLASHER_OFF 96
 
 #define SERIAL_COMM_CRYSTAL_COLOR 100
+#define SERIAL_COMM_SAUCER_SECTION 120
 
 #define SERIAL_COMM_IMPULSE_DRIVE 130   //last digit represents level
 #define SERIAL_COMM_WARP_DRIVE 150      //Last digit represents level

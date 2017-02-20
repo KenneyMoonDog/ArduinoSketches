@@ -48,9 +48,12 @@ an illuminated control section of the ship*/
 
 #define PIN_IR_RECEIVER 11
 
-//#define POLLING_FREQUENCY 250
 
 static char* scAudioEffects[]={"KLAX.WAV", "P1MSG.WAV", "TORP1.WAV", "SPZER1.WAV", "BPD1.WAV", "BPUP1.WAV", "DSTRT.WAV", "HULHIT.WAV", "BTS1.WAV", "BTS2.WAV", "BTS3.WAV", "BT4.WAV", "BT5.WAV", "BT6.WAV"};
+static byte colorWhite[] = {10, 10, 10};
+static byte colorAmber[] = {250, 85, 0};
+static byte colorBlue[] = {0, 0, 255};
+static byte colorOff[] = {0, 0, 0};
 
 class EN1701A
 {

@@ -1,5 +1,6 @@
 #include "Arduino.h"
 #include <IRStateReader.h>
+//#include <SERIAL_COMM.h>
 
 IRrecv *pReceiver;
 IRdecodeNEC mDecoder;
@@ -57,10 +58,14 @@ bool IRStateReader::updateShipStateViaIR() {
             EN1701A::svWriteShipState(true, POWER_CHANGE);
             break;
 
-         case 0xff12ed: //down
+         case 0xff12ed: //up
+            EN1701A::svWriteShipState(false, IMPULSE_ENGINES);
+            EN1701A::svWriteShipState(true, WARP_ENGINES);
             break;
 
-          case 0xffa25d: //up
+          case 0xffa25d: //down
+            EN1701A::svWriteShipState(true, IMPULSE_ENGINES);
+            EN1701A::svWriteShipState(false, WARP_ENGINES);
             break;
 
           case 0xff22dd: //left

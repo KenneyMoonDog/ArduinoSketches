@@ -9,7 +9,7 @@ public:
   //IRStateReader(int rp, unsigned int *currState, unsigned int *oldState, byte *audioIndex);
   IRStateReader(int rp);
   bool updateShipStateViaIR();
-  bool executeTimedOperations(unsigned long currentMillis);
+  //bool executeTimedOperations(unsigned long currentMillis);
 
 private:
   long lastDecodedValue = 0;

@@ -2,18 +2,20 @@
 #include <SERIAL_COMM.h>
 
 int incomingByte = 0;   // for incoming serial data
-unsigned long sectionData = 0;
+unsigned long saucerSectionData = 0;
+unsigned long hullSectionData = 0;
 
-//pin assignments
-#define PIN_NAVIGATION_FLASHER 8
-#define PIN_SR_CLOCK 11
-#define PIN_SR_LATCH 12
-#define PIN_SR_SECTION_DATA 13
-#define PIN_SR_ENABLE 14
 #define PIN_DEFLECTOR_R 6
 #define PIN_DEFLECTOR_G 5
 #define PIN_DEFLECTOR_B 3
 #define PIN_PHOTON_TORPEDO 9 
+
+#define PIN_SR_SECTION_DATA 13
+#define PIN_SR_ENABLE 14
+#define PIN_SR_LATCH 12
+#define PIN_SR_CLOCK 11
+
+#define PIN_NAVIGATION_FLASHER 8
 
 //timer constants
 #define RECEIVER_INTERRUPT_FREQUENCY 100 //ms
@@ -22,14 +24,15 @@ unsigned long sectionData = 0;
 #define beaconTimeOn 25
 #define beaconTimeOff 35
 
+byte sectionSignal[] = {0,0,0,0,0,0,0,0,0,0};
 volatile unsigned long previousMillis = 0;
 boolean bPowerOn = false;
 boolean bNavBeaconOn = false;
 boolean bNavFlasherOn = false;
 
-byte crystalSignal[4];
-byte colorWhite[] = {10, 10, 10};
-byte colorAmber[] = {250, 85, 0};
+byte crystalSignal[] = {0,0,0,0,0,0};
+byte newDeflectorRGB[] = {10,10,10};
+byte oldDeflectorRGB[] = {10,10,10};
 
 void setup() {
   pinMode(PIN_SR_ENABLE, OUTPUT);
@@ -44,8 +47,12 @@ void setup() {
   pinMode(PIN_DEFLECTOR_G, OUTPUT);
   pinMode(PIN_DEFLECTOR_B, OUTPUT);
   pinMode(PIN_PHOTON_TORPEDO, OUTPUT);
+
+  setDeflector(colorOff);
+ 
+  updateSaucerSectionDataRegister();
+  updateHullSectionDataRegister();
   
-  updateSectionDataRegister();
   digitalWrite(PIN_SR_ENABLE,LOW);
  
   OCR0A = 0xAF;
@@ -60,9 +67,51 @@ SIGNAL(TIMER0_COMPA_vect)
     // save the last time you did a repeatable item clear
     previousMillis = currentMillis;
     updateNavBeacon(bNavBeaconOn);
-    randomSectionUpdate(bPowerOn);
+   //randomSaucerSectionUpdate(bPowerOn);
   } //end if timer
 } 
+
+void setDeflector(byte color[]) {
+
+      newDeflectorRGB[0] = color[0];
+      newDeflectorRGB[1] = color[1];
+      newDeflectorRGB[2] = color[2];
+      
+      bool oper_R = (oldDeflectorRGB[0] >= newDeflectorRGB[0]) ? 0:1;
+      bool oper_G = (oldDeflectorRGB[1] >= newDeflectorRGB[1]) ? 0:1;
+      bool oper_B = (oldDeflectorRGB[2] >= newDeflectorRGB[2]) ? 0:1;
+      
+      for (int increment=0; increment<=255; increment++){
+         
+         if ( oldDeflectorRGB[0] != newDeflectorRGB[0] ) {
+           if ( oper_R ) {
+             analogWrite(PIN_DEFLECTOR_R, (255-(++oldDeflectorRGB[0])));
+           }
+           else {
+             analogWrite(PIN_DEFLECTOR_R, (255-(--oldDeflectorRGB[0])));
+           }
+         }
+
+         if ( oldDeflectorRGB[1] != newDeflectorRGB[1] ) {
+           if ( oper_G ) {
+             analogWrite(PIN_DEFLECTOR_G, (255-(++oldDeflectorRGB[1])));
+           }
+           else {
+             analogWrite(PIN_DEFLECTOR_G, (255-(--oldDeflectorRGB[1])));
+           }
+         }
+
+         if ( oldDeflectorRGB[2] != newDeflectorRGB[2] ) {
+           if ( oper_B ) {
+             analogWrite(PIN_DEFLECTOR_B, (255-(++oldDeflectorRGB[2])));
+           }
+           else {
+             analogWrite(PIN_DEFLECTOR_B, (255-(--oldDeflectorRGB[2])));
+           }
+         }
+         delay(7);
+      }  
+}
 
 void updateNavBeacon(boolean bPowerOn){
 
@@ -111,7 +160,7 @@ void updateNavBeacon(boolean bPowerOn){
   }
 }
 
-void randomSectionUpdate(boolean bPowerOn) { //called every POLLING_FREQUENCY ms
+void randomSaucerSectionUpdate(boolean bPowerOn) { //called every POLLING_FREQUENCY ms
    static byte changeCounter=0; //increments every INTERRUPT_FREQ duration
    static byte changeLimit=50; //INTERRUPT_FREQ*changeLimit = ms duration
 
@@ -120,20 +169,43 @@ void randomSectionUpdate(boolean bPowerOn) { //called every POLLING_FREQUENCY ms
       if (changeCounter++ > changeLimit){
         changeCounter=0;
         changeLimit = random(20,80);
-        sectionData ^= (0x0001 << random(0,6));
+        saucerSectionData ^= (0x0001 << random(0,6));
       }
-      updateSectionDataRegister();
+      updateSaucerSectionDataRegister();
    }
 }
 
-void updateSectionDataRegister()
-{
-   digitalWrite(PIN_SR_LATCH, LOW);
-   shiftOut(PIN_SR_SECTION_DATA, PIN_SR_CLOCK, LSBFIRST, (sectionData & 0xFF));
-   shiftOut(PIN_SR_SECTION_DATA, PIN_SR_CLOCK, LSBFIRST, (sectionData & 0xFF00) >> 8);
-   digitalWrite(PIN_SR_LATCH, HIGH);
+void updateSaucerSectionDataRegister(){
+   /*sectionSignal[0] = SERIAL_COMM_SAUCER_SECTION;
+   sectionSignal[1] = (saucerSectionData & 0xFF);
+   Serial.write(sectionSignal, 2); */
+   sectionSignal[0] = SERIAL_COMM_SAUCER_SECTION;
+   byte mask = 0;
+
+   for (int set=0; set<8; set++){
+      mask = 0x1 << set;
+      if ((saucerSectionData & mask) == 0){
+        sectionSignal[set+1]=0;
+      }
+      else {
+        sectionSignal[set+1]=1;
+      }
+      mask =0;
+   }
+
+   Serial.write(sectionSignal,9);
+   //Serial.write(SERIAL_COMM_SAUCER_SECTION);
+   //byte out = (byte)saucerSectionData & 0xFF;
+   //Serial.write(out);
 }
 
+void updateHullSectionDataRegister()
+{
+   digitalWrite(PIN_SR_LATCH, LOW);
+   shiftOut(PIN_SR_SECTION_DATA, PIN_SR_CLOCK, LSBFIRST, (hullSectionData & 0xFF));
+   //shiftOut(PIN_SR_SECTION_DATA, PIN_SR_CLOCK, LSBFIRST, (sectionData & 0xFF00) >> 8);
+   digitalWrite(PIN_SR_LATCH, HIGH);
+}
 
 void fireTorpedo() {
    analogWrite(PIN_PHOTON_TORPEDO, 10);
@@ -147,46 +219,27 @@ void fireTorpedo() {
    }  
 }
 
-void deflectorOn(boolean bOn){
-   if (bOn) {
-      for (int brightness=0; brightness<=100; brightness+=5){
-         analogWrite(PIN_DEFLECTOR_R, brightness);
-         analogWrite(PIN_DEFLECTOR_G, brightness);
-         analogWrite(PIN_DEFLECTOR_B, brightness);
-         delay(50);
-      }
-   }
-   else {
-      for (int brightness=100; brightness>=0; brightness-=5){
-         analogWrite(PIN_DEFLECTOR_R, brightness);
-         analogWrite(PIN_DEFLECTOR_G, brightness);
-         analogWrite(PIN_DEFLECTOR_B, brightness);
-         delay(50);
-      }
-   }
-}
-
 void powerSaucerSectionUp(){
-  bitSet(sectionData, SR_MAIN_POWER);
-  updateSectionDataRegister();
+  //bitSet(sectionData, SR_MAIN_POWER);
+  //updateSectionDataRegister();
 
   for (int section=0; section<8; section++){
-    bitSet(sectionData, section);
-    updateSectionDataRegister();
-    delay(750);
+    bitSet(saucerSectionData, section);
+    updateSaucerSectionDataRegister();
+    delay(1000);
   }
 }
 
 void powerSaucerSectionDown(){
 
   for (int section=0; section<8; section++){
-    bitClear(sectionData, section);
-    updateSectionDataRegister();
-    delay(750);
+    bitClear(saucerSectionData, section);
+    updateSaucerSectionDataRegister();
+    delay(1000);
   }
   
-  bitClear(sectionData, SR_MAIN_POWER);
-  updateSectionDataRegister();
+  //bitClear(saucerSectionData, SR_MAIN_POWER);
+  //updateSectionDataRegister();
 }
 
 void runShutdownSequence(){
@@ -194,13 +247,19 @@ void runShutdownSequence(){
   bNavFlasherOn=false;
   bPowerOn = false;
   powerSaucerSectionDown();
-  deflectorOn( false );
+ 
+  setDeflector(colorOff);
+  setCrystal(colorWhite);
 }
 
 void runStartUpSequence() {
-
+  
+  setCrystal(colorAmber);
+  delay(5000);
   powerSaucerSectionUp();
 
+  setDeflector(colorAmber);
+ 
   //start nav lights
   bPowerOn = true;
   bNavBeaconOn=true;
@@ -210,8 +269,8 @@ void runStartUpSequence() {
   
   //start warp engines 
   //fade in deflector
-  delay(2000); 
-  deflectorOn( true );
+  //deflectorOn( true );
+ 
   //start running lights
   //start random section updates
   //increase warp engines
@@ -235,11 +294,9 @@ void loop() {
        case SERIAL_COMM_POWER_OFF: 
           Serial.write(SERIAL_COMM_POWER_OFF);
           runShutdownSequence();
-          setCrystal(colorWhite);
           break;
        case SERIAL_COMM_POWER_ON: //power on
           Serial.write(SERIAL_COMM_POWER_ON);
-          setCrystal(colorAmber);
           runStartUpSequence();
           break;
        case SERIAL_COMM_TORPEDO:
@@ -250,6 +307,14 @@ void loop() {
           break;
        case SERIAL_COMM_PHASER_OFF:
           Serial.write(SERIAL_COMM_PHASER_OFF);
+          break;
+       case SERIAL_COMM_WARP_DRIVE:
+          setCrystal(colorBlue);
+          setDeflector(colorBlue);
+          break;
+       case SERIAL_COMM_IMPULSE_DRIVE:
+          setCrystal(colorAmber);
+          setDeflector(colorAmber);
           break;
      }
    }

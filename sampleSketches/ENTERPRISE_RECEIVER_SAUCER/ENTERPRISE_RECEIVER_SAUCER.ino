@@ -2,17 +2,20 @@
 #include <SERIAL_COMM.h>
 
 int incomingByte = 0;   // for incoming serial data
-unsigned long sectionData = 0;
+
+unsigned int sectionData = 0;
+byte sectionSignal[] = {0,0,0,0,0,0,0,0,0,0};
+
 byte newCrystalRGB[] = {25,25,25};
 byte oldCrystalRGB[] = {0,0,0};
 
 //pin assignments
 #define PIN_NAVIGATION_BEACON 17
 #define PIN_NAVIGATION_FLASHER 18
-#define PIN_SR_ENABLE 10
-#define PIN_SR_CLOCK 11
+#define PIN_SR_SECTION_DATA 10
+#define PIN_SR_ENABLE 11
 #define PIN_SR_LATCH 12
-#define PIN_SR_SECTION_DATA 13
+#define PIN_SR_CLOCK 13
 
 #define PIN_CRYSTAL_R 6
 #define PIN_CRYSTAL_G 5
@@ -46,7 +49,7 @@ void setup() {
 void updateSectionDataRegister() {  
    digitalWrite(PIN_SR_LATCH, LOW);
    shiftOut(PIN_SR_SECTION_DATA, PIN_SR_CLOCK, LSBFIRST, (sectionData & 0xFF));
-   shiftOut(PIN_SR_SECTION_DATA, PIN_SR_CLOCK, LSBFIRST, (sectionData & 0xFF00) >> 8);
+   //shiftOut(PIN_SR_SECTION_DATA, PIN_SR_CLOCK, LSBFIRST, (sectionData & 0xFF00) >> 8);
    digitalWrite(PIN_SR_LATCH, HIGH);
 }
 
@@ -61,48 +64,61 @@ void firePhaser(boolean bOn) {
 }
 
 void setCrystal() {
-      bool oper_R = (oldCrystalRGB[0] >= newCrystalRGB[0]) ? 0:1;
-      bool oper_G = (oldCrystalRGB[1] >= newCrystalRGB[1]) ? 0:1;
-      bool oper_B = (oldCrystalRGB[2] >= newCrystalRGB[2]) ? 0:1;
+
+    bool oper_R = (oldCrystalRGB[0] >= newCrystalRGB[0]) ? 0:1;
+    bool oper_G = (oldCrystalRGB[1] >= newCrystalRGB[1]) ? 0:1;
+    bool oper_B = (oldCrystalRGB[2] >= newCrystalRGB[2]) ? 0:1;
       
-      for (int increment=0; increment<=255; increment++){
-         
-         if ( oldCrystalRGB[0] != newCrystalRGB[0] ) {
+    for (int analogCount=0; analogCount<=255; analogCount++){
+         //if (Serial.available() > 0) {
+         //    incomingByte = Serial.read();
+         //}
+        
+        if ( oldCrystalRGB[0] != newCrystalRGB[0] ) {
            if ( oper_R ) {
-             analogWrite(PIN_CRYSTAL_R, (255-(++oldCrystalRGB[0])));
+             analogWrite(PIN_CRYSTAL_R, (255-(oldCrystalRGB[0]++)));
            }
            else {
-             analogWrite(PIN_CRYSTAL_R, (255-(--oldCrystalRGB[0])));
+             analogWrite(PIN_CRYSTAL_R, (255-(oldCrystalRGB[0]--)));
            }
-         }
+        }
 
-         if ( oldCrystalRGB[1] != newCrystalRGB[1] ) {
+        if ( oldCrystalRGB[1] != newCrystalRGB[1] ) {
            if ( oper_G ) {
-             analogWrite(PIN_CRYSTAL_G, (255-(++oldCrystalRGB[1])));
+             analogWrite(PIN_CRYSTAL_G, (255-(oldCrystalRGB[1]++)));
            }
            else {
-             analogWrite(PIN_CRYSTAL_G, (255-(--oldCrystalRGB[1])));
+             analogWrite(PIN_CRYSTAL_G, (255-(oldCrystalRGB[1]--)));
            }
-         }
+        }
 
-         if ( oldCrystalRGB[2] != newCrystalRGB[2] ) {
+        if ( oldCrystalRGB[2] != newCrystalRGB[2] ) {
            if ( oper_B ) {
-             analogWrite(PIN_CRYSTAL_B, (255-(++oldCrystalRGB[2])));
+             analogWrite(PIN_CRYSTAL_B, (255-(oldCrystalRGB[2]++)));
            }
            else {
-             analogWrite(PIN_CRYSTAL_B, (255-(--oldCrystalRGB[2])));
+             analogWrite(PIN_CRYSTAL_B, (255-(oldCrystalRGB[2]--)));
            }
-         }
-         delay(7);
-      }  
+        }
+        delay(7);
+    }  
 }
 
 void powerSaucerSectionUp(){
-  bitSet(sectionData, SR_MAIN_POWER);
+  for (int section=0; section<8; section++){
+    bitSet(sectionData, section);
+    updateSectionDataRegister();
+    delay(750);
+  }
 }
 
 void powerSaucerSectionDown(){
-  bitClear(sectionData, SR_MAIN_POWER);
+
+  for (int section=0; section<8; section++){
+    bitClear(sectionData, section);
+    updateSectionDataRegister();
+    delay(750);
+  }
 }
 
 void runShutdownSequence(){
@@ -111,12 +127,12 @@ void runShutdownSequence(){
   digitalWrite(PIN_NAVIGATION_BEACON, LOW); 
   digitalWrite(PIN_NAVIGATION_FLASHER, LOW);   
   digitalWrite(PIN_PHASER, LOW);
-  powerSaucerSectionDown();
+  //powerSaucerSectionDown();
 }
 
 void runStartUpSequence() {
 
-  powerSaucerSectionUp();
+  //powerSaucerSectionUp();
 
   //start nav lights
   bPowerOn = true;
@@ -131,6 +147,12 @@ void runStartUpSequence() {
   //start running lights
   //start random section updates
   //increase warp engines
+}
+
+void updateDataSectionRegister() {
+   digitalWrite(PIN_SR_LATCH, LOW);
+   shiftOut(PIN_SR_SECTION_DATA, PIN_SR_CLOCK, LSBFIRST, sectionData & 0xFF);
+   digitalWrite(PIN_SR_LATCH, HIGH);
 }
 
 void loop() {
@@ -168,13 +190,25 @@ void loop() {
           Serial.readBytes(newCrystalRGB, 3);
           setCrystal();       
           break;
+       case SERIAL_COMM_SAUCER_SECTION:
+          Serial.readBytes(sectionSignal,8);
+          for (int set=0; set<8; set++){
+             if (sectionSignal[set]==1){
+                bitSet(sectionData, set);
+             }
+             else {
+                bitClear(sectionData, set);
+             }
+          }
+          updateSectionDataRegister();
+          break;
        default:
-          switch (int(incomingByte/10) * 10){
+          /*switch (int(incomingByte/10) * 10){
             case SERIAL_COMM_IMPULSE_DRIVE:
                break;
             case SERIAL_COMM_WARP_DRIVE:
                break;
-          }
+          }*/
           break;
      }
    }
