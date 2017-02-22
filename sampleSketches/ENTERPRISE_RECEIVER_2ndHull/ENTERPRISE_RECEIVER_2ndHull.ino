@@ -19,20 +19,23 @@ unsigned long hullSectionData = 0;
 
 //timer constants
 #define RECEIVER_INTERRUPT_FREQUENCY 100 //ms
+#define FAST_RECEIVER_INTERRUPT_FREQUENCY 10 //ms
 #define flashTimeOn 10
 #define flashTimeOff 11
 #define beaconTimeOn 25
 #define beaconTimeOff 35
 
 byte sectionSignal[] = {0,0};
-volatile unsigned long previousMillis = 0;
+volatile unsigned long slowPreviousMillis = 0;
+volatile unsigned long fastPreviousMillis = 0;
 boolean bPowerOn = false;
 boolean bNavBeaconOn = false;
 boolean bNavFlasherOn = false;
 
 byte crystalSignal[] = {0,0,0,0};
-byte newDeflectorRGB[] = {10,10,10};
-byte oldDeflectorRGB[] = {10,10,10};
+byte newDeflectorRGB[] = {0,0,0};
+byte oldDeflectorRGB[] = {0,0,0};
+byte impulseLevelSignal[] = {SERIAL_COMM_IMPULSE_DRIVE, 0};
 
 void setup() {
   pinMode(PIN_SR_ENABLE, OUTPUT);
@@ -49,6 +52,9 @@ void setup() {
   pinMode(PIN_PHOTON_TORPEDO, OUTPUT);
 
   setDeflector(colorOff);
+  analogWrite(PIN_DEFLECTOR_R,255);
+  analogWrite(PIN_DEFLECTOR_G,255);
+  analogWrite(PIN_DEFLECTOR_B,255);
  
   updateSaucerSectionDataRegister();
   updateHullSectionDataRegister();
@@ -63,54 +69,57 @@ SIGNAL(TIMER0_COMPA_vect)
 {
   unsigned long currentMillis = millis();
 
-  if (currentMillis - previousMillis >= RECEIVER_INTERRUPT_FREQUENCY) {  //execute any timed operations every INTERRRUPT FREQ ms
+  if (currentMillis - slowPreviousMillis >= RECEIVER_INTERRUPT_FREQUENCY) {  //execute any timed operations every INTERRRUPT FREQ ms
     // save the last time you did a repeatable item clear
-    previousMillis = currentMillis;
+    slowPreviousMillis = currentMillis;
     updateNavBeacon(bNavBeaconOn);
     randomSaucerSectionUpdate(bPowerOn);
   } //end if timer
+
+  if (currentMillis - fastPreviousMillis >= FAST_RECEIVER_INTERRUPT_FREQUENCY) {
+    fastPreviousMillis = currentMillis;
+    checkDeflectorLevel();
+  }
 } 
 
-void setDeflector(byte color[]) {
+void checkDeflectorLevel(){
 
+   bool oper_R = (oldDeflectorRGB[0] >= newDeflectorRGB[0]) ? 0:1;
+   bool oper_G = (oldDeflectorRGB[1] >= newDeflectorRGB[1]) ? 0:1;
+   bool oper_B = (oldDeflectorRGB[2] >= newDeflectorRGB[2]) ? 0:1;      
+         
+   if ( oldDeflectorRGB[0] != newDeflectorRGB[0] ) {
+     if ( oper_R ) {
+       analogWrite(PIN_DEFLECTOR_R, (255-(++oldDeflectorRGB[0])));
+     }
+     else {
+       analogWrite(PIN_DEFLECTOR_R, (255-(--oldDeflectorRGB[0])));
+     }
+   }
+
+   if ( oldDeflectorRGB[1] != newDeflectorRGB[1] ) {
+      if ( oper_G ) {
+         analogWrite(PIN_DEFLECTOR_G, (255-(++oldDeflectorRGB[1])));
+      }
+      else {
+         analogWrite(PIN_DEFLECTOR_G, (255-(--oldDeflectorRGB[1])));
+      }
+   }
+
+   if ( oldDeflectorRGB[2] != newDeflectorRGB[2] ) {
+      if ( oper_B ) {
+         analogWrite(PIN_DEFLECTOR_B, (255-(++oldDeflectorRGB[2])));
+      }
+      else {
+         analogWrite(PIN_DEFLECTOR_B, (255-(--oldDeflectorRGB[2])));
+      }
+   }
+}
+
+void setDeflector(byte color[]) {
       newDeflectorRGB[0] = color[0];
       newDeflectorRGB[1] = color[1];
       newDeflectorRGB[2] = color[2];
-      
-      bool oper_R = (oldDeflectorRGB[0] >= newDeflectorRGB[0]) ? 0:1;
-      bool oper_G = (oldDeflectorRGB[1] >= newDeflectorRGB[1]) ? 0:1;
-      bool oper_B = (oldDeflectorRGB[2] >= newDeflectorRGB[2]) ? 0:1;
-      
-      for (int increment=0; increment<=255; increment++){
-         
-         if ( oldDeflectorRGB[0] != newDeflectorRGB[0] ) {
-           if ( oper_R ) {
-             analogWrite(PIN_DEFLECTOR_R, (255-(++oldDeflectorRGB[0])));
-           }
-           else {
-             analogWrite(PIN_DEFLECTOR_R, (255-(--oldDeflectorRGB[0])));
-           }
-         }
-
-         if ( oldDeflectorRGB[1] != newDeflectorRGB[1] ) {
-           if ( oper_G ) {
-             analogWrite(PIN_DEFLECTOR_G, (255-(++oldDeflectorRGB[1])));
-           }
-           else {
-             analogWrite(PIN_DEFLECTOR_G, (255-(--oldDeflectorRGB[1])));
-           }
-         }
-
-         if ( oldDeflectorRGB[2] != newDeflectorRGB[2] ) {
-           if ( oper_B ) {
-             analogWrite(PIN_DEFLECTOR_B, (255-(++oldDeflectorRGB[2])));
-           }
-           else {
-             analogWrite(PIN_DEFLECTOR_B, (255-(--oldDeflectorRGB[2])));
-           }
-         }
-         delay(7);
-      }  
 }
 
 void updateNavBeacon(boolean bPowerOn){
@@ -181,6 +190,11 @@ void updateSaucerSectionDataRegister(){
    Serial.write(sectionSignal, 2); 
 }
 
+void setImpulseDrive(byte level) {
+   impulseLevelSignal[1] = level;
+   Serial.write(impulseLevelSignal, 2);
+}
+
 void updateHullSectionDataRegister()
 {
    digitalWrite(PIN_SR_LATCH, LOW);
@@ -202,7 +216,6 @@ void fireTorpedo() {
 }
 
 void powerSaucerSectionUp(){
-
   for (int section=0; section<8; section++){
     bitSet(saucerSectionData, section);
     updateSaucerSectionDataRegister();
@@ -223,6 +236,7 @@ void runShutdownSequence(){
   bNavBeaconOn=false;
   bNavFlasherOn=false;
   bPowerOn = false;
+  setImpulseDrive(0);
   powerSaucerSectionDown();
  
   setDeflector(colorOff);
@@ -232,25 +246,16 @@ void runShutdownSequence(){
 void runStartUpSequence() {
   
   setCrystal(colorAmber);
-  delay(5000);
+  delay(2000);
   powerSaucerSectionUp();
-
-  setDeflector(colorAmber);
  
   //start nav lights
   bPowerOn = true;
   bNavBeaconOn=true;
   bNavFlasherOn=true;
-  //start dome
-  //start impulse engines
-  
-  //start warp engines 
-  //fade in deflector
-  //deflectorOn( true );
- 
-  //start running lights
-  //start random section updates
-  //increase warp engines
+
+  setDeflector(colorAmber);
+  setImpulseDrive(5);
 }
 
 void setCrystal(byte pRGB[]) {
@@ -278,64 +283,61 @@ void loop() {
 
    if (Serial.available() > 0) {
 
-     bool forwardByte = true;
      // read the incoming byte:
      incomingByte = Serial.read();
 
      switch (incomingByte) {
        case SERIAL_COMM_POWER_OFF: 
           runShutdownSequence();
+          Serial.write(SERIAL_COMM_POWER_OFF);
           break;
        case SERIAL_COMM_POWER_ON: //power on
           runStartUpSequence();
+          Serial.write(SERIAL_COMM_POWER_ON);
           break;
        case SERIAL_COMM_TORPEDO:
           fireTorpedo();
           break;
+       case SERIAL_COMM_PHASER_ON:
+          Serial.write(SERIAL_COMM_PHASER_ON);
+          break;
+       case SERIAL_COMM_PHASER_OFF:
+          Serial.write(SERIAL_COMM_PHASER_OFF);
+          break;
        case SERIAL_COMM_WARP_DRIVE:
           setCrystal(colorBlue);
           setDeflector(colorBlue);
+          setImpulseDrive(5);
           break;
        case SERIAL_COMM_IMPULSE_DRIVE:
           setCrystal(colorAmber);
           setDeflector(colorAmber);
+          setImpulseDrive(255);
           break;
        case SERIAL_COMM_BUTTON_1:
           buttonPressAction(1);
-          forwardByte= false;
           break;
        case SERIAL_COMM_BUTTON_2:
           buttonPressAction(2);
-          forwardByte= false;
           break;
        case SERIAL_COMM_BUTTON_3:
           buttonPressAction(3);
-          forwardByte= false;
           break;
        case SERIAL_COMM_BUTTON_4:
           buttonPressAction(4);
-          forwardByte= false;
           break;
        case SERIAL_COMM_BUTTON_5:
           buttonPressAction(5);
-          forwardByte= false;
           break;
        case SERIAL_COMM_BUTTON_6:
           buttonPressAction(6);
-          forwardByte= false;
           break;
        case SERIAL_COMM_BUTTON_7:
           buttonPressAction(7);
-          forwardByte= false;
           break;
        case SERIAL_COMM_BUTTON_8:
           buttonPressAction(8);
-          forwardByte= false;
           break;
      } ///end switch
-
-     if (forwardByte){
-       Serial.write(incomingByte);
-     }
    } //if serial
 }  //loop

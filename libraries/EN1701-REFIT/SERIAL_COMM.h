@@ -28,7 +28,7 @@
 #define SERIAL_COMM_CRYSTAL_COLOR 100
 #define SERIAL_COMM_SAUCER_SECTION 120
 
-#define SERIAL_COMM_IMPULSE_DRIVE 130   //last digit represents level
-#define SERIAL_COMM_WARP_DRIVE 150      //Last digit represents level
+#define SERIAL_COMM_IMPULSE_DRIVE 130
+#define SERIAL_COMM_WARP_DRIVE 150
 
 #endif

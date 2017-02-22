@@ -38,13 +38,14 @@ void ShipOperations::ApplyShipLogic() {
     return;
   }
 
-  if (EN1701A::sbAudioIndex == AUDIO_INDEX_CANCEL) {
-    stopPlaying();
-  }
-
   if (readCurrentShipState(AUDIO_EFFECT)) {
     playFile();
     EN1701A::svWriteShipState(false, AUDIO_EFFECT);
+    return;
+  }
+
+  if (EN1701A::sbAudioIndex == AUDIO_INDEX_CANCEL) {
+    stopPlaying();
   }
 
   if (readCurrentShipState(SR_TORPEDO)){
@@ -72,6 +73,22 @@ void ShipOperations::ApplyShipLogic() {
     //setTimer
     Serial.write(SERIAL_COMM_IMPULSE_DRIVE);
     EN1701A::svWriteShipState(false, IMPULSE_ENGINES);
+    return;
+  }
+
+  if (readCurrentShipState(SR_PHASER)){
+    if ( strcmp (pCurrentFilePlaying, scAudioEffects[AUDIO_INDEX_PHASER]) != 0) {
+      EN1701A::sbAudioIndex = AUDIO_INDEX_PHASER;
+      playFile();
+      delay(300);
+      Serial.write(SERIAL_COMM_PHASER_ON);
+      return;
+    }
+  }
+  else if (readOldShipState(SR_PHASER)){
+    stopPlaying();
+    Serial.write(SERIAL_COMM_PHASER_OFF);
+    EN1701A::svWriteShipState(false, SR_PHASER);
     return;
   }
 
@@ -152,19 +169,6 @@ void ShipOperations::ApplyShipLogic() {
     EN1701A::svWriteShipState(false, SR_BUTTON_0);
     Serial.write(SERIAL_COMM_BUTTON_0);
     return;
-  }
-
-  if (readCurrentShipState(SR_PHASER)){
-    if ( strcmp (pCurrentFilePlaying, scAudioEffects[AUDIO_INDEX_PHASER]) != 0) {
-      EN1701A::sbAudioIndex = AUDIO_INDEX_PHASER;
-      playFile();
-      Serial.write(SERIAL_COMM_PHASER_ON);
-    }
-  }
-  else if (readOldShipState(SR_PHASER)){
-    stopPlaying();
-    Serial.write(SERIAL_COMM_PHASER_OFF);
-    EN1701A::svWriteShipState(false, SR_PHASER);
   }
 }
 
