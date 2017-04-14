@@ -48,6 +48,7 @@ void setup() {
   pinMode(PIN_IMPULSE, OUTPUT);
   
   updateSectionDataRegister();
+  
   digitalWrite(PIN_SR_ENABLE,LOW);
 
   analogWrite(PIN_CRYSTAL_R, 255);
@@ -86,10 +87,23 @@ void firePhaser(boolean bOn) {
 
 void checkImpulseLevel() {
      
-   bool oper = newImpulseLevel >= currentImpulseLevel ? 1:0;
- 
    if ( newImpulseLevel != currentImpulseLevel ){
-      if (oper) {
+
+      if (newImpulseLevel >= currentImpulseLevel) {
+        //if on startup flash full impulse
+        if ( currentImpulseLevel == 0 ){
+           analogWrite(PIN_IMPULSE, 255);
+           delay(700);
+           analogWrite(PIN_IMPULSE, 0);
+           delay(2000);
+           analogWrite(PIN_IMPULSE, 255);
+           delay(700);
+           analogWrite(PIN_IMPULSE, 0);
+           delay(2000);
+           analogWrite(PIN_IMPULSE, 255);
+           currentImpulseLevel = 255;
+           return;
+        };
         analogWrite(PIN_IMPULSE, ++currentImpulseLevel);
       }
       else {
