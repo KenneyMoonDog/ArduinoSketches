@@ -8,7 +8,8 @@ unsigned long hullSectionData = 0;
 #define PIN_DEFLECTOR_R 6
 #define PIN_DEFLECTOR_G 5
 #define PIN_DEFLECTOR_B 3
-#define PIN_PHOTON_TORPEDO 9 
+#define PIN_PHOTON_TORPEDO_1 9 
+#define PIN_PHOTON_TORPEDO_2 10
 
 #define PIN_SR_SECTION_DATA 13
 #define PIN_SR_ENABLE 14
@@ -37,6 +38,8 @@ byte newDeflectorRGB[] = {0,0,0};
 byte oldDeflectorRGB[] = {0,0,0};
 byte impulseLevelSignal[] = {SERIAL_COMM_IMPULSE_DRIVE, 0};
 
+byte torpedo_tube = PIN_PHOTON_TORPEDO_1;
+
 void setup() {
   pinMode(PIN_SR_ENABLE, OUTPUT);
   digitalWrite(PIN_SR_ENABLE,HIGH);
@@ -49,7 +52,8 @@ void setup() {
   pinMode(PIN_DEFLECTOR_R, OUTPUT);
   pinMode(PIN_DEFLECTOR_G, OUTPUT);
   pinMode(PIN_DEFLECTOR_B, OUTPUT);
-  pinMode(PIN_PHOTON_TORPEDO, OUTPUT);
+  pinMode(PIN_PHOTON_TORPEDO_1, OUTPUT);
+  pinMode(PIN_PHOTON_TORPEDO_2, OUTPUT);
 
   setDeflector(colorOff);
   analogWrite(PIN_DEFLECTOR_R,255);
@@ -204,15 +208,22 @@ void updateHullSectionDataRegister()
 }
 
 void fireTorpedo() {
-   analogWrite(PIN_PHOTON_TORPEDO, 10);
+   analogWrite(torpedo_tube, 10);
    delay(100);
-   digitalWrite(PIN_PHOTON_TORPEDO, HIGH);
+   digitalWrite(torpedo_tube, HIGH);
    delay(250);
    
    for (int brightness=10; brightness>=0; brightness-=1){
-      analogWrite(PIN_PHOTON_TORPEDO, brightness);
-      delay(100);
+      analogWrite(torpedo_tube, brightness);
+      delay(120);
    }  
+
+   if ( torpedo_tube == PIN_PHOTON_TORPEDO_1 ){
+      torpedo_tube = PIN_PHOTON_TORPEDO_2;
+   }
+   else {
+      torpedo_tube = PIN_PHOTON_TORPEDO_1;
+   }
 }
 
 void powerSaucerSectionUp(){

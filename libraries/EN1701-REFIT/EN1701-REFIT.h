@@ -48,7 +48,7 @@ an illuminated control section of the ship*/
 
 static char* scAudioEffects[]={"KLAX.WAV", "P1MSG.WAV", "TORP1.WAV", "SPZER1.WAV", "BPD1.WAV", "BPUP1.WAV", "DSTRT.WAV", "HULHIT.WAV", "BTS1.WAV", "BTS2.WAV", "BTS3.WAV", "BT4.WAV", "BT5.WAV", "BT6.WAV"};
 static byte colorWhite[] = {10, 10, 10};
-static byte colorAmber[] = {250, 85, 0};
+static byte colorAmber[] = {250, 69, 0};
 static byte colorBlue[] = {0, 0, 255};
 static byte colorOff[] = {0, 0, 0};
 
