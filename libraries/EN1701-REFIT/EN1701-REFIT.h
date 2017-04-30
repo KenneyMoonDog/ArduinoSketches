@@ -27,6 +27,15 @@ an illuminated control section of the ship*/
 #define POWER_CHANGE 17
 #define AUDIO_EFFECT 18
 
+#define SAUCER_SECTION_BRIDGE 8
+#define SAUCER_SECTION_LOUNGE 7
+#define SAUCER_SECTION_1 1
+#define SAUCER_SECTION_2 2
+#define SAUCER_SECTION_3 3
+#define SAUCER_SECTION_4 4
+#define SAUCER_SECTION_5 5
+#define SAUCER_SECTION_6 6
+
 #define AUDIO_INDEX_CANCEL 100
 #define AUDIO_INDEX_RED_ALERT 0
 #define AUDIO_INDEX_P1_MESSAGE 1

@@ -32,6 +32,7 @@ volatile unsigned long fastPreviousMillis = 0;
 boolean bPowerOn = false;
 boolean bNavBeaconOn = false;
 boolean bNavFlasherOn = false;
+boolean fullImpulse = false;
 
 byte crystalSignal[] = {0,0,0,0};
 byte newDeflectorRGB[] = {0,0,0};
@@ -77,7 +78,7 @@ SIGNAL(TIMER0_COMPA_vect)
     // save the last time you did a repeatable item clear
     slowPreviousMillis = currentMillis;
     updateNavBeacon(bNavBeaconOn);
-    randomSaucerSectionUpdate(bPowerOn);
+    //randomSaucerSectionUpdate(bPowerOn);
   } //end if timer
 
   if (currentMillis - fastPreviousMillis >= FAST_RECEIVER_INTERRUPT_FREQUENCY) {
@@ -197,6 +198,13 @@ void updateSaucerSectionDataRegister(){
 void setImpulseDrive(byte level) {
    impulseLevelSignal[1] = level;
    Serial.write(impulseLevelSignal, 2);
+
+   if (level == 255) {
+      fullImpulse=true;
+   }
+   else {
+      fullImpulse=false;
+   }
 }
 
 void updateHullSectionDataRegister()
@@ -226,21 +234,64 @@ void fireTorpedo() {
    }
 }
 
-void powerSaucerSectionUp(){
-  for (int section=0; section<8; section++){
-    bitSet(saucerSectionData, section);
-    updateSaucerSectionDataRegister();
-    delay(750);
+/*void sectionPower( byte num, ... ){
+  va_list arguments;                     
+  va_start ( arguments, num );
+
+  bool set = va_arg(arguments, bool);
+  int delayReturn = va_arg(arguments, int);
+  
+  for (byte count = 0; count<(num-2); count++){
+    byte bitToSet = va_arg(arguments, byte) - 1;
+    if (set){
+      bitSet(saucerSectionData, bitToSet);
+    } 
+    else {
+      bitSet(saucerSectionData, bitToSet);
+    }
   }
+  
+  va_end(arguments);
+  updateSaucerSectionDataRegister();
+  delay(delayReturn);
+}*/
+
+void delayedSectionUpdate(int returnDelay){
+  updateSaucerSectionDataRegister();
+  delay(returnDelay);
+}
+void powerSaucerSectionUp(){
+
+  bitSet(saucerSectionData, (SAUCER_SECTION_LOUNGE-1));
+  delayedSectionUpdate(1000);
+  bitSet(saucerSectionData, (SAUCER_SECTION_3 - 1));
+  bitSet(saucerSectionData, (SAUCER_SECTION_4 - 1));
+  delayedSectionUpdate(1000);
+  bitSet(saucerSectionData, (SAUCER_SECTION_2 - 1));
+  bitSet(saucerSectionData, (SAUCER_SECTION_5 - 1));
+  delayedSectionUpdate(1000);
+  bitSet(saucerSectionData, (SAUCER_SECTION_1 - 1));
+  bitSet(saucerSectionData, (SAUCER_SECTION_6 - 1));
+  delayedSectionUpdate(1000);
+  delayedSectionUpdate(1000);
+  bitSet(saucerSectionData, (SAUCER_SECTION_BRIDGE - 1));
+  delayedSectionUpdate(0);
 }
 
 void powerSaucerSectionDown(){
-
-  for (int section=0; section<8; section++){
-    bitClear(saucerSectionData, section);
-    updateSaucerSectionDataRegister();
-    delay(750);
-  }
+  bitClear(saucerSectionData, (SAUCER_SECTION_BRIDGE - 1));
+  delayedSectionUpdate(1000);
+  bitClear(saucerSectionData, (SAUCER_SECTION_1 - 1));
+  bitClear(saucerSectionData, (SAUCER_SECTION_6 - 1));
+  delayedSectionUpdate(1000);
+  bitClear(saucerSectionData, (SAUCER_SECTION_3 - 1));
+  bitClear(saucerSectionData, (SAUCER_SECTION_4 - 1));
+  delayedSectionUpdate(1000);
+  bitClear(saucerSectionData, (SAUCER_SECTION_2 - 1));
+  bitClear(saucerSectionData, (SAUCER_SECTION_5 - 1));
+  delayedSectionUpdate(1000);
+  bitClear(saucerSectionData, (SAUCER_SECTION_LOUNGE-1));
+  delayedSectionUpdate(1000);
 }
 
 void runShutdownSequence(){
@@ -265,7 +316,9 @@ void runStartUpSequence() {
   bNavBeaconOn=true;
   bNavFlasherOn=true;
 
+  delay(1000);
   setDeflector(colorAmber);
+  delay(750);
   setImpulseDrive(5);
 }
 
@@ -277,8 +330,8 @@ void setCrystal(byte pRGB[]) {
    Serial.write(crystalSignal, 4); 
 }
 
-void buttonPressAction(byte button){
-    int sectionNumber = button - 1;
+void toggleSaucerSection(byte section){
+    int sectionNumber = section - 1;
     if (bPowerOn) {
        if (bitRead(saucerSectionData, sectionNumber) == 1){
           bitClear(saucerSectionData, sectionNumber);
@@ -323,31 +376,39 @@ void loop() {
        case SERIAL_COMM_IMPULSE_DRIVE:
           setCrystal(colorAmber);
           setDeflector(colorAmber);
-          setImpulseDrive(255);
+          if (fullImpulse){
+            setImpulseDrive(5);
+          } 
+          else {
+            setImpulseDrive(255);
+          }
           break;
        case SERIAL_COMM_BUTTON_1:
-          buttonPressAction(1);
+          toggleSaucerSection(SAUCER_SECTION_3);
           break;
-       case SERIAL_COMM_BUTTON_2:
-          buttonPressAction(2);
-          break;
+       //case SERIAL_COMM_BUTTON_2:
+       //   togg/leSaucerSection(2);
+       //   break;
        case SERIAL_COMM_BUTTON_3:
-          buttonPressAction(3);
+          toggleSaucerSection(SAUCER_SECTION_4);
           break;
        case SERIAL_COMM_BUTTON_4:
-          buttonPressAction(4);
+          toggleSaucerSection(SAUCER_SECTION_2);
           break;
        case SERIAL_COMM_BUTTON_5:
-          buttonPressAction(5);
+          toggleSaucerSection(SAUCER_SECTION_BRIDGE);
           break;
        case SERIAL_COMM_BUTTON_6:
-          buttonPressAction(6);
+          toggleSaucerSection(SAUCER_SECTION_5);
           break;
        case SERIAL_COMM_BUTTON_7:
-          buttonPressAction(7);
+          toggleSaucerSection(SAUCER_SECTION_1);
           break;
        case SERIAL_COMM_BUTTON_8:
-          buttonPressAction(8);
+          toggleSaucerSection(SAUCER_SECTION_LOUNGE);
+          break;
+       case SERIAL_COMM_BUTTON_9:
+          toggleSaucerSection(SAUCER_SECTION_6);
           break;
      } ///end switch
    } //if serial
