@@ -35,6 +35,7 @@ boolean bNavFlasherOn = false;
 boolean fullImpulse = false;
 
 byte crystalSignal[] = {0,0,0,0};
+byte nacelleSignal[] = {0,0,0,0};
 byte newDeflectorRGB[] = {0,0,0};
 byte oldDeflectorRGB[] = {0,0,0};
 byte impulseLevelSignal[] = {SERIAL_COMM_IMPULSE_DRIVE, 0};
@@ -170,6 +171,7 @@ void updateNavBeacon(boolean bPowerOn){
     if ( bFlasherOn ){
       bFlasherOn = false;
       digitalWrite(PIN_NAVIGATION_FLASHER, LOW);
+      Serial.write(SERIAL_COMM_NAV_FLASHER_OFF);
     }
   }
 }
@@ -260,6 +262,7 @@ void delayedSectionUpdate(int returnDelay){
   updateSaucerSectionDataRegister();
   delay(returnDelay);
 }
+
 void powerSaucerSectionUp(){
 
   bitSet(saucerSectionData, (SAUCER_SECTION_LOUNGE-1));
@@ -302,12 +305,14 @@ void runShutdownSequence(){
   powerSaucerSectionDown();
  
   setDeflector(colorOff);
+  setNacelles(colorWhite);
   setCrystal(colorWhite);
 }
 
 void runStartUpSequence() {
   
   setCrystal(colorAmber);
+  setNacelles(colorBlue); 
   delay(2000);
   powerSaucerSectionUp();
  
@@ -328,6 +333,14 @@ void setCrystal(byte pRGB[]) {
    crystalSignal[2] = pRGB[1];
    crystalSignal[3] = pRGB[2];
    Serial.write(crystalSignal, 4); 
+}
+
+void setNacelles(byte pRGB[]) {
+   nacelleSignal[0] = SERIAL_COMM_NACELLE_COLOR;
+   nacelleSignal[1] = pRGB[0];
+   nacelleSignal[2] = pRGB[1];
+   nacelleSignal[3] = pRGB[2];
+   Serial.write(nacelleSignal, 4); 
 }
 
 void toggleSaucerSection(byte section){
@@ -351,9 +364,9 @@ void loop() {
      incomingByte = Serial.read();
 
      switch (incomingByte) {
-       case SERIAL_COMM_POWER_OFF: 
+       case SERIAL_COMM_POWER_OFF:
+          Serial.write(SERIAL_COMM_POWER_OFF); 
           runShutdownSequence();
-          Serial.write(SERIAL_COMM_POWER_OFF);
           break;
        case SERIAL_COMM_POWER_ON: //power on
           runStartUpSequence();
