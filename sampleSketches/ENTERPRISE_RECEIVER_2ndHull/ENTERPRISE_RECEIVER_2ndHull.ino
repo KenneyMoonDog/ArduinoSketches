@@ -1,9 +1,18 @@
-#include <EN1701-REFIT.h>
+//#include <EN1701-REFIT.h>
 #include <SERIAL_COMM.h>
 
 int incomingByte = 0;   // for incoming serial data
 unsigned long saucerSectionData = 0;
 unsigned long hullSectionData = 0;
+
+#define SAUCER_SECTION_BRIDGE 8
+#define SAUCER_SECTION_LOUNGE 7
+#define SAUCER_SECTION_1 1
+#define SAUCER_SECTION_2 2
+#define SAUCER_SECTION_3 3
+#define SAUCER_SECTION_4 4
+#define SAUCER_SECTION_5 5
+#define SAUCER_SECTION_6 6
 
 #define PIN_DEFLECTOR_R 6
 #define PIN_DEFLECTOR_G 5
@@ -41,6 +50,11 @@ byte oldDeflectorRGB[] = {0,0,0};
 byte impulseLevelSignal[] = {SERIAL_COMM_IMPULSE_DRIVE, 0};
 
 byte torpedo_tube = PIN_PHOTON_TORPEDO_1;
+
+static byte colorWhite[] = {10, 10, 10};
+static byte colorAmber[] = {250, 69, 0};
+static byte colorBlue[] = {0, 0, 255};
+static byte colorOff[] = {0, 0, 0};
 
 void setup() {
   pinMode(PIN_SR_ENABLE, OUTPUT);

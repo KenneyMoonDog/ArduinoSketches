@@ -27,15 +27,6 @@ an illuminated control section of the ship*/
 #define POWER_CHANGE 17
 #define AUDIO_EFFECT 18
 
-#define SAUCER_SECTION_BRIDGE 8
-#define SAUCER_SECTION_LOUNGE 7
-#define SAUCER_SECTION_1 1
-#define SAUCER_SECTION_2 2
-#define SAUCER_SECTION_3 3
-#define SAUCER_SECTION_4 4
-#define SAUCER_SECTION_5 5
-#define SAUCER_SECTION_6 6
-
 #define AUDIO_INDEX_CANCEL 100
 #define AUDIO_INDEX_RED_ALERT 0
 #define AUDIO_INDEX_P1_MESSAGE 1
@@ -51,15 +42,11 @@ an illuminated control section of the ship*/
 #define AUDIO_INDEX_BTS4 11
 #define AUDIO_INDEX_BTS5 12
 #define AUDIO_INDEX_BTS6 13
-
 #define PIN_IR_RECEIVER 11
 
-
 static char* scAudioEffects[]={"KLAX.WAV", "P1MSG.WAV", "TORP1.WAV", "SPZER1.WAV", "BPD1.WAV", "BPUP1.WAV", "DSTRT.WAV", "HULHIT.WAV", "BTS1.WAV", "BTS2.WAV", "BTS3.WAV", "BT4.WAV", "BT5.WAV", "BT6.WAV"};
-static byte colorWhite[] = {10, 10, 10};
-static byte colorAmber[] = {250, 69, 0};
-static byte colorBlue[] = {0, 0, 255};
-static byte colorOff[] = {0, 0, 0};
+
+class ShipOperations;
 
 class EN1701A
 {
@@ -69,6 +56,7 @@ class EN1701A
     static unsigned long suiCurrentShipState;
     static unsigned long suiPreviousShipState;
     static void svWriteShipState(bool set, byte pinset);
+    static ShipOperations mShipboardOperations;
 };
 
 #endif

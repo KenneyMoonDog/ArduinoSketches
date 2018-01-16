@@ -1,12 +1,13 @@
 #include <EN1701-REFIT.h>
 #include <IRStateReader.h>
 #include <ShipOperations.h>
+#include <ButtonReader.h>
 
 #define CONSOLE_POLLING_FREQUENCY 250 //ms
 volatile unsigned long previousMillis = 0;
 
-//----------
 IRStateReader *pStateReader;
+ButtonReader *pButtonReader;
 ShipOperations *pShipOperations;
 
 byte          EN1701A::sbAudioIndex = 0;
@@ -30,10 +31,13 @@ void setup()
   Serial.begin(9600); 
 
   pStateReader = new IRStateReader(PIN_IR_RECEIVER);
-  pShipOperations = new ShipOperations();
-
+  pShipOperations = new ShipOperations;
+  pButtonReader = new ButtonReader;
+  pButtonReader->setupInterrupts();
   pShipOperations->clearAll();
 
+  EN1701A::mShipboardOperations.clearAll();
+  
   // Timer0 is already used for millis() - we'll just interrupt somewhere
   // in the middle and call the "Compare A" function below
   OCR0A = 0xAF;
@@ -46,8 +50,8 @@ SIGNAL(TIMER0_COMPA_vect)
 
   if (currentMillis - previousMillis >= CONSOLE_POLLING_FREQUENCY) {  //execute any timed operations every 250ms
     // save the last time you did a repeatable item clear
-    previousMillis = currentMillis;
-    pShipOperations->audioCheck(); 
+    previousMillis = currentMillis;; 
+    pShipOperations->audioCheck();
   }
 } 
 
@@ -55,9 +59,9 @@ void loop() {
   if (pStateReader->updateShipStateViaIR()) {
     pShipOperations->ApplyShipLogic();
   } 
+
+  if (pButtonReader->scanButtons() ) {
+    pShipOperations->ApplyShipLogic();
+  }
 }
-
-
-
-
 

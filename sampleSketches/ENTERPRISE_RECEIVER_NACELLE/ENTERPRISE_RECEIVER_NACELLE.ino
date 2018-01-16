@@ -1,10 +1,7 @@
-#include <EN1701-REFIT.h>
 #include <SERIAL_COMM.h>
 
 volatile unsigned long previousMillis = 0;
-
 int incomingByte = 0;   // for incoming serial data
-
 byte newNacelleRGB[] = {10,10,10};
 byte oldNacelleRGB[] = {0,0,0};
 
@@ -15,7 +12,6 @@ byte oldNacelleRGB[] = {0,0,0};
 
 //timer constants
 #define RECEIVER_INTERRUPT_FREQUENCY 7 //ms
-
 boolean bPowerOn = false;
 
 void setup() {    
@@ -24,7 +20,7 @@ void setup() {
   pinMode(PIN_NACELLE_R, OUTPUT);
   pinMode(PIN_NACELLE_G, OUTPUT);
   pinMode(PIN_NACELLE_B, OUTPUT);
-  
+
   analogWrite(PIN_NACELLE_R, 255);
   analogWrite(PIN_NACELLE_G, 255);
   analogWrite(PIN_NACELLE_B, 255);
