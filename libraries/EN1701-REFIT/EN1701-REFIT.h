@@ -46,17 +46,18 @@ an illuminated control section of the ship*/
 
 static char* scAudioEffects[]={"KLAX.WAV", "P1MSG.WAV", "TORP1.WAV", "SPZER1.WAV", "BPD1.WAV", "BPUP1.WAV", "DSTRT.WAV", "HULHIT.WAV", "BTS1.WAV", "BTS2.WAV", "BTS3.WAV", "BT4.WAV", "BT5.WAV", "BT6.WAV"};
 
-class ShipOperations;
+//class ShipOperations;
 
 class EN1701A
 {
   public:
+    volatile static boolean buttonInterrupt;
     static byte sendByte;
     static byte sbAudioIndex;
     static unsigned long suiCurrentShipState;
     static unsigned long suiPreviousShipState;
     static void svWriteShipState(bool set, byte pinset);
-    static ShipOperations mShipboardOperations;
+    //static ShipOperations mShipboardOperations;
 };
 
 #endif

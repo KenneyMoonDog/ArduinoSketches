@@ -13,6 +13,7 @@ ShipOperations *pShipOperations;
 byte          EN1701A::sbAudioIndex = 0;
 unsigned long  EN1701A::suiCurrentShipState = 0;
 unsigned long  EN1701A::suiPreviousShipState = 0;
+volatile boolean EN1701A::buttonInterrupt = false;
 
 void EN1701A::svWriteShipState(bool set, byte pinset )
 {
@@ -33,10 +34,11 @@ void setup()
   pStateReader = new IRStateReader(PIN_IR_RECEIVER);
   pShipOperations = new ShipOperations;
   pButtonReader = new ButtonReader;
+  
   pButtonReader->setupInterrupts();
   pShipOperations->clearAll();
 
-  EN1701A::mShipboardOperations.clearAll();
+  //EN1701A::mShipboardOperations.clearAll();
   
   // Timer0 is already used for millis() - we'll just interrupt somewhere
   // in the middle and call the "Compare A" function below
@@ -60,8 +62,9 @@ void loop() {
     pShipOperations->ApplyShipLogic();
   } 
 
-  if (pButtonReader->scanButtons() ) {
+  if ( EN1701A::buttonInterrupt ) {
     pShipOperations->ApplyShipLogic();
+    EN1701A::buttonInterrupt = false;
   }
 }
 
