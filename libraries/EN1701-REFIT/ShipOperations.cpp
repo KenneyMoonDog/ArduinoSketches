@@ -82,8 +82,8 @@ void ShipOperations::ApplyShipLogic() {
       playFile();
       delay(300);
       Serial.write(SERIAL_COMM_PHASER_ON);
-      return;
     }
+    return;
   }
   else if (readOldShipState(SR_PHASER)){
     stopPlaying();
