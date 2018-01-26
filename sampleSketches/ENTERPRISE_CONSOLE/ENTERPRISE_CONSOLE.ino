@@ -56,13 +56,17 @@ SIGNAL(TIMER0_COMPA_vect)
 } 
 
 void loop() {
-  if (pStateReader->updateShipStateViaIR()) {
+  /*if (pStateReader->updateShipStateViaIR()) {
     pShipOperations->ApplyShipLogic();
-  } 
+  } */
 
   if ( EN1701A::buttonInterrupt ) {
     pShipOperations->ApplyShipLogic();
     EN1701A::buttonInterrupt = false;
+  }
+
+  if (pButtonReader->pollButtons()){
+    pShipOperations->ApplyShipLogic();
   }
 }
 

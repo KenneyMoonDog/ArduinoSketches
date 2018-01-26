@@ -5,17 +5,12 @@ class ButtonReader {
 public:
   ButtonReader();
   void setupInterrupts();
-
+  boolean pollButtons();
 
 private:
-  //static void checkTorpedoPin();
-  //static void checkPhaserPin();
   static void testInterruptPin();
-  static void updateShipState(byte pinToTest, boolean newState);
+  static void updateShipState_fromInterrupt(byte pinToTest, boolean newState);
+  void updateShipState_fromPolledButton(byte pinToTest, boolean newState);
   static boolean onButtonChange(byte pinToTest, boolean &stateTarget, unsigned long &debounceTarget, boolean bDownOnly );
-  static boolean power_button_change();
-  static boolean phaser_button_change();
-  static boolean torpedo_button_change();
-  //static ShipOperations *pShipOperations;
 };
 #endif

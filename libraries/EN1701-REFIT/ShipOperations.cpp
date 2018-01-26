@@ -38,6 +38,11 @@ void ShipOperations::ApplyShipLogic() {
     return;
   }
 
+  if (!readCurrentShipState(PRIMARY_SYSTEMS)) {
+    clearAll();
+    return;
+  }
+
   if (readCurrentShipState(AUDIO_EFFECT)) {
     playFile();
     EN1701A::svWriteShipState(false, AUDIO_EFFECT);
