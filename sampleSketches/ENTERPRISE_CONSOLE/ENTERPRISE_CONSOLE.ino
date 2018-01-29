@@ -65,8 +65,8 @@ void loop() {
     EN1701A::buttonInterrupt = false;
   }
 
-  if (pButtonReader->pollButtons()){
+  /*if (pButtonReader->pollButtons()){
     pShipOperations->ApplyShipLogic();
-  }
+  }*/
 }
 
