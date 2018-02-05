@@ -399,6 +399,13 @@ void loop() {
           setCrystal(colorBlue);
           setDeflector(colorBlue);
           setImpulseDrive(5);
+          Serial.write(SERIAL_COMM_WARP_DRIVE);
+          break;
+       case SERIAL_COMM_INCREASE_WARP_DRIVE:
+          Serial.write(SERIAL_COMM_INCREASE_WARP_DRIVE);
+          break;
+       case SERIAL_COMM_DECREASE_WARP_DRIVE:
+          Serial.write(SERIAL_COMM_DECREASE_WARP_DRIVE);
           break;
        case SERIAL_COMM_IMPULSE_DRIVE:
           setCrystal(colorAmber);
@@ -409,6 +416,7 @@ void loop() {
           else {
             setImpulseDrive(255);
           }
+          Serial.write(SERIAL_COMM_IMPULSE_DRIVE);
           break;
        case SERIAL_COMM_BUTTON_1:
           toggleSaucerSection(SAUCER_SECTION_3);

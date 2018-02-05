@@ -71,6 +71,30 @@ void ShipOperations::ApplyShipLogic() {
     return;
   }
 
+  if(readCurrentShipState(INCREASE_WARP_ENGINES)){
+    //EN1701A::sbAudioIndex = AUDIO_INDEX_BTS1;
+    //playFile();
+    //setTimer
+    //delay(3000);
+    EN1701A::sbAudioIndex = AUDIO_INDEX_BTS4;
+    playFile();
+    Serial.write(SERIAL_COMM_INCREASE_WARP_DRIVE);
+    EN1701A::svWriteShipState(false, INCREASE_WARP_ENGINES);
+    return;
+  }
+
+  if(readCurrentShipState(DECREASE_WARP_ENGINES)){
+    //EN1701A::sbAudioIndex = AUDIO_INDEX_BTS1;
+    //playFile();
+    //setTimer
+    //delay(3000);
+    EN1701A::sbAudioIndex = AUDIO_INDEX_BTS4;
+    playFile();
+    Serial.write(SERIAL_COMM_DECREASE_WARP_DRIVE);
+    EN1701A::svWriteShipState(false, DECREASE_WARP_ENGINES);
+    return;
+  }
+
   if(readCurrentShipState(IMPULSE_ENGINES)){
     EN1701A::sbAudioIndex = AUDIO_INDEX_BTS1;
     playFile();

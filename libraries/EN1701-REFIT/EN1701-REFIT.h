@@ -26,6 +26,8 @@ an illuminated control section of the ship*/
 #define IMPULSE_ENGINES 16 //byte3
 #define POWER_CHANGE 17
 #define AUDIO_EFFECT 18
+#define INCREASE_WARP_ENGINES 19
+#define DECREASE_WARP_ENGINES 20
 
 #define AUDIO_INDEX_CANCEL 100
 #define AUDIO_INDEX_RED_ALERT 0

@@ -148,12 +148,18 @@ void ButtonReader::updateShipState_fromInterrupt(byte pinToTest, boolean newStat
        }
        break;
      case PIN_SPEED_UP:
+       if (b_warp_mode_on) {
+         EN1701A::svWriteShipState(true, INCREASE_WARP_ENGINES);
+       }
        /*EN1701A::svWriteShipState(newState, SR_PHASER);
        if (!newState){
          EN1701A::sbAudioIndex = AUDIO_INDEX_CANCEL;
        }*/
        break;
      case PIN_SPEED_DOWN:
+       if (b_warp_mode_on) {
+         EN1701A::svWriteShipState(true, DECREASE_WARP_ENGINES);
+       }
        //EN1701A::svWriteShipState(newState, SR_TORPEDO);
        break;
      case PIN_RED_ALERT:

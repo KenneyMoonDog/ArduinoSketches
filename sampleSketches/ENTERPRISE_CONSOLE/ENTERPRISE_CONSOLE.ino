@@ -1,12 +1,12 @@
 #include <EN1701-REFIT.h>
-#include <IRStateReader.h>
+//#include <IRStateReader.h>
 #include <ShipOperations.h>
 #include <ButtonReader.h>
 
 #define CONSOLE_POLLING_FREQUENCY 250 //ms
 volatile unsigned long previousMillis = 0;
 
-IRStateReader *pStateReader;
+//IRStateReader *pStateReader;
 ButtonReader *pButtonReader;
 ShipOperations *pShipOperations;
 
@@ -31,13 +31,13 @@ void setup()
 {
   Serial.begin(9600); 
 
-  pStateReader = new IRStateReader(PIN_IR_RECEIVER);
-  pShipOperations = new ShipOperations;
-  pButtonReader = new ButtonReader;
+  //pStateReader = new IRStateReader(PIN_IR_RECEIVER);
   
   pButtonReader->setupInterrupts();
   pShipOperations->clearAll();
   
+  pShipOperations = new ShipOperations;
+  pButtonReader = new ButtonReader;
   // Timer0 is already used for millis() - we'll just interrupt somewhere
   // in the middle and call the "Compare A" function below
   OCR0A = 0xAF;
