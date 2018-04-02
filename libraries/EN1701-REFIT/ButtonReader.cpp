@@ -107,10 +107,10 @@ void ButtonReader::testInterruptPin() {
   }
 }
 
-void ButtonReader::updateShipState_fromPolledButton(byte pinToTest, boolean newState)  {
+void ButtonReader::updateShipState_fromPolledButton(byte pinToTest, boolean buttonDown)  {
    /*switch (pinToTest) {
      case PIN_DEFLECTOR_MODE:
-       if (newState) {
+       if (buttonDown) {
          EN1701A::svWriteShipState(false, IMPULSE_ENGINES);
          EN1701A::svWriteShipState(true, WARP_ENGINES);
        }
@@ -122,19 +122,23 @@ void ButtonReader::updateShipState_fromPolledButton(byte pinToTest, boolean newS
    }*/
 }
 
-void ButtonReader::updateShipState_fromInterrupt(byte pinToTest, boolean newState)  {
+void ButtonReader::updateShipState_fromInterrupt(byte pinToTest, boolean buttonDown)  {
    switch (pinToTest) {
      case PIN_POWER_CYCLE:
-       EN1701A::svWriteShipState(newState, POWER_CHANGE);
+       EN1701A::svWriteShipState(buttonDown, POWER_CHANGE);
        break;
      case PIN_PHASER_BUTTON:
-       EN1701A::svWriteShipState(newState, SR_PHASER);
-       if (!newState){
-         EN1701A::sbAudioIndex = AUDIO_INDEX_CANCEL;
+       if (buttonDown){
+         EN1701A::svWriteShipState(true, PHASER_ON);
+         EN1701A::svWriteShipState(false, PHASER_OFF);
+       }
+       else {
+         EN1701A::svWriteShipState(true, PHASER_OFF);
+         EN1701A::svWriteShipState(false, PHASER_ON);
        }
        break;
      case PIN_TORPEDO_BUTTON:
-       EN1701A::svWriteShipState(newState, SR_TORPEDO);
+       EN1701A::svWriteShipState(buttonDown, TORPEDO);
        break;
      case PIN_DEFLECTOR_MODE:
        b_warp_mode_on = !b_warp_mode_on;
@@ -151,16 +155,17 @@ void ButtonReader::updateShipState_fromInterrupt(byte pinToTest, boolean newStat
        if (b_warp_mode_on) {
          EN1701A::svWriteShipState(true, INCREASE_WARP_ENGINES);
        }
-       /*EN1701A::svWriteShipState(newState, SR_PHASER);
-       if (!newState){
-         EN1701A::sbAudioIndex = AUDIO_INDEX_CANCEL;
-       }*/
+       else {
+         EN1701A::svWriteShipState(true, INCREASE_IMPULSE_ENGINES);
+       }
        break;
      case PIN_SPEED_DOWN:
        if (b_warp_mode_on) {
          EN1701A::svWriteShipState(true, DECREASE_WARP_ENGINES);
        }
-       //EN1701A::svWriteShipState(newState, SR_TORPEDO);
+       else {
+         EN1701A::svWriteShipState(true, DECREASE_IMPULSE_ENGINES);
+       }
        break;
      case PIN_RED_ALERT:
        b_red_alert_on = !b_red_alert_on;
@@ -174,7 +179,7 @@ void ButtonReader::updateShipState_fromInterrupt(byte pinToTest, boolean newStat
        }
        break;
      case PIN_TRANSPORTER:
-       //EN1701A::svWriteShipState(newState, SR_TORPEDO);
+       //EN1701A::svWriteShipState(buttonDown, SR_TORPEDO);
        break;
    }
 }

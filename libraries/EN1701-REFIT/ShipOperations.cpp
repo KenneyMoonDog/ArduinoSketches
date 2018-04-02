@@ -28,8 +28,10 @@ void ShipOperations::ApplyShipLogic() {
       clearAll();
     }
     else { //startup
+      clearAll();
       EN1701A::svWriteShipState(true, PRIMARY_SYSTEMS);
-      EN1701A::suiCurrentShipState |= 0xFF & rand() % 254 + 1;
+      //EN1701A::suiCurrentShipState |= 0xFF & rand() % 254 + 1;   //this clears out a section.. why not clean everything
+
       Serial.write(SERIAL_COMM_POWER_ON);
       EN1701A::sbAudioIndex = AUDIO_INDEX_POWER_UP;
     }
@@ -53,11 +55,11 @@ void ShipOperations::ApplyShipLogic() {
     stopPlaying();
   }
 
-  if (readCurrentShipState(SR_TORPEDO)){
+  if (readCurrentShipState(TORPEDO)){
     EN1701A::sbAudioIndex = AUDIO_INDEX_TORPEDO;
     playFile();
     Serial.write(SERIAL_COMM_TORPEDO);
-    EN1701A::svWriteShipState(false, SR_TORPEDO);
+    EN1701A::svWriteShipState(false, TORPEDO);
     return;
   }
 
@@ -71,30 +73,6 @@ void ShipOperations::ApplyShipLogic() {
     return;
   }
 
-  if(readCurrentShipState(INCREASE_WARP_ENGINES)){
-    //EN1701A::sbAudioIndex = AUDIO_INDEX_BTS1;
-    //playFile();
-    //setTimer
-    //delay(3000);
-    EN1701A::sbAudioIndex = AUDIO_INDEX_BTS4;
-    playFile();
-    Serial.write(SERIAL_COMM_INCREASE_WARP_DRIVE);
-    EN1701A::svWriteShipState(false, INCREASE_WARP_ENGINES);
-    return;
-  }
-
-  if(readCurrentShipState(DECREASE_WARP_ENGINES)){
-    //EN1701A::sbAudioIndex = AUDIO_INDEX_BTS1;
-    //playFile();
-    //setTimer
-    //delay(3000);
-    EN1701A::sbAudioIndex = AUDIO_INDEX_BTS4;
-    playFile();
-    Serial.write(SERIAL_COMM_DECREASE_WARP_DRIVE);
-    EN1701A::svWriteShipState(false, DECREASE_WARP_ENGINES);
-    return;
-  }
-
   if(readCurrentShipState(IMPULSE_ENGINES)){
     EN1701A::sbAudioIndex = AUDIO_INDEX_BTS1;
     playFile();
@@ -105,7 +83,39 @@ void ShipOperations::ApplyShipLogic() {
     return;
   }
 
-  if (readCurrentShipState(SR_PHASER)){
+  if(readCurrentShipState(INCREASE_WARP_ENGINES)){
+    EN1701A::sbAudioIndex = AUDIO_INDEX_BTS4;
+    playFile();
+    Serial.write(SERIAL_COMM_INCREASE_WARP_DRIVE);
+    EN1701A::svWriteShipState(false, INCREASE_WARP_ENGINES);
+    return;
+  }
+
+  if(readCurrentShipState(DECREASE_WARP_ENGINES)){
+    EN1701A::sbAudioIndex = AUDIO_INDEX_BTS4;
+    playFile();
+    Serial.write(SERIAL_COMM_DECREASE_WARP_DRIVE);
+    EN1701A::svWriteShipState(false, DECREASE_WARP_ENGINES);
+    return;
+  }
+
+  if (readCurrentShipState(PHASER_ON)){
+    EN1701A::sbAudioIndex = AUDIO_INDEX_PHASER;
+    playFile();
+    delay(300);
+    Serial.write(SERIAL_COMM_PHASER_ON);
+    EN1701A::svWriteShipState(false, PHASER_ON);
+    return;
+  }
+
+  if(readCurrentShipState(PHASER_OFF)){
+    stopPlaying();
+    Serial.write(SERIAL_COMM_PHASER_OFF);
+    EN1701A::svWriteShipState(false, PHASER_OFF);
+    return;
+  }
+}
+/*  if (readCurrentShipState(SR_PHASER)){
     if ( strcmp (pCurrentFilePlaying, scAudioEffects[AUDIO_INDEX_PHASER]) != 0) {
       EN1701A::sbAudioIndex = AUDIO_INDEX_PHASER;
       playFile();
@@ -119,9 +129,9 @@ void ShipOperations::ApplyShipLogic() {
     Serial.write(SERIAL_COMM_PHASER_OFF);
     EN1701A::svWriteShipState(false, SR_PHASER);
     return;
-  }
+  }*/
 
-  if(readCurrentShipState(SR_BUTTON_1)){
+  /*if(readCurrentShipState(SR_BUTTON_1)){
     EN1701A::sbAudioIndex = AUDIO_INDEX_BTS4;
     playFile();
     EN1701A::svWriteShipState(false, SR_BUTTON_1);
@@ -199,7 +209,7 @@ void ShipOperations::ApplyShipLogic() {
     Serial.write(SERIAL_COMM_BUTTON_0);
     return;
   }
-}
+}*/
 
 void ShipOperations::setupSound() {
   //putstring_nl("WaveHC with 6 buttons");

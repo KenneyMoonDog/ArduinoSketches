@@ -3,16 +3,16 @@
 
 int incomingByte = 0;   // for incoming serial data
 unsigned long saucerSectionData = 0;
-unsigned long hullSectionData = 0;
+//unsigned long hullSectionData = 0;
 
-#define SAUCER_SECTION_BRIDGE 8
-#define SAUCER_SECTION_LOUNGE 7
 #define SAUCER_SECTION_1 1
 #define SAUCER_SECTION_2 2
 #define SAUCER_SECTION_3 3
 #define SAUCER_SECTION_4 4
 #define SAUCER_SECTION_5 5
 #define SAUCER_SECTION_6 6
+#define SAUCER_SECTION_BRIDGE 8
+#define SAUCER_SECTION_LOUNGE 7
 
 #define PIN_DEFLECTOR_R 6
 #define PIN_DEFLECTOR_G 5
@@ -77,7 +77,7 @@ void setup() {
   analogWrite(PIN_DEFLECTOR_B,255);
  
   updateSaucerSectionDataRegister();
-  updateHullSectionDataRegister();
+  //updateHullSectionDataRegister();
   
   digitalWrite(PIN_SR_ENABLE,LOW);
  
@@ -190,7 +190,20 @@ void updateNavBeacon(boolean bPowerOn){
   }
 }
 
-void randomSaucerSectionUpdate(boolean bPowerOn) { //called every POLLING_FREQUENCY ms
+/*void toggleSaucerSection(byte section){
+    int sectionNumber = section - 1;
+    if (bPowerOn) {
+       if (bitRead(saucerSectionData, sectionNumber) == 1){
+          bitClear(saucerSectionData, sectionNumber);
+       }
+       else {
+          bitSet(saucerSectionData, sectionNumber);
+       }
+       updateSaucerSectionDataRegister();
+    }  
+}*/
+
+/*void randomSaucerSectionUpdate(boolean bPowerOn) { //called every POLLING_FREQUENCY ms
    static byte changeCounter=0; //increments every INTERRUPT_FREQ duration
    static byte changeLimit=50; //INTERRUPT_FREQ*changeLimit = ms duration
 
@@ -203,52 +216,15 @@ void randomSaucerSectionUpdate(boolean bPowerOn) { //called every POLLING_FREQUE
       }
       updateSaucerSectionDataRegister();
    }
-}
+}*/
 
-void updateSaucerSectionDataRegister(){
-   sectionSignal[0] = SERIAL_COMM_SAUCER_SECTION;
-   sectionSignal[1] = (saucerSectionData & 0xFF);
-   Serial.write(sectionSignal, 2); 
-}
-
-void setImpulseDrive(byte level) {
-   impulseLevelSignal[1] = level;
-   Serial.write(impulseLevelSignal, 2);
-
-   if (level == 255) {
-      fullImpulse=true;
-   }
-   else {
-      fullImpulse=false;
-   }
-}
-
-void updateHullSectionDataRegister()
+/*void updateHullSectionDataRegister()
 {
    digitalWrite(PIN_SR_LATCH, LOW);
    shiftOut(PIN_SR_SECTION_DATA, PIN_SR_CLOCK, LSBFIRST, (hullSectionData & 0xFF));
    //shiftOut(PIN_SR_SECTION_DATA, PIN_SR_CLOCK, LSBFIRST, (sectionData & 0xFF00) >> 8);
    digitalWrite(PIN_SR_LATCH, HIGH);
-}
-
-void fireTorpedo() {
-   analogWrite(torpedo_tube, 10);
-   delay(100);
-   digitalWrite(torpedo_tube, HIGH);
-   delay(250);
-   
-   for (int brightness=10; brightness>=0; brightness-=1){
-      analogWrite(torpedo_tube, brightness);
-      delay(120);
-   }  
-
-   if ( torpedo_tube == PIN_PHOTON_TORPEDO_1 ){
-      torpedo_tube = PIN_PHOTON_TORPEDO_2;
-   }
-   else {
-      torpedo_tube = PIN_PHOTON_TORPEDO_1;
-   }
-}
+}*/
 
 /*void sectionPower( byte num, ... ){
   va_list arguments;                     
@@ -271,6 +247,37 @@ void fireTorpedo() {
   updateSaucerSectionDataRegister();
   delay(delayReturn);
 }*/
+
+void setImpulseDrive(byte level) {
+   impulseLevelSignal[1] = level;
+   Serial.write(impulseLevelSignal, 2);
+
+   if (level == 255) {
+      fullImpulse=true;
+   }
+   else {
+      fullImpulse=false;
+   }
+}
+
+void fireTorpedo() {
+   analogWrite(torpedo_tube, 10);
+   delay(100);
+   digitalWrite(torpedo_tube, HIGH);
+   delay(250);
+   
+   for (int brightness=10; brightness>=0; brightness-=1){
+      analogWrite(torpedo_tube, brightness);
+      delay(120);
+   }  
+
+   if ( torpedo_tube == PIN_PHOTON_TORPEDO_1 ){
+      torpedo_tube = PIN_PHOTON_TORPEDO_2;
+   }
+   else {
+      torpedo_tube = PIN_PHOTON_TORPEDO_1;
+   }
+}
 
 void delayedSectionUpdate(int returnDelay){
   updateSaucerSectionDataRegister();
@@ -357,17 +364,10 @@ void setNacelles(byte pRGB[]) {
    Serial.write(nacelleSignal, 4); 
 }
 
-void toggleSaucerSection(byte section){
-    int sectionNumber = section - 1;
-    if (bPowerOn) {
-       if (bitRead(saucerSectionData, sectionNumber) == 1){
-          bitClear(saucerSectionData, sectionNumber);
-       }
-       else {
-          bitSet(saucerSectionData, sectionNumber);
-       }
-       updateSaucerSectionDataRegister();
-    }  
+void updateSaucerSectionDataRegister(){
+   sectionSignal[0] = SERIAL_COMM_SAUCER_SECTION;
+   sectionSignal[1] = (saucerSectionData & 0xFF);
+   Serial.write(sectionSignal, 2);
 }
 
 void loop() {
@@ -418,12 +418,11 @@ void loop() {
           }
           Serial.write(SERIAL_COMM_IMPULSE_DRIVE);
           break;
-       case SERIAL_COMM_BUTTON_1:
+       default:
+          break;
+       /*case SERIAL_COMM_BUTTON_1:
           toggleSaucerSection(SAUCER_SECTION_3);
           break;
-       //case SERIAL_COMM_BUTTON_2:
-       //   togg/leSaucerSection(2);
-       //   break;
        case SERIAL_COMM_BUTTON_3:
           toggleSaucerSection(SAUCER_SECTION_4);
           break;
@@ -444,7 +443,7 @@ void loop() {
           break;
        case SERIAL_COMM_BUTTON_9:
           toggleSaucerSection(SAUCER_SECTION_6);
-          break;
+          break;*/
      } ///end switch
    } //if serial
 }  //loop

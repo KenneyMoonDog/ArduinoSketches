@@ -1,5 +1,4 @@
 #include <EN1701-REFIT.h>
-//#include <IRStateReader.h>
 #include <ShipOperations.h>
 #include <ButtonReader.h>
 
@@ -30,8 +29,7 @@ void EN1701A::svWriteShipState(bool set, byte pinset )
 void setup()
 {
   Serial.begin(9600); 
-
-  //pStateReader = new IRStateReader(PIN_IR_RECEIVER);
+  Serial.flush();
   
   pButtonReader->setupInterrupts();
   pShipOperations->clearAll();
@@ -56,17 +54,9 @@ SIGNAL(TIMER0_COMPA_vect)
 } 
 
 void loop() {
-  /*if (pStateReader->updateShipStateViaIR()) {
-    pShipOperations->ApplyShipLogic();
-  } */
-
   if ( EN1701A::buttonInterrupt ) {
     pShipOperations->ApplyShipLogic();
     EN1701A::buttonInterrupt = false;
   }
-
-  /*if (pButtonReader->pollButtons()){
-    pShipOperations->ApplyShipLogic();
-  }*/
 }
 
