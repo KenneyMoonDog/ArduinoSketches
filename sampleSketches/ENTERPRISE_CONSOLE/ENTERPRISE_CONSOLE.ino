@@ -5,7 +5,6 @@
 #define CONSOLE_POLLING_FREQUENCY 250 //ms
 volatile unsigned long previousMillis = 0;
 
-//IRStateReader *pStateReader;
 ButtonReader *pButtonReader;
 ShipOperations *pShipOperations;
 

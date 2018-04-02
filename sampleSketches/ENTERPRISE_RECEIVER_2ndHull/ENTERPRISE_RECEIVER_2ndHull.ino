@@ -3,6 +3,7 @@
 
 int incomingByte = 0;   // for incoming serial data
 unsigned long saucerSectionData = 0;
+byte newImpulseLevel=0;
 //unsigned long hullSectionData = 0;
 
 #define SAUCER_SECTION_1 1
@@ -248,16 +249,28 @@ void updateNavBeacon(boolean bPowerOn){
   delay(delayReturn);
 }*/
 
+/*void decreaseImpulseDrive() {
+  impulseLevelSignal[1]-=50;
+  
+  if (impulseLevelSignal[1] < 0){
+    impulseLevelSignal[1]=0;
+  }
+  Serial.write(impulseLevelSignal, 2);
+}
+
+void increaseImpulseDrive() {
+  impulseLevelSignal[1]+=50;
+  
+  if (impulseLevelSignal[1] > 255){
+    impulseLevelSignal[1]=255;
+  }
+  
+  Serial.write(impulseLevelSignal, 2);
+}*/
+
 void setImpulseDrive(byte level) {
    impulseLevelSignal[1] = level;
    Serial.write(impulseLevelSignal, 2);
-
-   if (level == 255) {
-      fullImpulse=true;
-   }
-   else {
-      fullImpulse=false;
-   }
 }
 
 void fireTorpedo() {
@@ -398,52 +411,22 @@ void loop() {
        case SERIAL_COMM_WARP_DRIVE:
           setCrystal(colorBlue);
           setDeflector(colorBlue);
-          setImpulseDrive(5);
           Serial.write(SERIAL_COMM_WARP_DRIVE);
           break;
-       case SERIAL_COMM_INCREASE_WARP_DRIVE:
-          Serial.write(SERIAL_COMM_INCREASE_WARP_DRIVE);
-          break;
-       case SERIAL_COMM_DECREASE_WARP_DRIVE:
-          Serial.write(SERIAL_COMM_DECREASE_WARP_DRIVE);
-          break;
+       //case SERIAL_COMM_INCREASE_WARP_DRIVE:
+       //   Serial.write(SERIAL_COMM_INCREASE_WARP_DRIVE);
+       //   break;
+       //case SERIAL_COMM_DECREASE_WARP_DRIVE:
+       //   Serial.write(SERIAL_COMM_DECREASE_WARP_DRIVE);
+       //   break;
        case SERIAL_COMM_IMPULSE_DRIVE:
           setCrystal(colorAmber);
           setDeflector(colorAmber);
-          if (fullImpulse){
-            setImpulseDrive(5);
-          } 
-          else {
-            setImpulseDrive(255);
-          }
-          Serial.write(SERIAL_COMM_IMPULSE_DRIVE);
+          Serial.readBytes(&newImpulseLevel,1);
+          setImpulseDrive(newImpulseLevel);
           break;
        default:
           break;
-       /*case SERIAL_COMM_BUTTON_1:
-          toggleSaucerSection(SAUCER_SECTION_3);
-          break;
-       case SERIAL_COMM_BUTTON_3:
-          toggleSaucerSection(SAUCER_SECTION_4);
-          break;
-       case SERIAL_COMM_BUTTON_4:
-          toggleSaucerSection(SAUCER_SECTION_2);
-          break;
-       case SERIAL_COMM_BUTTON_5:
-          toggleSaucerSection(SAUCER_SECTION_BRIDGE);
-          break;
-       case SERIAL_COMM_BUTTON_6:
-          toggleSaucerSection(SAUCER_SECTION_5);
-          break;
-       case SERIAL_COMM_BUTTON_7:
-          toggleSaucerSection(SAUCER_SECTION_1);
-          break;
-       case SERIAL_COMM_BUTTON_8:
-          toggleSaucerSection(SAUCER_SECTION_LOUNGE);
-          break;
-       case SERIAL_COMM_BUTTON_9:
-          toggleSaucerSection(SAUCER_SECTION_6);
-          break;*/
      } ///end switch
    } //if serial
 }  //loop

@@ -14,6 +14,9 @@ public:
    void ApplyShipLogic();
    void audioCheck();
    void clearAll();
+   void setImpulseLevel(byte level);
+   void decreaseImpulseDrive();
+   void increaseImpulseDrive();
 
  private:
    SdReader card;    // This object holds the information for the card

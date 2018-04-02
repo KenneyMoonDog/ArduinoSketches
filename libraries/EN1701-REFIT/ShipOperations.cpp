@@ -1,6 +1,8 @@
 #include "Arduino.h"
 #include <ShipOperations.h>
 
+byte impulseLevel[] = {SERIAL_COMM_IMPULSE_DRIVE, 0};
+
 ShipOperations::ShipOperations() {
   setupSound();
 }
@@ -16,6 +18,29 @@ bool ShipOperations::readOldShipState(byte pinset) {
 void ShipOperations::clearAll(){
   EN1701A::suiCurrentShipState = 0;
   EN1701A::suiPreviousShipState = 0;
+}
+
+void ShipOperations::setImpulseLevel(byte level) {
+   impulseLevel[1] = level;
+   Serial.write(impulseLevel, 2);
+}
+
+void ShipOperations::increaseImpulseDrive(){
+  impulseLevel[1]+=50;
+
+  if (impulseLevel[1] > 255){
+    impulseLevel[1]=255;
+  }
+  Serial.write(impulseLevel, 2);
+}
+
+void ShipOperations::decreaseImpulseDrive(){
+  impulseLevel[1]-=50;
+
+  if (impulseLevel[1] < 0){
+    impulseLevel[1]=0;
+  }
+  Serial.write(impulseLevel, 2);
 }
 
 void ShipOperations::ApplyShipLogic() {
@@ -68,6 +93,7 @@ void ShipOperations::ApplyShipLogic() {
     playFile();
     //setTimer
     delay(3000);
+    setImpulseLevel(5);
     Serial.write(SERIAL_COMM_WARP_DRIVE);
     EN1701A::svWriteShipState(false, WARP_ENGINES);
     return;
@@ -76,26 +102,38 @@ void ShipOperations::ApplyShipLogic() {
   if(readCurrentShipState(IMPULSE_ENGINES)){
     EN1701A::sbAudioIndex = AUDIO_INDEX_BTS1;
     playFile();
-    delay(3000);
     //setTimer
-    Serial.write(SERIAL_COMM_IMPULSE_DRIVE);
+    delay(3000);
+    setImpulseLevel(100);
     EN1701A::svWriteShipState(false, IMPULSE_ENGINES);
     return;
   }
 
+  if(readCurrentShipState(INCREASE_IMPULSE_ENGINES)){
+    increaseImpulseDrive();
+    EN1701A::svWriteShipState(false, INCREASE_IMPULSE_ENGINES);
+    return;
+  }
+
+  if(readCurrentShipState(DECREASE_IMPULSE_ENGINES)){
+    decreaseImpulseDrive();
+    EN1701A::svWriteShipState(false, DECREASE_IMPULSE_ENGINES);
+    return;
+  }
+
   if(readCurrentShipState(INCREASE_WARP_ENGINES)){
-    EN1701A::sbAudioIndex = AUDIO_INDEX_BTS4;
-    playFile();
-    Serial.write(SERIAL_COMM_INCREASE_WARP_DRIVE);
-    EN1701A::svWriteShipState(false, INCREASE_WARP_ENGINES);
+    //EN1701A::sbAudioIndex = AUDIO_INDEX_BTS4;
+    //playFile();
+    //Serial.write(SERIAL_COMM_INCREASE_WARP_DRIVE);
+    //EN1701A::svWriteShipState(false, INCREASE_WARP_ENGINES);
     return;
   }
 
   if(readCurrentShipState(DECREASE_WARP_ENGINES)){
-    EN1701A::sbAudioIndex = AUDIO_INDEX_BTS4;
-    playFile();
-    Serial.write(SERIAL_COMM_DECREASE_WARP_DRIVE);
-    EN1701A::svWriteShipState(false, DECREASE_WARP_ENGINES);
+    //EN1701A::sbAudioIndex = AUDIO_INDEX_BTS4;
+    //playFile();
+    //Serial.write(SERIAL_COMM_DECREASE_WARP_DRIVE);
+    //EN1701A::svWriteShipState(false, DECREASE_WARP_ENGINES);
     return;
   }
 
