@@ -110,30 +110,34 @@ void ShipOperations::ApplyShipLogic() {
   }
 
   if(readCurrentShipState(INCREASE_IMPULSE_ENGINES)){
+    EN1701A::sbAudioIndex = AUDIO_INDEX_WARP_UP;
+    playFile();
     increaseImpulseDrive();
     EN1701A::svWriteShipState(false, INCREASE_IMPULSE_ENGINES);
     return;
   }
 
   if(readCurrentShipState(DECREASE_IMPULSE_ENGINES)){
+    EN1701A::sbAudioIndex = AUDIO_INDEX_WARP_DOWN;
+    playFile();
     decreaseImpulseDrive();
     EN1701A::svWriteShipState(false, DECREASE_IMPULSE_ENGINES);
     return;
   }
 
   if(readCurrentShipState(INCREASE_WARP_ENGINES)){
-    //EN1701A::sbAudioIndex = AUDIO_INDEX_BTS4;
-    //playFile();
-    //Serial.write(SERIAL_COMM_INCREASE_WARP_DRIVE);
-    //EN1701A::svWriteShipState(false, INCREASE_WARP_ENGINES);
+    EN1701A::sbAudioIndex = AUDIO_INDEX_WARP_UP;
+    playFile();
+    Serial.write(SERIAL_COMM_INCREASE_WARP_DRIVE);
+    EN1701A::svWriteShipState(false, INCREASE_WARP_ENGINES);
     return;
   }
 
   if(readCurrentShipState(DECREASE_WARP_ENGINES)){
-    //EN1701A::sbAudioIndex = AUDIO_INDEX_BTS4;
-    //playFile();
-    //Serial.write(SERIAL_COMM_DECREASE_WARP_DRIVE);
-    //EN1701A::svWriteShipState(false, DECREASE_WARP_ENGINES);
+    EN1701A::sbAudioIndex = AUDIO_INDEX_WARP_DOWN;
+    playFile();
+    Serial.write(SERIAL_COMM_DECREASE_WARP_DRIVE);
+    EN1701A::svWriteShipState(false, DECREASE_WARP_ENGINES);
     return;
   }
 
@@ -332,7 +336,7 @@ void ShipOperations::audioCheck() {
   if (readCurrentShipState(PRIMARY_SYSTEMS)){
     if (!wave.isplaying) {
        //Serial.println(F("NO WAVE PLAYING"));
-       EN1701A::sbAudioIndex = AUDIO_INDEX_POWER_UP;
+       EN1701A::sbAudioIndex = AUDIO_INDEX_POWER_CONTINUE;
        playFile();
     }
   }

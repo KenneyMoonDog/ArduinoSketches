@@ -7,7 +7,7 @@ boolean lastState_power_switch_up = true;
 boolean lastState_torpedo_switch_up = true;
 boolean lastState_phaser_switch_up = true;
 boolean lastState_deflector_switch_up = true;
-boolean lastState_transporter_switch_up = true;
+boolean lastState_panelmode_switch_up = true;
 boolean lastState_red_alert_switch_up = true;
 boolean lastState_speed_up_switch_up = true;
 boolean lastState_speed_down_switch_up = true;
@@ -16,42 +16,42 @@ unsigned long last_power_DebounceTime = 0;
 unsigned long last_torpedo_DebounceTime = 0;
 unsigned long last_phaser_DebounceTime = 0;
 unsigned long last_deflector_DebounceTime = 0;
-unsigned long last_transporter_DebounceTime = 0;
+unsigned long last_panelmode_DebounceTime = 0;
 unsigned long last_red_alert_DebounceTime = 0;
 unsigned long last_speed_up_DebounceTime = 0;
 unsigned long last_speed_down_DebounceTime = 0;
 
-unsigned long buttonDebounceDelay = 50;
+unsigned long buttonDebounceDelay = 100;
 
 boolean b_warp_mode_on = false;
 boolean b_red_alert_on = false;
 
-#define PIN_TRANSPORTER 6
-#define PIN_PHASER_BUTTON 7
-#define PIN_TORPEDO_BUTTON 8
-#define PIN_ALERT_MODE 9
-
-#define PIN_POWER_CYCLE 14
-#define PIN_DEFLECTOR_MODE 15
-#define PIN_SPEED_UP 16
-#define PIN_SPEED_DOWN 17
+#define PIN_POWER_CYCLE 7
+#define PIN_DEFLECTOR_MODE 8
+#define PIN_SPEED_UP 14
+#define PIN_SPEED_DOWN 6
 #define PIN_RED_ALERT 18
+#define PIN_PANEL_MODE 17
+#define PIN_PHASER_BUTTON 15
+#define PIN_TORPEDO_BUTTON 16
+
 #define PIN_TEST_INTERRUPT 19
 
 ButtonReader::ButtonReader() {
+  pinMode(PIN_TEST_INTERRUPT, INPUT_PULLUP);
+
   pinMode(PIN_PHASER_BUTTON,INPUT_PULLUP);
   pinMode(PIN_TORPEDO_BUTTON,INPUT_PULLUP);
-  pinMode(PIN_TEST_INTERRUPT, INPUT_PULLUP);
   pinMode(PIN_RED_ALERT,INPUT_PULLUP);
   pinMode(PIN_SPEED_DOWN,INPUT_PULLUP);
   pinMode(PIN_SPEED_UP,INPUT_PULLUP);
   pinMode(PIN_DEFLECTOR_MODE, INPUT_PULLUP);
-  pinMode(PIN_TRANSPORTER,INPUT_PULLUP);
+  pinMode(PIN_PANEL_MODE,INPUT_PULLUP);
   pinMode(PIN_POWER_CYCLE, INPUT_PULLUP);
 }
 
 void ButtonReader::setupInterrupts() {
-  PCintPort::attachInterrupt(PIN_TEST_INTERRUPT, testInterruptPin,CHANGE);
+  PCintPort::attachInterrupt(PIN_TEST_INTERRUPT, testInterruptPin, FALLING); //RISING, FALLING and CHANGE
 }
 
 boolean ButtonReader::pollButtons(){
@@ -71,17 +71,17 @@ void ButtonReader::testInterruptPin() {
     return;
   }
 
+  if (onButtonChange(PIN_DEFLECTOR_MODE, lastState_deflector_switch_up, last_deflector_DebounceTime, true )) {
+    EN1701A::buttonInterrupt = true;
+    return;
+  }
+
   if (onButtonChange(PIN_TORPEDO_BUTTON, lastState_torpedo_switch_up, last_torpedo_DebounceTime, true )) {
     EN1701A::buttonInterrupt = true;
     return;
   }
 
   if (onButtonChange(PIN_PHASER_BUTTON, lastState_phaser_switch_up, last_phaser_DebounceTime, false )) {
-    EN1701A::buttonInterrupt = true;
-    return;
-  }
-
-  if (onButtonChange(PIN_DEFLECTOR_MODE, lastState_deflector_switch_up, last_deflector_DebounceTime, true )) {
     EN1701A::buttonInterrupt = true;
     return;
   }
@@ -101,7 +101,7 @@ void ButtonReader::testInterruptPin() {
     return;
   }
 
-  if (onButtonChange(PIN_TRANSPORTER, lastState_transporter_switch_up, last_transporter_DebounceTime, true )) {
+  if (onButtonChange(PIN_PANEL_MODE, lastState_panelmode_switch_up, last_panelmode_DebounceTime, true )) {
     EN1701A::buttonInterrupt = true;
     return;
   }
@@ -178,7 +178,7 @@ void ButtonReader::updateShipState_fromInterrupt(byte pinToTest, boolean buttonD
          EN1701A::svWriteShipState(false, AUDIO_EFFECT);
        }
        break;
-     case PIN_TRANSPORTER:
+     case PIN_PANEL_MODE:
        //EN1701A::svWriteShipState(buttonDown, SR_TORPEDO);
        break;
    }

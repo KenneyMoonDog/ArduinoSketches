@@ -35,13 +35,11 @@ an illuminated control section of the ship*/
 //#define PHASER_OFF 21
 
 #define AUDIO_INDEX_CANCEL 100
+
 #define AUDIO_INDEX_RED_ALERT 0
 #define AUDIO_INDEX_P1_MESSAGE 1
 #define AUDIO_INDEX_TORPEDO 2
 #define AUDIO_INDEX_PHASER 3
-#define AUDIO_INDEX_POWER_DOWN 4
-#define AUDIO_INDEX_POWER_UP 5
-#define AUDIO_INDEX_DESTRUCT 6
 #define AUDIO_INDEX_HIT 7
 #define AUDIO_INDEX_BTS1 8
 #define AUDIO_INDEX_BTS2 9
@@ -49,9 +47,16 @@ an illuminated control section of the ship*/
 #define AUDIO_INDEX_BTS4 11
 #define AUDIO_INDEX_BTS5 12
 #define AUDIO_INDEX_BTS6 13
+#define AUDIO_INDEX_POWER_DOWN 18
+#define AUDIO_INDEX_POWER_CONTINUE 17
+#define AUDIO_INDEX_POWER_UP 16
+#define AUDIO_INDEX_WARP_DOWN 15
+#define AUDIO_INDEX_WARP_UP 14
 //#define PIN_IR_RECEIVER 11
 
-static char* scAudioEffects[]={"KLAX.WAV", "P1MSG.WAV", "TORP1.WAV", "SPZER1.WAV", "BPD1.WAV", "BPUP1.WAV", "DSTRT.WAV", "HULHIT.WAV", "BTS1.WAV", "BTS2.WAV", "BTS3.WAV", "BT4.WAV", "BT5.WAV", "BT6.WAV"};
+static char* scAudioEffects[]={"KLAX.WAV", "P1MSG.WAV", "TORP1.WAV", "SPZER1.WAV", "BPD1.WAV",
+"BPUP1.WAV", "DSTRT.WAV", "HULHIT.WAV", "BTS1.WAV", "BTS2.WAV", "BTS3.WAV",
+"BT4.WAV", "BT5.WAV", "BT6.WAV", "WACC1.WAV", "WDCELL1.WAV", "PUP1A.WAV", "PUP1B.WAV", "PD1.WAV"};
 
 //class ShipOperations;
 
@@ -60,9 +65,9 @@ class EN1701A
   public:
     volatile static boolean buttonInterrupt;
     static byte sendByte;
-    static byte sbAudioIndex;
-    static unsigned long suiCurrentShipState;
-    static unsigned long suiPreviousShipState;
+    volatile static byte sbAudioIndex;
+    volatile static unsigned long suiCurrentShipState;
+    volatile static unsigned long suiPreviousShipState;
     static void svWriteShipState(bool set, byte pinset);
     //static ShipOperations mShipboardOperations;
 };

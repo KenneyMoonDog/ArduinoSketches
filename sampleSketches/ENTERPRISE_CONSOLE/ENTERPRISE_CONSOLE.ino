@@ -8,9 +8,9 @@ volatile unsigned long previousMillis = 0;
 ButtonReader *pButtonReader;
 ShipOperations *pShipOperations;
 
-byte          EN1701A::sbAudioIndex = 0;
-unsigned long  EN1701A::suiCurrentShipState = 0;
-unsigned long  EN1701A::suiPreviousShipState = 0;
+volatile byte          EN1701A::sbAudioIndex = 0;
+volatile unsigned long  EN1701A::suiCurrentShipState = 0;
+volatile unsigned long  EN1701A::suiPreviousShipState = 0;
 volatile boolean EN1701A::buttonInterrupt = false;
 
 void EN1701A::svWriteShipState(bool set, byte pinset )
