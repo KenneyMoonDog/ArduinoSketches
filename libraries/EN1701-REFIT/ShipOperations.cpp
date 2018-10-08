@@ -1,5 +1,6 @@
 #include "Arduino.h"
 #include <ShipOperations.h>
+#include <EN1701-REFIT.h>
 
 byte impulseLevel[] = {SERIAL_COMM_IMPULSE_DRIVE, 0};
 
@@ -18,6 +19,10 @@ bool ShipOperations::readOldShipState(byte pinset) {
 void ShipOperations::clearAll(){
   EN1701A::suiCurrentShipState = 0;
   EN1701A::suiPreviousShipState = 0;
+  EN1701A::b_warp_mode_on = false;
+  EN1701A::b_red_alert_on = false;
+  EN1701A::b_phaser_on = false;
+  EN1701A::b_power_cycle = false;
 }
 
 void ShipOperations::setImpulseLevel(byte level) {
@@ -146,112 +151,16 @@ void ShipOperations::ApplyShipLogic() {
     playFile();
     delay(300);
     Serial.write(SERIAL_COMM_PHASER_ON);
-    EN1701A::svWriteShipState(false, PHASER_ON);
-    return;
   }
-
-  if(readCurrentShipState(PHASER_OFF)){
+  else if (readCurrentShipState(PHASER_OFF)){
     stopPlaying();
     Serial.write(SERIAL_COMM_PHASER_OFF);
-    EN1701A::svWriteShipState(false, PHASER_OFF);
-    return;
   }
+
+  EN1701A::svWriteShipState(false, PHASER_ON);
+  EN1701A::svWriteShipState(false, PHASER_OFF);
+  return;
 }
-/*  if (readCurrentShipState(SR_PHASER)){
-    if ( strcmp (pCurrentFilePlaying, scAudioEffects[AUDIO_INDEX_PHASER]) != 0) {
-      EN1701A::sbAudioIndex = AUDIO_INDEX_PHASER;
-      playFile();
-      delay(300);
-      Serial.write(SERIAL_COMM_PHASER_ON);
-    }
-    return;
-  }
-  else if (readOldShipState(SR_PHASER)){
-    stopPlaying();
-    Serial.write(SERIAL_COMM_PHASER_OFF);
-    EN1701A::svWriteShipState(false, SR_PHASER);
-    return;
-  }*/
-
-  /*if(readCurrentShipState(SR_BUTTON_1)){
-    EN1701A::sbAudioIndex = AUDIO_INDEX_BTS4;
-    playFile();
-    EN1701A::svWriteShipState(false, SR_BUTTON_1);
-    Serial.write(SERIAL_COMM_BUTTON_1);
-    return;
-  }
-
-  if(readCurrentShipState(SR_BUTTON_2)){
-    EN1701A::sbAudioIndex = AUDIO_INDEX_BTS5;
-    playFile();
-    EN1701A::svWriteShipState(false, SR_BUTTON_2);
-    Serial.write(SERIAL_COMM_BUTTON_2);
-    return;
-  }
-
-  if(readCurrentShipState(SR_BUTTON_3)){
-    EN1701A::sbAudioIndex = AUDIO_INDEX_BTS6;
-    playFile();
-    EN1701A::svWriteShipState(false, SR_BUTTON_3);
-    Serial.write(SERIAL_COMM_BUTTON_3);
-    return;
-  }
-
-  if(readCurrentShipState(SR_BUTTON_4)){
-    EN1701A::sbAudioIndex = AUDIO_INDEX_BTS5;
-    playFile();
-    EN1701A::svWriteShipState(false, SR_BUTTON_4);
-    Serial.write(SERIAL_COMM_BUTTON_4);
-    return;
-  }
-
-  if(readCurrentShipState(SR_BUTTON_5)){
-    EN1701A::sbAudioIndex = AUDIO_INDEX_BTS4;
-    playFile();
-    EN1701A::svWriteShipState(false, SR_BUTTON_5);
-    Serial.write(SERIAL_COMM_BUTTON_5);
-    return;
-  }
-
-  if(readCurrentShipState(SR_BUTTON_6)){
-    EN1701A::sbAudioIndex = AUDIO_INDEX_BTS6;
-    playFile();
-    EN1701A::svWriteShipState(false, SR_BUTTON_6);
-    Serial.write(SERIAL_COMM_BUTTON_6);
-    return;
-  }
-
-  if(readCurrentShipState(SR_BUTTON_7)){
-    EN1701A::sbAudioIndex = AUDIO_INDEX_BTS4;
-    playFile();
-    EN1701A::svWriteShipState(false, SR_BUTTON_7);
-    Serial.write(SERIAL_COMM_BUTTON_7);
-    return;
-  }
-  if(readCurrentShipState(SR_BUTTON_8)){
-    EN1701A::sbAudioIndex = AUDIO_INDEX_BTS6;
-    playFile();
-    EN1701A::svWriteShipState(false, SR_BUTTON_8);
-    Serial.write(SERIAL_COMM_BUTTON_8);
-    return;
-  }
-
-  if(readCurrentShipState(SR_BUTTON_9)){
-    EN1701A::sbAudioIndex = AUDIO_INDEX_BTS5;
-    playFile();
-    EN1701A::svWriteShipState(false, SR_BUTTON_9);
-    Serial.write(SERIAL_COMM_BUTTON_9);
-    return;
-  }
-
-  if(readCurrentShipState(SR_BUTTON_0)){
-    EN1701A::sbAudioIndex = AUDIO_INDEX_BTS4;
-    playFile();
-    EN1701A::svWriteShipState(false, SR_BUTTON_0);
-    Serial.write(SERIAL_COMM_BUTTON_0);
-    return;
-  }
-}*/
 
 void ShipOperations::setupSound() {
   //putstring_nl("WaveHC with 6 buttons");

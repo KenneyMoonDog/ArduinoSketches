@@ -64,6 +64,10 @@ class EN1701A
 {
   public:
     volatile static boolean buttonInterrupt;
+    volatile static boolean b_warp_mode_on;
+    volatile static boolean b_red_alert_on;
+    volatile static boolean b_phaser_on;
+    volatile static boolean b_power_cycle;
     static byte sendByte;
     volatile static byte sbAudioIndex;
     volatile static unsigned long suiCurrentShipState;
