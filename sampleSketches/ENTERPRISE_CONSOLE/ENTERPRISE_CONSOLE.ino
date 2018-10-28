@@ -34,11 +34,12 @@ void setup()
   Serial.begin(9600); 
   Serial.flush();
   
+  pShipOperations = new ShipOperations;
+  pButtonReader = new ButtonReader;
+
   pButtonReader->setupInterrupts();
   pShipOperations->clearAll();
   
-  pShipOperations = new ShipOperations;
-  pButtonReader = new ButtonReader;
   // Timer0 is already used for millis() - we'll just interrupt somewhere
   // in the middle and call the "Compare A" function below
   OCR0A = 0xAF;

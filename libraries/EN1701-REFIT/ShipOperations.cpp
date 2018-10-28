@@ -2,9 +2,13 @@
 #include <ShipOperations.h>
 #include <EN1701-REFIT.h>
 
+#define PIN_CONSOLE_LIGHT 9
+
 byte impulseLevel[] = {SERIAL_COMM_IMPULSE_DRIVE, 0};
 
 ShipOperations::ShipOperations() {
+  pinMode(PIN_CONSOLE_LIGHT, OUTPUT);
+  digitalWrite(PIN_CONSOLE_LIGHT, HIGH);
   setupSound();
 }
 
