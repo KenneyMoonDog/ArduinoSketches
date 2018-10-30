@@ -221,25 +221,19 @@ void loop() {
           Serial.readBytes(newNacelleRGB, 3);     
           break;
        case SERIAL_COMM_INCREASE_WARP_DRIVE:
-          /*if (newWarpPowerLevel < 100){
-            newWarpPowerLevel=newWarpPowerLevel+25;
-          }*/
           coilPeriod+=25;
           resetWarpEngine();
           break;
        case SERIAL_COMM_DECREASE_WARP_DRIVE:
-          /*if (newWarpPowerLevel > 0){
-            newWarpPowerLevel=newWarpPowerLevel-25;
-          }*/
           coilPeriod-=25;
           resetWarpEngine();
           break;       
-       case SERIAL_COMM_WARP_DRIVE:
+       case SERIAL_COMM_START_WARP_DRIVE:
           bWarpOn = true;
           break;
-       case SERIAL_COMM_IMPULSE_DRIVE:
+       case SERIAL_COMM_STOP_WARP_DRIVE:
           bWarpOn = false;
-          break;
+          break;     
        default:
           break;
      }

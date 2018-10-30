@@ -119,12 +119,16 @@ void ButtonReader::updateShipState_fromInterrupt(byte pinToTest)  {
      case PIN_DEFLECTOR_MODE:
        EN1701A::b_warp_mode_on = !EN1701A::b_warp_mode_on;
        if (EN1701A::b_warp_mode_on) {
-         EN1701A::svWriteShipState(false, IMPULSE_ENGINES);
-         EN1701A::svWriteShipState(true, WARP_ENGINES);
+         //EN1701A::svWriteShipState(false, IMPULSE_ENGINES);
+         //EN1701A::svWriteShipState(true, WARP_ENGINES);
+         EN1701A::svWriteShipState(true, SWITCH_TO_WARP_MODE);
+         EN1701A::svWriteShipState(false, SWITCH_TO_IMPULSE_MODE);
        }
        else {
-         EN1701A::svWriteShipState(true, IMPULSE_ENGINES);
-         EN1701A::svWriteShipState(false, WARP_ENGINES);
+         //EN1701A::svWriteShipState(true, IMPULSE_ENGINES);
+         //EN1701A::svWriteShipState(false, WARP_ENGINES);
+         EN1701A::svWriteShipState(true, SWITCH_TO_IMPULSE_MODE);
+         EN1701A::svWriteShipState(false, SWITCH_TO_WARP_MODE);
        }
        break;
      case PIN_SPEED_UP:

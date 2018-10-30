@@ -2,13 +2,14 @@
 #include <ShipOperations.h>
 #include <EN1701-REFIT.h>
 
-#define PIN_CONSOLE_LIGHT 9
+//#define PIN_CONSOLE_LIGHT 9
 
 byte impulseLevel[] = {SERIAL_COMM_IMPULSE_DRIVE, 0};
 
 ShipOperations::ShipOperations() {
-  pinMode(PIN_CONSOLE_LIGHT, OUTPUT);
-  digitalWrite(PIN_CONSOLE_LIGHT, HIGH);
+  //pinMode(PIN_CONSOLE_LIGHT, OUTPUT);
+  //digitalWrite(PIN_CONSOLE_LIGHT, HIGH);
+  //clearAll();
   setupSound();
 }
 
@@ -35,16 +36,16 @@ void ShipOperations::setImpulseLevel(byte level) {
 }
 
 void ShipOperations::increaseImpulseDrive(){
-  impulseLevel[1]+=50;
+  impulseLevel[1]+=25;
 
-  if (impulseLevel[1] > 255){
-    impulseLevel[1]=255;
+  if (impulseLevel[1] > 100){
+    impulseLevel[1]=100;
   }
   Serial.write(impulseLevel, 2);
 }
 
 void ShipOperations::decreaseImpulseDrive(){
-  impulseLevel[1]-=50;
+  impulseLevel[1]-=25;
 
   if (impulseLevel[1] < 0){
     impulseLevel[1]=0;
@@ -64,8 +65,6 @@ void ShipOperations::ApplyShipLogic() {
     else { //startup
       clearAll();
       EN1701A::svWriteShipState(true, PRIMARY_SYSTEMS);
-      //EN1701A::suiCurrentShipState |= 0xFF & rand() % 254 + 1;   //this clears out a section.. why not clean everything
-
       Serial.write(SERIAL_COMM_POWER_ON);
       EN1701A::sbAudioIndex = AUDIO_INDEX_POWER_UP;
     }
@@ -75,7 +74,7 @@ void ShipOperations::ApplyShipLogic() {
   }
 
   if (!readCurrentShipState(PRIMARY_SYSTEMS)) {
-    clearAll();
+    //clearAll();
     return;
   }
 
@@ -97,24 +96,28 @@ void ShipOperations::ApplyShipLogic() {
     return;
   }
 
-  if(readCurrentShipState(WARP_ENGINES)){
+  if(readCurrentShipState(SWITCH_TO_WARP_MODE)){
+    setImpulseLevel(10);
     EN1701A::sbAudioIndex = AUDIO_INDEX_BTS1;
     playFile();
     //setTimer
     delay(3000);
-    setImpulseLevel(5);
-    Serial.write(SERIAL_COMM_WARP_DRIVE);
-    EN1701A::svWriteShipState(false, WARP_ENGINES);
+    Serial.write(SERIAL_COMM_START_WARP_DRIVE);
+    EN1701A::svWriteShipState(false, SWITCH_TO_WARP_MODE);
+    EN1701A::svWriteShipState(false, SWITCH_TO_IMPULSE_MODE);
     return;
   }
 
-  if(readCurrentShipState(IMPULSE_ENGINES)){
+  if(readCurrentShipState(SWITCH_TO_IMPULSE_MODE)){
     EN1701A::sbAudioIndex = AUDIO_INDEX_BTS1;
     playFile();
     //setTimer
     delay(3000);
     setImpulseLevel(100);
-    EN1701A::svWriteShipState(false, IMPULSE_ENGINES);
+    //Serial.write(SERIAL_COMM_IMPULSE_DRIVE);
+    Serial.write(SERIAL_COMM_STOP_WARP_DRIVE);
+    EN1701A::svWriteShipState(false, SWITCH_TO_WARP_MODE);
+    EN1701A::svWriteShipState(false, SWITCH_TO_IMPULSE_MODE);
     return;
   }
 
@@ -155,14 +158,16 @@ void ShipOperations::ApplyShipLogic() {
     playFile();
     delay(300);
     Serial.write(SERIAL_COMM_PHASER_ON);
+    EN1701A::svWriteShipState(false, PHASER_ON);
+    EN1701A::svWriteShipState(false, PHASER_OFF);
   }
   else if (readCurrentShipState(PHASER_OFF)){
     stopPlaying();
     Serial.write(SERIAL_COMM_PHASER_OFF);
+    EN1701A::svWriteShipState(false, PHASER_ON);
+    EN1701A::svWriteShipState(false, PHASER_OFF);
   }
 
-  EN1701A::svWriteShipState(false, PHASER_ON);
-  EN1701A::svWriteShipState(false, PHASER_OFF);
   return;
 }
 

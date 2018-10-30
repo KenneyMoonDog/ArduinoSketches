@@ -408,18 +408,19 @@ void loop() {
        case SERIAL_COMM_PHASER_OFF:
           Serial.write(SERIAL_COMM_PHASER_OFF);
           break;
-       case SERIAL_COMM_WARP_DRIVE:
+       case SERIAL_COMM_START_WARP_DRIVE:
           setCrystal(colorBlue);
           setDeflector(colorBlue);
-          Serial.write(SERIAL_COMM_WARP_DRIVE);
+          Serial.write(SERIAL_COMM_START_WARP_DRIVE);
           break;
-       //case SERIAL_COMM_INCREASE_WARP_DRIVE:
-       //   Serial.write(SERIAL_COMM_INCREASE_WARP_DRIVE);
-       //   break;
-       //case SERIAL_COMM_DECREASE_WARP_DRIVE:
-       //   Serial.write(SERIAL_COMM_DECREASE_WARP_DRIVE);
-       //   break;
+       case SERIAL_COMM_INCREASE_WARP_DRIVE:
+          Serial.write(SERIAL_COMM_INCREASE_WARP_DRIVE);
+          break;
+       case SERIAL_COMM_DECREASE_WARP_DRIVE:
+          Serial.write(SERIAL_COMM_DECREASE_WARP_DRIVE);
+          break;
        case SERIAL_COMM_IMPULSE_DRIVE:
+          Serial.write(SERIAL_COMM_STOP_WARP_DRIVE);
           setCrystal(colorAmber);
           setDeflector(colorAmber);
           Serial.readBytes(&newImpulseLevel,1);
