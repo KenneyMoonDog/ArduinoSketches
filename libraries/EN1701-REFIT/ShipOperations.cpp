@@ -4,7 +4,11 @@
 
 //#define PIN_CONSOLE_LIGHT 9
 
-byte impulseLevel[] = {SERIAL_COMM_IMPULSE_DRIVE, 0};
+#define stop_impulse 0
+#define half_impulse 85
+#define full_impulse 255
+
+byte impulseLevel[] = {SERIAL_COMM_IMPULSE_DRIVE, half_impulse};
 
 ShipOperations::ShipOperations() {
   //pinMode(PIN_CONSOLE_LIGHT, OUTPUT);
@@ -28,6 +32,7 @@ void ShipOperations::clearAll(){
   EN1701A::b_red_alert_on = false;
   EN1701A::b_phaser_on = false;
   EN1701A::b_power_cycle = false;
+  impulseLevel[1] = half_impulse;
 }
 
 void ShipOperations::setImpulseLevel(byte level) {
@@ -36,21 +41,33 @@ void ShipOperations::setImpulseLevel(byte level) {
 }
 
 void ShipOperations::increaseImpulseDrive(){
-  impulseLevel[1]+=25;
-
-  if (impulseLevel[1] > 100){
-    impulseLevel[1]=100;
+  switch (impulseLevel[1]){
+    case stop_impulse:
+      setImpulseLevel(half_impulse);
+      break;
+    case half_impulse:
+      setImpulseLevel(full_impulse);
+      break;
+    case full_impulse:
+      break;
+    default:
+      break;
   }
-  Serial.write(impulseLevel, 2);
 }
 
 void ShipOperations::decreaseImpulseDrive(){
-  impulseLevel[1]-=25;
-
-  if (impulseLevel[1] < 0){
-    impulseLevel[1]=0;
+  switch (impulseLevel[1]){
+    case stop_impulse:
+      break;
+    case half_impulse:
+      setImpulseLevel(stop_impulse);
+      break;
+    case full_impulse:
+      setImpulseLevel(half_impulse);
+      break;
+    default:
+      break;
   }
-  Serial.write(impulseLevel, 2);
 }
 
 void ShipOperations::ApplyShipLogic() {
@@ -97,7 +114,7 @@ void ShipOperations::ApplyShipLogic() {
   }
 
   if(readCurrentShipState(SWITCH_TO_WARP_MODE)){
-    setImpulseLevel(10);
+    setImpulseLevel(0);
     EN1701A::sbAudioIndex = AUDIO_INDEX_BTS1;
     playFile();
     //setTimer
@@ -113,8 +130,7 @@ void ShipOperations::ApplyShipLogic() {
     playFile();
     //setTimer
     delay(3000);
-    setImpulseLevel(100);
-    //Serial.write(SERIAL_COMM_IMPULSE_DRIVE);
+    setImpulseLevel(half_impulse);
     Serial.write(SERIAL_COMM_STOP_WARP_DRIVE);
     EN1701A::svWriteShipState(false, SWITCH_TO_WARP_MODE);
     EN1701A::svWriteShipState(false, SWITCH_TO_IMPULSE_MODE);

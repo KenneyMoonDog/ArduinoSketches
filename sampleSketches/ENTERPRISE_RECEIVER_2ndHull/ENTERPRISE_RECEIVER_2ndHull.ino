@@ -336,6 +336,7 @@ void runShutdownSequence(){
   bNavFlasherOn=false;
   bPowerOn = false;
   setImpulseDrive(0);
+  Serial.write(SERIAL_COMM_STOP_WARP_DRIVE);
   powerSaucerSectionDown();
  
   setDeflector(colorOff);
@@ -358,7 +359,6 @@ void runStartUpSequence() {
   delay(1000);
   setDeflector(colorAmber);
   delay(750);
-  setImpulseDrive(5);
 }
 
 void setCrystal(byte pRGB[]) {
@@ -413,6 +413,9 @@ void loop() {
           setDeflector(colorBlue);
           Serial.write(SERIAL_COMM_START_WARP_DRIVE);
           break;
+       case SERIAL_COMM_STOP_WARP_DRIVE:
+          Serial.write(SERIAL_COMM_STOP_WARP_DRIVE);
+          break;
        case SERIAL_COMM_INCREASE_WARP_DRIVE:
           Serial.write(SERIAL_COMM_INCREASE_WARP_DRIVE);
           break;
@@ -420,7 +423,6 @@ void loop() {
           Serial.write(SERIAL_COMM_DECREASE_WARP_DRIVE);
           break;
        case SERIAL_COMM_IMPULSE_DRIVE:
-          Serial.write(SERIAL_COMM_STOP_WARP_DRIVE);
           setCrystal(colorAmber);
           setDeflector(colorAmber);
           Serial.readBytes(&newImpulseLevel,1);
