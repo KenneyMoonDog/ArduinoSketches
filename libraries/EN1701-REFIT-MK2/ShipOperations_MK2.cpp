@@ -1,11 +1,12 @@
 #include "Arduino.h"
 #include <ShipOperations_MK2.h>
 #include <EN1701-REFIT_MK2.h>
+#include <ButtonReader_MK2.h>
 
 //#define PIN_CONSOLE_LIGHT 9
 
 #define stop_impulse 0
-#define half_impulse 85
+#define half_impulse 60
 #define full_impulse 255
 
 byte impulseLevel[] = {SERIAL_COMM_IMPULSE_DRIVE, half_impulse};
@@ -26,6 +27,9 @@ bool ShipOperations_MK2::readOldShipState(byte pinset) {
 }
 
 void ShipOperations_MK2::clearAll(){
+  EN1701A::buttonPressed = 0;
+  //EN1701A::console_mode=MODE_HELM;//
+
   EN1701A::suiCurrentShipState = 0;
   EN1701A::suiPreviousShipState = 0;
   EN1701A::b_warp_mode_on = false;
@@ -72,7 +76,111 @@ void ShipOperations_MK2::decreaseImpulseDrive(){
 
 void ShipOperations_MK2::ApplyShipLogic() {
 
-  if (readCurrentShipState(POWER_CHANGE)) {
+  if ( EN1701A::console_mode == MODE_TRANSPORTER) {
+     switch (EN1701A::buttonPressed) {
+       case PIN_A_BUTTON:
+         break;
+       case PIN_B_BUTTON:
+         break;
+       case PIN_C_BUTTON:
+         break;
+       case PIN_D_BUTTON:
+         break;
+       case PIN_E_BUTTON:
+         break;
+       case PIN_F_BUTTON:
+         break;
+       case PIN_G_BUTTON:
+         break;
+       case PIN_H_BUTTON:
+         break;
+       default:
+         break;
+     }
+  }
+
+  if ( EN1701A::console_mode == MODE_COMMUNICATIONS) {
+    switch (EN1701A::buttonPressed) {
+      case PIN_A_BUTTON:
+        break;
+      case PIN_B_BUTTON:
+        break;
+      case PIN_C_BUTTON:
+        break;
+      case PIN_D_BUTTON:
+        break;
+      case PIN_E_BUTTON:
+        break;
+      case PIN_F_BUTTON:
+        break;
+      case PIN_G_BUTTON:
+        break;
+      case PIN_H_BUTTON:
+        break;
+      default:
+        break;
+    }
+  }
+
+  if ( EN1701A::console_mode == MODE_HELM) {
+    switch (EN1701A::buttonPressed) {
+      case PIN_A_BUTTON:
+        if (EN1701A::b_power_cycle) { //shutdown
+          Serial.write(SERIAL_COMM_POWER_OFF);
+          EN1701A::sbAudioIndex = AUDIO_INDEX_POWER_DOWN;
+          clearAll();
+        }
+        else { //startup
+          clearAll();
+          EN1701A::svWriteShipState(true, PRIMARY_SYSTEMS);
+          Serial.write(SERIAL_COMM_POWER_ON);
+          EN1701A::sbAudioIndex = AUDIO_INDEX_POWER_UP;
+          EN1701A::b_power_cycle = true;
+        }
+        playFile();
+        break;
+      case PIN_B_BUTTON:
+        if (EN1701A::b_warp_mode_on) { //warp
+          EN1701A::sbAudioIndex = AUDIO_INDEX_WARP_UP;
+          playFile();
+          Serial.write(SERIAL_COMM_INCREASE_WARP_DRIVE);
+        }
+        else {  //impulse
+          EN1701A::sbAudioIndex = AUDIO_INDEX_WARP_UP;
+          playFile();
+          increaseImpulseDrive();
+        }
+        break;
+      case PIN_C_BUTTON:
+        break;
+      case PIN_D_BUTTON:
+        break;
+      case PIN_E_BUTTON:
+        break;
+      case PIN_F_BUTTON:
+        if(EN1701A::b_warp_mode_on){
+          EN1701A::sbAudioIndex = AUDIO_INDEX_WARP_DOWN;
+          playFile();
+          Serial.write(SERIAL_COMM_DECREASE_WARP_DRIVE);
+        }
+        else {
+          EN1701A::sbAudioIndex = AUDIO_INDEX_WARP_DOWN;
+          playFile();
+          decreaseImpulseDrive();
+        }
+        break;
+      case PIN_G_BUTTON:
+        break;
+      case PIN_H_BUTTON:
+        break;
+      default:
+        break;
+    }
+  }
+
+  EN1701A::buttonPressed = 0;
+
+/*  if (readCurrentShipState(POWER_CHANGE)) {
     if (readCurrentShipState(PRIMARY_SYSTEMS)) { //shutdown
       EN1701A::svWriteShipState(false, PRIMARY_SYSTEMS);
       Serial.write(SERIAL_COMM_POWER_OFF);
@@ -184,7 +292,7 @@ void ShipOperations_MK2::ApplyShipLogic() {
     EN1701A::svWriteShipState(false, PHASER_OFF);
   }
 
-  return;
+  return;*/
 }
 
 void ShipOperations_MK2::setupSound() {

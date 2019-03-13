@@ -4,9 +4,12 @@
 #include "Arduino.h"
 #include "SERIAL_COMM_MK2.h"
 
+#define MODE_HELM 1
+#define MODE_COMMUNICATIONS 2
+#define MODE_TRANSPORTER 3
+
 /*This set maps bits in an unsigned int to
 an illuminated control section of the ship*/
-
 #define SR_BUTTON_0 0 //byte 1
 #define SR_BUTTON_1 1
 #define SR_BUTTON_2 2
@@ -60,8 +63,6 @@ static char* scAudioEffects[]={"KLAX.WAV", "P1MSG.WAV", "TORP1.WAV", "SPZER1.WAV
 "BPUP1.WAV", "DSTRT.WAV", "HULHIT.WAV", "BTS1.WAV", "BTS2.WAV", "BTS3.WAV",
 "BT4.WAV", "BT5.WAV", "BT6.WAV", "WACC1.WAV", "WDCELL1.WAV", "PUP1A.WAV", "PUP1B.WAV", "PD1.WAV"};
 
-//class ShipOperations;
-
 class EN1701A
 {
   public:
@@ -70,13 +71,15 @@ class EN1701A
     volatile static boolean b_red_alert_on;
     volatile static boolean b_phaser_on;
     volatile static boolean b_power_cycle;
-    volatile static byte b_console_mode;
+    volatile static byte console_mode;
+    volatile static byte buttonPressed;
 
     static byte sendByte;
     volatile static byte sbAudioIndex;
     volatile static unsigned long suiCurrentShipState;
     volatile static unsigned long suiPreviousShipState;
     static void svWriteShipState(bool set, byte pinset);
+
     //static ShipOperations mShipboardOperations;
 };
 
