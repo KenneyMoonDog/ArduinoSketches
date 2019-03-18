@@ -15,6 +15,9 @@ public:
    void audioCheck();
    void clearAll();
    void setImpulseLevel(byte level);
+   //void setConsoleMode();
+   void switchConsoleMode(byte mode);
+   void switchConsoleLight(boolean bOn);
    void decreaseImpulseDrive();
    void increaseImpulseDrive();
 

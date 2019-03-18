@@ -72,6 +72,7 @@ class EN1701A
     volatile static boolean b_phaser_on;
     volatile static boolean b_power_cycle;
     volatile static byte console_mode;
+    volatile static boolean console_light_state;
     volatile static byte buttonPressed;
 
     static byte sendByte;

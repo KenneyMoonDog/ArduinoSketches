@@ -3,7 +3,7 @@
 #include <EN1701-REFIT_MK2.h>
 #include <ButtonReader_MK2.h>
 
-//#define PIN_CONSOLE_LIGHT 9
+#define PIN_CONSOLE_LIGHT 9
 
 #define stop_impulse 0
 #define half_impulse 60
@@ -12,8 +12,9 @@
 byte impulseLevel[] = {SERIAL_COMM_IMPULSE_DRIVE, half_impulse};
 
 ShipOperations_MK2::ShipOperations_MK2() {
-  //pinMode(PIN_CONSOLE_LIGHT, OUTPUT);
-  //digitalWrite(PIN_CONSOLE_LIGHT, HIGH);
+  pinMode(PIN_CONSOLE_LIGHT, OUTPUT);
+  switchConsoleMode(MODE_HELM);
+  //switchConsoleLight(true);
   //clearAll();
   setupSound();
 }
@@ -42,6 +43,34 @@ void ShipOperations_MK2::clearAll(){
 void ShipOperations_MK2::setImpulseLevel(byte level) {
    impulseLevel[1] = level;
    Serial.write(impulseLevel, 2);
+}
+
+void ShipOperations_MK2::switchConsoleMode(byte mode) {
+   EN1701A::console_mode = mode;
+   switch (mode) {
+     case MODE_HELM:
+       switchConsoleLight(true);
+       break;
+     case MODE_COMMUNICATIONS:
+       switchConsoleLight(false);
+       break;
+     case MODE_TRANSPORTER:
+       switchConsoleLight(false);
+       break;
+     default:
+       switchConsoleLight(true);
+       break;
+   }
+}
+
+void ShipOperations_MK2::switchConsoleLight(boolean bOn){
+  if (bOn) {
+    digitalWrite(PIN_CONSOLE_LIGHT, HIGH);
+  }
+  else {
+    digitalWrite(PIN_CONSOLE_LIGHT, LOW);
+  }
+  EN1701A::console_light_state = bOn;
 }
 
 void ShipOperations_MK2::increaseImpulseDrive(){
@@ -83,6 +112,10 @@ void ShipOperations_MK2::ApplyShipLogic() {
        case PIN_B_BUTTON:
          break;
        case PIN_C_BUTTON:
+         EN1701A::sbAudioIndex = AUDIO_INDEX_BTS6;
+         switchConsoleMode(MODE_HELM);
+//         switchConsoleLight(true);
+         playFile();
          break;
        case PIN_D_BUTTON:
          break;
@@ -97,6 +130,8 @@ void ShipOperations_MK2::ApplyShipLogic() {
        default:
          break;
      }
+     EN1701A::buttonPressed = 0;
+     return;
   }
 
   if ( EN1701A::console_mode == MODE_COMMUNICATIONS) {
@@ -106,6 +141,10 @@ void ShipOperations_MK2::ApplyShipLogic() {
       case PIN_B_BUTTON:
         break;
       case PIN_C_BUTTON:
+        EN1701A::sbAudioIndex = AUDIO_INDEX_BTS5;
+        switchConsoleMode(MODE_TRANSPORTER);
+//        switchConsoleLight(false);
+        playFile();
         break;
       case PIN_D_BUTTON:
         break;
@@ -120,6 +159,8 @@ void ShipOperations_MK2::ApplyShipLogic() {
       default:
         break;
     }
+    EN1701A::buttonPressed = 0;
+    return;
   }
 
   if ( EN1701A::console_mode == MODE_HELM) {
@@ -139,7 +180,8 @@ void ShipOperations_MK2::ApplyShipLogic() {
         }
         playFile();
         break;
-      case PIN_B_BUTTON:
+
+      case PIN_B_BUTTON: //speed up
         if (EN1701A::b_warp_mode_on) { //warp
           EN1701A::sbAudioIndex = AUDIO_INDEX_WARP_UP;
           playFile();
@@ -151,13 +193,47 @@ void ShipOperations_MK2::ApplyShipLogic() {
           increaseImpulseDrive();
         }
         break;
-      case PIN_C_BUTTON:
+
+      case PIN_C_BUTTON: //mode buttons
+        EN1701A::sbAudioIndex = AUDIO_INDEX_BTS4;
+        switchConsoleMode(MODE_COMMUNICATIONS);
+  //      switchConsoleLight(false);
+        playFile();
         break;
-      case PIN_D_BUTTON:
+
+      case PIN_D_BUTTON: //phaser
+        if (!EN1701A::b_phaser_on){
+          EN1701A::sbAudioIndex = AUDIO_INDEX_PHASER;
+          playFile();
+          delay(300);
+          Serial.write(SERIAL_COMM_PHASER_ON);
+          EN1701A::b_phaser_on = true;
+        }
+        else {
+          stopPlaying();
+          Serial.write(SERIAL_COMM_PHASER_OFF);
+          EN1701A::b_phaser_on = false;
+        }
         break;
-      case PIN_E_BUTTON:
+
+      case PIN_E_BUTTON: //deflector mode
+        EN1701A::sbAudioIndex = AUDIO_INDEX_BTS1;
+        playFile();
+        //setTimer
+        delay(3000);
+
+        if (EN1701A::b_warp_mode_on){
+          setImpulseLevel(half_impulse);
+          Serial.write(SERIAL_COMM_STOP_WARP_DRIVE);
+        }
+        else {
+          setImpulseLevel(stop_impulse);
+          Serial.write(SERIAL_COMM_START_WARP_DRIVE);
+        }
+        EN1701A::b_warp_mode_on = !EN1701A::b_warp_mode_on;
         break;
-      case PIN_F_BUTTON:
+
+      case PIN_F_BUTTON: //speed down
         if(EN1701A::b_warp_mode_on){
           EN1701A::sbAudioIndex = AUDIO_INDEX_WARP_DOWN;
           playFile();
@@ -169,16 +245,22 @@ void ShipOperations_MK2::ApplyShipLogic() {
           decreaseImpulseDrive();
         }
         break;
-      case PIN_G_BUTTON:
+
+      case PIN_G_BUTTON: //red alert
         break;
-      case PIN_H_BUTTON:
+
+      case PIN_H_BUTTON: //torpedos
+        EN1701A::sbAudioIndex = AUDIO_INDEX_TORPEDO;
+        playFile();
+        Serial.write(SERIAL_COMM_TORPEDO);
         break;
+
       default:
         break;
     }
+    EN1701A::buttonPressed = 0;
+    return;
   }
-
-  EN1701A::buttonPressed = 0;
 
 /*  if (readCurrentShipState(POWER_CHANGE)) {
     if (readCurrentShipState(PRIMARY_SYSTEMS)) { //shutdown
