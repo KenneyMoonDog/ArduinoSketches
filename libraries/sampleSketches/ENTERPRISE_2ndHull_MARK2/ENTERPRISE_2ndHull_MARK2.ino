@@ -15,20 +15,28 @@ byte newImpulseLevel=0;
 #define SAUCER_SECTION_BRIDGE 8
 #define SAUCER_SECTION_LOUNGE 7
 
-#define PIN_HULL_SECTION_1 19
+//#define PIN_HULL_SECTION_1 19
+//#define PIN_SR_SECTION_DATA 13
+//#define PIN_SR_ENABLE 14
+//#define PIN_SR_LATCH 12
+//#define PIN_SR_CLOCK 11
 
-#define PIN_DEFLECTOR_R 6
-#define PIN_DEFLECTOR_G 5
-#define PIN_DEFLECTOR_B 3
-#define PIN_PHOTON_TORPEDO_1 9 
-#define PIN_PHOTON_TORPEDO_2 10
+#define PIN_NECK_LIGHTING 3
+#define PIN_ARBORITUM 4
+#define PIN_PHOTON_TORPEDO_2 5
+#define PIN_PHOTON_TORPEDO_1 6
 
-#define PIN_SR_SECTION_DATA 13
-#define PIN_SR_ENABLE 14
-#define PIN_SR_LATCH 12
-#define PIN_SR_CLOCK 11
+#define PIN_DEFLECTOR_R 9
+#define PIN_DEFLECTOR_G 10
+#define PIN_DEFLECTOR_B 11
+#define PIN_NAVIGATION_FLASHER 12
 
-#define PIN_NAVIGATION_FLASHER 8
+#define PIN_FLOOD_1 14
+#define PIN_HANGER 15
+#define PIN_DOWN_BELOW 16
+#define PIN_STARBOARD_LIGHTS 17
+#define PIN_PORT_LIGHTS 18
+#define PIN_FLOOD_2 19
 
 //timer constants
 #define RECEIVER_INTERRUPT_FREQUENCY 100 //ms
@@ -45,6 +53,7 @@ boolean bPowerOn = false;
 boolean bNavBeaconOn = false;
 boolean bNavFlasherOn = false;
 boolean fullImpulse = false;
+boolean testMode = true;
 
 byte crystalSignal[] = {0,0,0,0};
 byte nacelleSignal[] = {0,0,0,0};
@@ -60,23 +69,26 @@ static byte colorBlue[] = {0, 0, 255};
 static byte colorOff[] = {0, 0, 0};
 
 void setup() {
-  pinMode(PIN_SR_ENABLE, OUTPUT);
-  digitalWrite(PIN_SR_ENABLE,HIGH);
+  //pinMode(PIN_SR_ENABLE, OUTPUT);
+  //digitalWrite(PIN_SR_ENABLE,HIGH);
     
   Serial.begin(9600);
   Serial.flush();
-  
-  pinMode(PIN_NAVIGATION_FLASHER, OUTPUT);   
-  pinMode(PIN_SR_CLOCK, OUTPUT);  
-  pinMode(PIN_SR_LATCH, OUTPUT);
-  pinMode(PIN_SR_SECTION_DATA, OUTPUT);
+
+  pinMode(PIN_NECK_LIGHTING, OUTPUT);
+  pinMode(PIN_ARBORITUM, OUTPUT);
+  pinMode(PIN_PHOTON_TORPEDO_1, OUTPUT);
+  pinMode(PIN_PHOTON_TORPEDO_2, OUTPUT);
   pinMode(PIN_DEFLECTOR_R, OUTPUT);
   pinMode(PIN_DEFLECTOR_G, OUTPUT);
   pinMode(PIN_DEFLECTOR_B, OUTPUT);
-  pinMode(PIN_PHOTON_TORPEDO_1, OUTPUT);
-  pinMode(PIN_PHOTON_TORPEDO_2, OUTPUT);
-
-  pinMode(PIN_HULL_SECTION_1, OUTPUT);
+  pinMode(PIN_NAVIGATION_FLASHER, OUTPUT);
+  pinMode(PIN_FLOOD_1, OUTPUT);
+  pinMode(PIN_HANGER, OUTPUT);
+  pinMode(PIN_DOWN_BELOW, OUTPUT);
+  pinMode(PIN_STARBOARD_LIGHTS, OUTPUT);
+  pinMode(PIN_PORT_LIGHTS, OUTPUT);
+  pinMode(PIN_FLOOD_2, OUTPUT);
 
   setDeflector(colorOff);
   analogWrite(PIN_DEFLECTOR_R,255);
@@ -84,9 +96,6 @@ void setup() {
   analogWrite(PIN_DEFLECTOR_B,255);
  
   updateSaucerSectionDataRegister();
-  //updateHullSectionDataRegister();
-  
-  digitalWrite(PIN_SR_ENABLE,LOW);
  
   OCR0A = 0xAF;
   TIMSK0 |= _BV(OCIE0A);
@@ -345,7 +354,7 @@ void runShutdownSequence(){
   Serial.write(SERIAL_COMM_STOP_WARP_DRIVE);
   powerSaucerSectionDown();
 
-  digitalWrite(PIN_HULL_SECTION_1, LOW);
+  //digitalWrite(PIN_HULL_SECTION_1, LOW);
  
   setDeflector(colorOff);
   setNacelles(colorWhite);
@@ -353,16 +362,24 @@ void runShutdownSequence(){
 }
 
 void runStartUpSequence() {
+  bPowerOn = true;
   
+  digitalWrite(PIN_NECK_LIGHTING, HIGH);
+  digitalWrite(PIN_ARBORITUM, HIGH);
+  digitalWrite(PIN_FLOOD_1, HIGH);
+  digitalWrite(PIN_HANGER, HIGH);
+  digitalWrite(PIN_DOWN_BELOW, HIGH);
+  digitalWrite(PIN_STARBOARD_LIGHTS, HIGH);
+  digitalWrite(PIN_PORT_LIGHTS, HIGH);
+  digitalWrite(PIN_FLOOD_2, HIGH);
+
   setCrystal(colorAmber);
   setNacelles(colorBlue); 
   delay(2000);
   powerSaucerSectionUp();
-
-  digitalWrite(PIN_HULL_SECTION_1, HIGH);
+  //digitalWrite(PIN_HULL_SECTION_1, HIGH);
  
   //start nav lights
-  bPowerOn = true;
   bNavBeaconOn=true;
   bNavFlasherOn=true;
 
@@ -394,7 +411,12 @@ void updateSaucerSectionDataRegister(){
 }
 
 void loop() {
-
+  
+   if ( testMode ){
+      runStartUpSequence();
+      return;
+   }
+   
    if (Serial.available() > 0) {
 
      // read the incoming byte:
