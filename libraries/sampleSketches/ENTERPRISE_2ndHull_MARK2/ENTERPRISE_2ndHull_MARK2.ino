@@ -25,7 +25,7 @@ byte newImpulseLevel=0;
 #define PIN_ARBORITUM 4
 #define PIN_PHOTON_TORPEDO_2 5
 #define PIN_PHOTON_TORPEDO_1 6
-
+#define PIN_AFT_LIGHTS 8
 #define PIN_DEFLECTOR_R 9
 #define PIN_DEFLECTOR_G 10
 #define PIN_DEFLECTOR_B 11
@@ -89,6 +89,7 @@ void setup() {
   pinMode(PIN_STARBOARD_LIGHTS, OUTPUT);
   pinMode(PIN_PORT_LIGHTS, OUTPUT);
   pinMode(PIN_FLOOD_2, OUTPUT);
+  pinMode(PIN_AFT_LIGHTS, OUTPUT);
 
   setDeflector(colorOff);
   analogWrite(PIN_DEFLECTOR_R,255);
@@ -372,6 +373,7 @@ void runStartUpSequence() {
   digitalWrite(PIN_STARBOARD_LIGHTS, HIGH);
   digitalWrite(PIN_PORT_LIGHTS, HIGH);
   digitalWrite(PIN_FLOOD_2, HIGH);
+  digitalWrite(PIN_AFT_LIGHTS, HIGH);
 
   setCrystal(colorAmber);
   setNacelles(colorBlue); 
@@ -414,6 +416,7 @@ void loop() {
   
    if ( testMode ){
       runStartUpSequence();
+      testMode = false;
       return;
    }
    
