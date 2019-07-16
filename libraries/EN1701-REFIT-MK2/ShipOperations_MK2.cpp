@@ -10,34 +10,37 @@
 #define full_impulse 255
 
 byte impulseLevel[] = {SERIAL_COMM_IMPULSE_DRIVE, half_impulse};
+byte saucerSection[] = {0,0};
+byte setColor[] = {0,0,0,0};
 
 ShipOperations_MK2::ShipOperations_MK2() {
   pinMode(PIN_CONSOLE_LIGHT, OUTPUT);
   switchConsoleMode(MODE_HELM);
-  //switchConsoleLight(true);
-  //clearAll();
   setupSound();
-}
-
-bool ShipOperations_MK2::readCurrentShipState(byte pinset) {
-  return (bitRead(EN1701A::suiCurrentShipState, pinset));
-}
-
-bool ShipOperations_MK2::readOldShipState(byte pinset) {
-  return (bitRead(EN1701A::suiPreviousShipState, pinset));
 }
 
 void ShipOperations_MK2::clearAll(){
   EN1701A::buttonPressed = 0;
-  //EN1701A::console_mode=MODE_HELM;//
-
-  EN1701A::suiCurrentShipState = 0;
-  EN1701A::suiPreviousShipState = 0;
   EN1701A::b_warp_mode_on = false;
   EN1701A::b_red_alert_on = false;
   EN1701A::b_phaser_on = false;
   EN1701A::b_power_cycle = false;
   impulseLevel[1] = half_impulse;
+}
+
+void ShipOperations_MK2::setTargetColor(byte target, byte* color) {
+   setColor[0] = target;
+   setColor[1] = color[0];
+   setColor[2] = color[1];
+   setColor[3] = color[2];
+   Serial.write(setColor,4);
+}
+
+void ShipOperations_MK2::setSaucerSection(byte section, byte set, int waitMs) {
+   saucerSection[0] = section;
+   saucerSection[1] = set;
+   Serial.write(saucerSection, 2);
+   delay(waitMs);
 }
 
 void ShipOperations_MK2::setImpulseLevel(byte level) {
@@ -166,19 +169,63 @@ void ShipOperations_MK2::ApplyShipLogic() {
   if ( EN1701A::console_mode == MODE_HELM) {
     switch (EN1701A::buttonPressed) {
       case PIN_A_BUTTON:
-        if (EN1701A::b_power_cycle) { //shutdown
+        if ( EN1701A::b_power_cycle) { //shutdown
+          EN1701A::b_power_cycle = false;
           Serial.write(SERIAL_COMM_POWER_OFF);
           EN1701A::sbAudioIndex = AUDIO_INDEX_POWER_DOWN;
           clearAll();
+          playFile();
+
+          Serial.write(SERIAL_COMM_STOP_WARP_DRIVE);
+          setImpulseLevel(stop_impulse);
+
+          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_LOUNGE,0,1000);
+          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_3,0,0);
+          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_4,0,1000);
+          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_2,0,0);
+          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_5,0,1000);
+          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_1,0,0);
+          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_6,0,1000);
+          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_BRIDGE,true,0);
+
+          setTargetColor(SERIAL_COMM_DEFLECTOR_COLOR, colorOff);
+          setTargetColor(SERIAL_COMM_NACELLE_COLOR, colorWhite);
+          setTargetColor(SERIAL_COMM_CRYSTAL_COLOR, colorWhite);
+
+          //setSaucerSection(SERIAL_COMM_FLOOD_1,0,1);
+          //setSaucerSection(SERIAL_COMM_FLOOD_2,0,1);
+          //setSaucerSection(SERIAL_COMM_HANGER_SECTION,0,1);
+          //setSaucerSection(SERIAL_COMM_AFT_SECTION,0,1);
+          //setSaucerSection(SERIAL_COMM_BELLY_SECION,0,1);
+          //setSaucerSection(SERIAL_COMM_ENGINEERING_SECTION_1,0,1);
+          //setSaucerSection(SERIAL_COMM_ENGINEERING_SECTION_2,0,1);
+          //setSaucerSection(SERIAL_COMM_NECK_SECTION,0,1);
+          //setSaucerSection(SERIAL_COMM_ARBORITUM,0,1);
+
         }
-        else { //startup
+        else {
           clearAll();
-          EN1701A::svWriteShipState(true, PRIMARY_SYSTEMS);
           Serial.write(SERIAL_COMM_POWER_ON);
           EN1701A::sbAudioIndex = AUDIO_INDEX_POWER_UP;
           EN1701A::b_power_cycle = true;
+          playFile();
+
+          setTargetColor(SERIAL_COMM_CRYSTAL_COLOR, colorAmber);
+          setTargetColor(SERIAL_COMM_NACELLE_COLOR, colorBlue);
+          delay(1000);
+
+          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_LOUNGE,1,1000);
+          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_3,1,0);
+          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_4,1,1000);
+          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_2,1,0);
+          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_5,1,1000);
+          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_1,1,0);
+          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_6,1,1000);
+          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_BRIDGE,1,1000);
+
+          setTargetColor(SERIAL_COMM_DEFLECTOR_COLOR, colorAmber);
         }
-        playFile();
+
         break;
 
       case PIN_B_BUTTON: //speed up
@@ -223,10 +270,14 @@ void ShipOperations_MK2::ApplyShipLogic() {
         delay(3000);
 
         if (EN1701A::b_warp_mode_on){
+          setTargetColor(SERIAL_COMM_DEFLECTOR_COLOR, colorAmber);
+          setTargetColor(SERIAL_COMM_CRYSTAL_COLOR, colorAmber);
           setImpulseLevel(half_impulse);
           Serial.write(SERIAL_COMM_STOP_WARP_DRIVE);
         }
         else {
+          setTargetColor(SERIAL_COMM_DEFLECTOR_COLOR, colorBlue);
+          setTargetColor(SERIAL_COMM_CRYSTAL_COLOR, colorBlue);
           setImpulseLevel(stop_impulse);
           Serial.write(SERIAL_COMM_START_WARP_DRIVE);
         }
@@ -261,120 +312,6 @@ void ShipOperations_MK2::ApplyShipLogic() {
     EN1701A::buttonPressed = 0;
     return;
   }
-
-/*  if (readCurrentShipState(POWER_CHANGE)) {
-    if (readCurrentShipState(PRIMARY_SYSTEMS)) { //shutdown
-      EN1701A::svWriteShipState(false, PRIMARY_SYSTEMS);
-      Serial.write(SERIAL_COMM_POWER_OFF);
-      EN1701A::sbAudioIndex = AUDIO_INDEX_POWER_DOWN;
-      clearAll();
-    }
-    else { //startup
-      clearAll();
-      EN1701A::svWriteShipState(true, PRIMARY_SYSTEMS);
-      Serial.write(SERIAL_COMM_POWER_ON);
-      EN1701A::sbAudioIndex = AUDIO_INDEX_POWER_UP;
-    }
-    playFile();
-    EN1701A::svWriteShipState(false, POWER_CHANGE);
-    return;
-  }
-
-  if (!readCurrentShipState(PRIMARY_SYSTEMS)) {
-    //clearAll();
-    return;
-  }
-
-  if (readCurrentShipState(AUDIO_EFFECT)) {
-    playFile();
-    EN1701A::svWriteShipState(false, AUDIO_EFFECT);
-    return;
-  }
-
-  if (EN1701A::sbAudioIndex == AUDIO_INDEX_CANCEL) {
-    stopPlaying();
-  }
-
-  if (readCurrentShipState(TORPEDO)){
-    EN1701A::sbAudioIndex = AUDIO_INDEX_TORPEDO;
-    playFile();
-    Serial.write(SERIAL_COMM_TORPEDO);
-    EN1701A::svWriteShipState(false, TORPEDO);
-    return;
-  }
-
-  if(readCurrentShipState(SWITCH_TO_WARP_MODE)){
-    setImpulseLevel(0);
-    EN1701A::sbAudioIndex = AUDIO_INDEX_BTS1;
-    playFile();
-    //setTimer
-    delay(3000);
-    Serial.write(SERIAL_COMM_START_WARP_DRIVE);
-    EN1701A::svWriteShipState(false, SWITCH_TO_WARP_MODE);
-    EN1701A::svWriteShipState(false, SWITCH_TO_IMPULSE_MODE);
-    return;
-  }
-
-  if(readCurrentShipState(SWITCH_TO_IMPULSE_MODE)){
-    EN1701A::sbAudioIndex = AUDIO_INDEX_BTS1;
-    playFile();
-    //setTimer
-    delay(3000);
-    setImpulseLevel(half_impulse);
-    Serial.write(SERIAL_COMM_STOP_WARP_DRIVE);
-    EN1701A::svWriteShipState(false, SWITCH_TO_WARP_MODE);
-    EN1701A::svWriteShipState(false, SWITCH_TO_IMPULSE_MODE);
-    return;
-  }
-
-  if(readCurrentShipState(INCREASE_IMPULSE_ENGINES)){
-    EN1701A::sbAudioIndex = AUDIO_INDEX_WARP_UP;
-    playFile();
-    increaseImpulseDrive();
-    EN1701A::svWriteShipState(false, INCREASE_IMPULSE_ENGINES);
-    return;
-  }
-
-  if(readCurrentShipState(DECREASE_IMPULSE_ENGINES)){
-    EN1701A::sbAudioIndex = AUDIO_INDEX_WARP_DOWN;
-    playFile();
-    decreaseImpulseDrive();
-    EN1701A::svWriteShipState(false, DECREASE_IMPULSE_ENGINES);
-    return;
-  }
-
-  if(readCurrentShipState(INCREASE_WARP_ENGINES)){
-    EN1701A::sbAudioIndex = AUDIO_INDEX_WARP_UP;
-    playFile();
-    Serial.write(SERIAL_COMM_INCREASE_WARP_DRIVE);
-    EN1701A::svWriteShipState(false, INCREASE_WARP_ENGINES);
-    return;
-  }
-
-  if(readCurrentShipState(DECREASE_WARP_ENGINES)){
-    EN1701A::sbAudioIndex = AUDIO_INDEX_WARP_DOWN;
-    playFile();
-    Serial.write(SERIAL_COMM_DECREASE_WARP_DRIVE);
-    EN1701A::svWriteShipState(false, DECREASE_WARP_ENGINES);
-    return;
-  }
-
-  if (readCurrentShipState(PHASER_ON)){
-    EN1701A::sbAudioIndex = AUDIO_INDEX_PHASER;
-    playFile();
-    delay(300);
-    Serial.write(SERIAL_COMM_PHASER_ON);
-    EN1701A::svWriteShipState(false, PHASER_ON);
-    EN1701A::svWriteShipState(false, PHASER_OFF);
-  }
-  else if (readCurrentShipState(PHASER_OFF)){
-    stopPlaying();
-    Serial.write(SERIAL_COMM_PHASER_OFF);
-    EN1701A::svWriteShipState(false, PHASER_ON);
-    EN1701A::svWriteShipState(false, PHASER_OFF);
-  }
-
-  return;*/
 }
 
 void ShipOperations_MK2::setupSound() {
@@ -457,7 +394,7 @@ void ShipOperations_MK2::stopPlaying(){
 }*/
 
 void ShipOperations_MK2::audioCheck() {
-  if (readCurrentShipState(PRIMARY_SYSTEMS)){
+  if (EN1701A::b_power_cycle){
     if (!wave.isplaying) {
        //Serial.println(F("NO WAVE PLAYING"));
        EN1701A::sbAudioIndex = AUDIO_INDEX_POWER_CONTINUE;

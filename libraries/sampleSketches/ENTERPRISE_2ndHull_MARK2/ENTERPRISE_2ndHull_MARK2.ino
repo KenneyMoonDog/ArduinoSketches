@@ -1,9 +1,10 @@
-//#include <EN1701-REFIT.h>
+#include <EN1701-REFIT_MK2.h>
 #include <SERIAL_COMM_MK2.h>
 
 int incomingByte = 0;   // for incoming serial data
 unsigned long saucerSectionData = 0;
 byte newImpulseLevel=0;
+
 //unsigned long hullSectionData = 0;
 
 #define SAUCER_SECTION_1 1
@@ -14,12 +15,6 @@ byte newImpulseLevel=0;
 #define SAUCER_SECTION_6 6
 #define SAUCER_SECTION_BRIDGE 8
 #define SAUCER_SECTION_LOUNGE 7
-
-//#define PIN_HULL_SECTION_1 19
-//#define PIN_SR_SECTION_DATA 13
-//#define PIN_SR_ENABLE 14
-//#define PIN_SR_LATCH 12
-//#define PIN_SR_CLOCK 11
 
 #define PIN_NECK_LIGHTING 3
 #define PIN_ARBORITUM 4
@@ -53,7 +48,7 @@ boolean bPowerOn = false;
 boolean bNavBeaconOn = false;
 boolean bNavFlasherOn = false;
 boolean fullImpulse = false;
-boolean testMode = true;
+boolean testMode = false;
 
 byte crystalSignal[] = {0,0,0,0};
 byte nacelleSignal[] = {0,0,0,0};
@@ -63,10 +58,10 @@ byte impulseLevelSignal[] = {SERIAL_COMM_IMPULSE_DRIVE, 0};
 
 byte torpedo_tube = PIN_PHOTON_TORPEDO_1;
 
-static byte colorWhite[] = {10, 10, 10};
-static byte colorAmber[] = {250, 69, 0};
-static byte colorBlue[] = {0, 0, 255};
-static byte colorOff[] = {0, 0, 0};
+//static byte colorWhite[] = {10, 10, 10};
+//static byte colorAmber[] = {250, 69, 0};
+//static byte colorBlue[] = {0, 0, 255};
+//static byte colorOff[] = {0, 0, 0};
 
 void setup() {
   //pinMode(PIN_SR_ENABLE, OUTPUT);
@@ -154,9 +149,9 @@ void checkDeflectorLevel(){
 }
 
 void setDeflector(byte color[]) {
-      newDeflectorRGB[0] = color[0];
-      newDeflectorRGB[1] = color[1];
-      newDeflectorRGB[2] = color[2];
+      newDeflectorRGB[0] = color[1];
+      newDeflectorRGB[1] = color[2];
+      newDeflectorRGB[2] = color[3];
 }
 
 void updateNavBeacon(boolean bPowerOn){
@@ -351,21 +346,18 @@ void runShutdownSequence(){
   bNavBeaconOn=false;
   bNavFlasherOn=false;
   bPowerOn = false;
-  setImpulseDrive(0);
-  Serial.write(SERIAL_COMM_STOP_WARP_DRIVE);
-  powerSaucerSectionDown();
-
-  //digitalWrite(PIN_HULL_SECTION_1, LOW);
- 
-  setDeflector(colorOff);
-  setNacelles(colorWhite);
-  setCrystal(colorWhite);
+  //setImpulseDrive(0);
+  //Serial.write(SERIAL_COMM_STOP_WARP_DRIVE);
+  //powerSaucerSectionDown();
+  //setDeflector(colorOff);
+  //setNacelles(colorWhite);
+  //setCrystal(colorWhite);
 }
 
 void runStartUpSequence() {
   bPowerOn = true;
   
-  digitalWrite(PIN_NECK_LIGHTING, HIGH);
+  /*digitalWrite(PIN_NECK_LIGHTING, HIGH);
   digitalWrite(PIN_ARBORITUM, HIGH);
   digitalWrite(PIN_FLOOD_1, HIGH);
   digitalWrite(PIN_HANGER, HIGH);
@@ -373,21 +365,21 @@ void runStartUpSequence() {
   digitalWrite(PIN_STARBOARD_LIGHTS, HIGH);
   digitalWrite(PIN_PORT_LIGHTS, HIGH);
   digitalWrite(PIN_FLOOD_2, HIGH);
-  digitalWrite(PIN_AFT_LIGHTS, HIGH);
+  digitalWrite(PIN_AFT_LIGHTS, HIGH);*/
 
-  setCrystal(colorAmber);
-  setNacelles(colorBlue); 
-  delay(2000);
-  powerSaucerSectionUp();
+  //setCrystal(colorAmber);
+  //setNacelles(colorBlue); 
+  //delay(2000);
+  //powerSaucerSectionUp();
   //digitalWrite(PIN_HULL_SECTION_1, HIGH);
  
   //start nav lights
   bNavBeaconOn=true;
   bNavFlasherOn=true;
 
-  delay(1000);
-  setDeflector(colorAmber);
-  delay(750);
+  //delay(1000);
+  //setDeflector(colorAmber);
+  //delay(750);
 }
 
 void setCrystal(byte pRGB[]) {
@@ -412,13 +404,23 @@ void updateSaucerSectionDataRegister(){
    Serial.write(sectionSignal, 2);
 }
 
+void updateSaucerSection(byte section, byte set){
+  if (set){
+     bitSet(saucerSectionData, (section-1)); 
+  }  
+  else {
+     bitClear(saucerSectionData, (section-1)); 
+  }
+  updateSaucerSectionDataRegister();
+}
+
 void loop() {
   
-   if ( testMode ){
+   /*if ( testMode ){
       runStartUpSequence();
       testMode = false;
       return;
-   }
+   }*/
    
    if (Serial.available() > 0) {
 
@@ -444,8 +446,8 @@ void loop() {
           Serial.write(SERIAL_COMM_PHASER_OFF);
           break;
        case SERIAL_COMM_START_WARP_DRIVE:
-          setCrystal(colorBlue);
-          setDeflector(colorBlue);
+          //setCrystal(colorBlue);
+          //setDeflector(colorBlue);
           Serial.write(SERIAL_COMM_START_WARP_DRIVE);
           break;
        case SERIAL_COMM_STOP_WARP_DRIVE:
@@ -458,11 +460,89 @@ void loop() {
           Serial.write(SERIAL_COMM_DECREASE_WARP_DRIVE);
           break;
        case SERIAL_COMM_IMPULSE_DRIVE:
-          setCrystal(colorAmber);
-          setDeflector(colorAmber);
+          //setCrystal(colorAmber);
+          //setDeflector(colorAmber);
           Serial.readBytes(&newImpulseLevel,1);
           setImpulseDrive(newImpulseLevel);
           break;
+          
+       case SERIAL_COMM_DEFLECTOR_COLOR:
+          byte color[3];
+          Serial.readBytes(&color[0],3);
+          setDeflector(color);
+          break;
+
+       case SERIAL_COMM_NACELLE_COLOR:
+          nacelleSignal[0]=SERIAL_COMM_NACELLE_COLOR;
+          Serial.readBytes(&nacelleSignal[1],3);
+          Serial.write(nacelleSignal, 4); 
+          break;
+          
+       case SERIAL_COMM_CRYSTAL_COLOR:
+          crystalSignal[0]=SERIAL_COMM_CRYSTAL_COLOR;
+          Serial.readBytes(&crystalSignal[1],3);
+          Serial.write(crystalSignal, 4); 
+          break;
+          
+       case SERIAL_COMM_SAUCER_SECTION_1:
+          incomingByte = Serial.read();
+          updateSaucerSection(SAUCER_SECTION_1, incomingByte);
+          break;
+       case SERIAL_COMM_SAUCER_SECTION_2:
+          incomingByte = Serial.read();
+          updateSaucerSection(SAUCER_SECTION_2, incomingByte);
+          break;
+       case SERIAL_COMM_SAUCER_SECTION_3:
+          incomingByte = Serial.read();
+          updateSaucerSection(SAUCER_SECTION_3, incomingByte);
+          break;
+       case SERIAL_COMM_SAUCER_SECTION_4:
+          incomingByte = Serial.read();
+          updateSaucerSection(SAUCER_SECTION_4, incomingByte);
+          break;
+       case SERIAL_COMM_SAUCER_SECTION_5:
+          incomingByte = Serial.read();
+          updateSaucerSection(SAUCER_SECTION_5, incomingByte);
+          break;
+       case SERIAL_COMM_SAUCER_SECTION_6:
+          incomingByte = Serial.read();
+          updateSaucerSection(SAUCER_SECTION_6, incomingByte);
+          break;
+       case SERIAL_COMM_SAUCER_SECTION_BRIDGE:
+          incomingByte = Serial.read();
+          updateSaucerSection(SAUCER_SECTION_BRIDGE, incomingByte);
+          break;
+       case SERIAL_COMM_SAUCER_SECTION_LOUNGE:
+          incomingByte = Serial.read();
+          updateSaucerSection(SAUCER_SECTION_LOUNGE, incomingByte);
+          break;
+       case SERIAL_COMM_FLOOD_1:
+          //updateSaucerSection(SAUCER_SECTION_LOUNGE, Serial.read(), Serial.read());
+          break;
+       case SERIAL_COMM_FLOOD_2:
+          //updateSaucerSection(SAUCER_SECTION_LOUNGE, Serial.read(), Serial.read());
+          break;
+       case SERIAL_COMM_HANGER_SECTION:
+          //updateSaucerSection(SAUCER_SECTION_LOUNGE, Serial.read(), Serial.read());
+          break;
+       case SERIAL_COMM_AFT_SECTION:
+          //updateSaucerSection(SAUCER_SECTION_LOUNGE, Serial.read(), Serial.read());
+          break;
+       case SERIAL_COMM_BELLY_SECION:
+          //updateSaucerSection(SAUCER_SECTION_LOUNGE, Serial.read(), Serial.read());
+          break;
+       case SERIAL_COMM_ENGINEERING_SECTION_1:
+          //updateSaucerSection(SAUCER_SECTION_LOUNGE, Serial.read(), Serial.read());
+          break;
+       case SERIAL_COMM_ENGINEERING_SECTION_2:
+          //updateSaucerSection(SAUCER_SECTION_LOUNGE, Serial.read(), Serial.read());
+          break;
+       case SERIAL_COMM_NECK_SECTION:
+          //updateSaucerSection(SAUCER_SECTION_LOUNGE, Serial.read(), Serial.read());
+          break;
+       case SERIAL_COMM_ARBORITUM:
+          //updateSaucerSection(SAUCER_SECTION_LOUNGE, Serial.read(), Serial.read());
+          break;         
        default:
           break;
      } ///end switch

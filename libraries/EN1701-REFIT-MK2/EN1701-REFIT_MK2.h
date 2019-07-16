@@ -10,7 +10,7 @@
 
 /*This set maps bits in an unsigned int to
 an illuminated control section of the ship*/
-#define SR_BUTTON_0 0 //byte 1
+/*#define SR_BUTTON_0 0 //byte 1
 #define SR_BUTTON_1 1
 #define SR_BUTTON_2 2
 #define SR_BUTTON_3 3
@@ -36,7 +36,7 @@ an illuminated control section of the ship*/
 #define INCREASE_IMPULSE_ENGINES 21
 #define DECREASE_IMPULSE_ENGINES 22
 #define SWITCH_TO_WARP_MODE 23
-#define SWITCH_TO_IMPULSE_MODE 24
+#define SWITCH_TO_IMPULSE_MODE 24*/
 //#define PHASER_OFF 21
 
 #define AUDIO_INDEX_CANCEL 100
@@ -63,6 +63,11 @@ static char* scAudioEffects[]={"KLAX.WAV", "P1MSG.WAV", "TORP1.WAV", "SPZER1.WAV
 "BPUP1.WAV", "DSTRT.WAV", "HULHIT.WAV", "BTS1.WAV", "BTS2.WAV", "BTS3.WAV",
 "BT4.WAV", "BT5.WAV", "BT6.WAV", "WACC1.WAV", "WDCELL1.WAV", "PUP1A.WAV", "PUP1B.WAV", "PD1.WAV"};
 
+static byte colorWhite[] = {10, 10, 10};
+static byte colorAmber[] = {250, 69, 0};
+static byte colorBlue[] = {0, 0, 255};
+static byte colorOff[] = {0, 0, 0};
+
 class EN1701A
 {
   public:
@@ -77,10 +82,11 @@ class EN1701A
 
     static byte sendByte;
     volatile static byte sbAudioIndex;
-    volatile static unsigned long suiCurrentShipState;
-    volatile static unsigned long suiPreviousShipState;
-    static void svWriteShipState(bool set, byte pinset);
 
+
+    //volatile static unsigned long suiCurrentShipState;
+    //volatile static unsigned long suiPreviousShipState;
+    //static void svWriteShipState(bool set, byte pinset);
     //static ShipOperations mShipboardOperations;
 };
 

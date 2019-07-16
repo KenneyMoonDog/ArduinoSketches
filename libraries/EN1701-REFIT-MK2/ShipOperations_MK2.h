@@ -20,6 +20,8 @@ public:
    void switchConsoleLight(boolean bOn);
    void decreaseImpulseDrive();
    void increaseImpulseDrive();
+   void setSaucerSection(byte section, byte set, int waitMs);
+   void setTargetColor(byte target, byte* color);
 
  private:
    SdReader card;    // This object holds the information for the card

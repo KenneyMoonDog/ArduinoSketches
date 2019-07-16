@@ -18,15 +18,13 @@ volatile byte           EN1701A::sbAudioIndex = 0;
 volatile byte           EN1701A::console_mode = MODE_HELM;
 volatile boolean        EN1701A::console_light_state = false;
 volatile byte           EN1701A::buttonPressed = 0;
-volatile unsigned long  EN1701A::suiCurrentShipState = 0;
-volatile unsigned long  EN1701A::suiPreviousShipState = 0;
 volatile boolean        EN1701A::buttonInterrupt = false;
 volatile boolean        EN1701A::b_warp_mode_on = false;
 volatile boolean        EN1701A::b_red_alert_on = false;
 volatile boolean        EN1701A::b_phaser_on = false;
 volatile boolean        EN1701A::b_power_cycle = false;
 
-void EN1701A::svWriteShipState(bool set, byte pinset )
+/*void EN1701A::svWriteShipState(bool set, byte pinset )
 {
   EN1701A::suiPreviousShipState = EN1701A::suiCurrentShipState;
   
@@ -36,7 +34,7 @@ void EN1701A::svWriteShipState(bool set, byte pinset )
   else {
     bitClear(suiCurrentShipState, pinset);
   }
-}
+}*/
 
 void setup()
 {
