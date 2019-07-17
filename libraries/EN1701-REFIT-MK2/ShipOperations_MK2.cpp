@@ -36,7 +36,7 @@ void ShipOperations_MK2::setTargetColor(byte target, byte* color) {
    Serial.write(setColor,4);
 }
 
-void ShipOperations_MK2::setSaucerSection(byte section, byte set, int waitMs) {
+void ShipOperations_MK2::setShipSection(byte section, byte set, int waitMs) {
    saucerSection[0] = section;
    saucerSection[1] = set;
    Serial.write(saucerSection, 2);
@@ -179,29 +179,31 @@ void ShipOperations_MK2::ApplyShipLogic() {
           Serial.write(SERIAL_COMM_STOP_WARP_DRIVE);
           setImpulseLevel(stop_impulse);
 
-          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_LOUNGE,0,1000);
-          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_3,0,0);
-          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_4,0,1000);
-          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_2,0,0);
-          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_5,0,1000);
-          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_1,0,0);
-          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_6,0,1000);
-          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_BRIDGE,true,0);
+          delay(500);
+          setShipSection(SERIAL_COMM_FLOOD_1,0,0);
+          setShipSection(SERIAL_COMM_FLOOD_2,0,1000);
+
+          setShipSection(SERIAL_COMM_AFT_SECTION,0,500);
+          setShipSection(SERIAL_COMM_SAUCER_SECTION_LOUNGE,0,500);
+          setShipSection(SERIAL_COMM_SAUCER_SECTION_3,0,0);
+          setShipSection(SERIAL_COMM_SAUCER_SECTION_4,0,750);
+          setShipSection(SERIAL_COMM_SAUCER_SECTION_2,0,0);
+          setShipSection(SERIAL_COMM_SAUCER_SECTION_5,0,750);
+          setShipSection(SERIAL_COMM_SAUCER_SECTION_1,0,0);
+          setShipSection(SERIAL_COMM_SAUCER_SECTION_6,0,750);
+
+          setShipSection(SERIAL_COMM_NECK_SECTION,0,500);
+          setShipSection(SERIAL_COMM_ARBORITUM,0,500);
+          setShipSection(SERIAL_COMM_BELLY_SECTION,0,500);
+          setShipSection(SERIAL_COMM_HANGER_SECTION,0,500);
+
+          setShipSection(SERIAL_COMM_ENGINEERING_SECTION_1,0,500);
+          setShipSection(SERIAL_COMM_ENGINEERING_SECTION_2,0,500);
+          setShipSection(SERIAL_COMM_SAUCER_SECTION_BRIDGE,0,750);
 
           setTargetColor(SERIAL_COMM_DEFLECTOR_COLOR, colorOff);
           setTargetColor(SERIAL_COMM_NACELLE_COLOR, colorWhite);
           setTargetColor(SERIAL_COMM_CRYSTAL_COLOR, colorWhite);
-
-          //setSaucerSection(SERIAL_COMM_FLOOD_1,0,1);
-          //setSaucerSection(SERIAL_COMM_FLOOD_2,0,1);
-          //setSaucerSection(SERIAL_COMM_HANGER_SECTION,0,1);
-          //setSaucerSection(SERIAL_COMM_AFT_SECTION,0,1);
-          //setSaucerSection(SERIAL_COMM_BELLY_SECION,0,1);
-          //setSaucerSection(SERIAL_COMM_ENGINEERING_SECTION_1,0,1);
-          //setSaucerSection(SERIAL_COMM_ENGINEERING_SECTION_2,0,1);
-          //setSaucerSection(SERIAL_COMM_NECK_SECTION,0,1);
-          //setSaucerSection(SERIAL_COMM_ARBORITUM,0,1);
-
         }
         else {
           clearAll();
@@ -212,16 +214,26 @@ void ShipOperations_MK2::ApplyShipLogic() {
 
           setTargetColor(SERIAL_COMM_CRYSTAL_COLOR, colorAmber);
           setTargetColor(SERIAL_COMM_NACELLE_COLOR, colorBlue);
-          delay(1000);
+          delay(750);
 
-          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_LOUNGE,1,1000);
-          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_3,1,0);
-          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_4,1,1000);
-          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_2,1,0);
-          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_5,1,1000);
-          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_1,1,0);
-          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_6,1,1000);
-          setSaucerSection(SERIAL_COMM_SAUCER_SECTION_BRIDGE,1,1000);
+          setShipSection(SERIAL_COMM_ENGINEERING_SECTION_2,0,750);
+          setShipSection(SERIAL_COMM_ENGINEERING_SECTION_1,0,750);
+          setShipSection(SERIAL_COMM_BELLY_SECTION,0,500);
+          setShipSection(SERIAL_COMM_HANGER_SECTION,0,500);
+          setShipSection(SERIAL_COMM_NECK_SECTION,0,500);
+
+          setShipSection(SERIAL_COMM_SAUCER_SECTION_LOUNGE,1,500);
+          setShipSection(SERIAL_COMM_SAUCER_SECTION_3,1,0);
+          setShipSection(SERIAL_COMM_SAUCER_SECTION_4,1,500);
+          setShipSection(SERIAL_COMM_SAUCER_SECTION_2,1,0);
+          setShipSection(SERIAL_COMM_SAUCER_SECTION_5,1,500);
+          setShipSection(SERIAL_COMM_SAUCER_SECTION_1,1,0);
+          setShipSection(SERIAL_COMM_SAUCER_SECTION_6,1,500);
+          setShipSection(SERIAL_COMM_SAUCER_SECTION_BRIDGE,1,500);
+          setShipSection(SERIAL_COMM_ARBORITUM,0,500);
+          setShipSection(SERIAL_COMM_AFT_SECTION,0,500);
+          setShipSection(SERIAL_COMM_FLOOD_1,0,0);
+          setShipSection(SERIAL_COMM_FLOOD_2,0,1000);
 
           setTargetColor(SERIAL_COMM_DEFLECTOR_COLOR, colorAmber);
         }

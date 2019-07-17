@@ -58,11 +58,6 @@ byte impulseLevelSignal[] = {SERIAL_COMM_IMPULSE_DRIVE, 0};
 
 byte torpedo_tube = PIN_PHOTON_TORPEDO_1;
 
-//static byte colorWhite[] = {10, 10, 10};
-//static byte colorAmber[] = {250, 69, 0};
-//static byte colorBlue[] = {0, 0, 255};
-//static byte colorOff[] = {0, 0, 0};
-
 void setup() {
   //pinMode(PIN_SR_ENABLE, OUTPUT);
   //digitalWrite(PIN_SR_ENABLE,HIGH);
@@ -346,40 +341,14 @@ void runShutdownSequence(){
   bNavBeaconOn=false;
   bNavFlasherOn=false;
   bPowerOn = false;
-  //setImpulseDrive(0);
-  //Serial.write(SERIAL_COMM_STOP_WARP_DRIVE);
-  //powerSaucerSectionDown();
-  //setDeflector(colorOff);
-  //setNacelles(colorWhite);
-  //setCrystal(colorWhite);
 }
 
 void runStartUpSequence() {
   bPowerOn = true;
-  
-  /*digitalWrite(PIN_NECK_LIGHTING, HIGH);
-  digitalWrite(PIN_ARBORITUM, HIGH);
-  digitalWrite(PIN_FLOOD_1, HIGH);
-  digitalWrite(PIN_HANGER, HIGH);
-  digitalWrite(PIN_DOWN_BELOW, HIGH);
-  digitalWrite(PIN_STARBOARD_LIGHTS, HIGH);
-  digitalWrite(PIN_PORT_LIGHTS, HIGH);
-  digitalWrite(PIN_FLOOD_2, HIGH);
-  digitalWrite(PIN_AFT_LIGHTS, HIGH);*/
-
-  //setCrystal(colorAmber);
-  //setNacelles(colorBlue); 
-  //delay(2000);
-  //powerSaucerSectionUp();
-  //digitalWrite(PIN_HULL_SECTION_1, HIGH);
  
   //start nav lights
   bNavBeaconOn=true;
   bNavFlasherOn=true;
-
-  //delay(1000);
-  //setDeflector(colorAmber);
-  //delay(750);
 }
 
 void setCrystal(byte pRGB[]) {
@@ -446,8 +415,6 @@ void loop() {
           Serial.write(SERIAL_COMM_PHASER_OFF);
           break;
        case SERIAL_COMM_START_WARP_DRIVE:
-          //setCrystal(colorBlue);
-          //setDeflector(colorBlue);
           Serial.write(SERIAL_COMM_START_WARP_DRIVE);
           break;
        case SERIAL_COMM_STOP_WARP_DRIVE:
@@ -460,8 +427,6 @@ void loop() {
           Serial.write(SERIAL_COMM_DECREASE_WARP_DRIVE);
           break;
        case SERIAL_COMM_IMPULSE_DRIVE:
-          //setCrystal(colorAmber);
-          //setDeflector(colorAmber);
           Serial.readBytes(&newImpulseLevel,1);
           setImpulseDrive(newImpulseLevel);
           break;
@@ -517,32 +482,41 @@ void loop() {
           updateSaucerSection(SAUCER_SECTION_LOUNGE, incomingByte);
           break;
        case SERIAL_COMM_FLOOD_1:
-          //updateSaucerSection(SAUCER_SECTION_LOUNGE, Serial.read(), Serial.read());
+          incomingByte = Serial.read();
+          digitalWrite(PIN_FLOOD_2, incomingByte);
           break;
-       case SERIAL_COMM_FLOOD_2:
-          //updateSaucerSection(SAUCER_SECTION_LOUNGE, Serial.read(), Serial.read());
+       case SERIAL_COMM_FLOOD_2: 
+          incomingByte = Serial.read();
+          digitalWrite(PIN_FLOOD_1, incomingByte);
           break;
        case SERIAL_COMM_HANGER_SECTION:
-          //updateSaucerSection(SAUCER_SECTION_LOUNGE, Serial.read(), Serial.read());
+          incomingByte = Serial.read();
+          digitalWrite(PIN_HANGER, incomingByte);
           break;
        case SERIAL_COMM_AFT_SECTION:
-          //updateSaucerSection(SAUCER_SECTION_LOUNGE, Serial.read(), Serial.read());
+          incomingByte = Serial.read();
+          digitalWrite(PIN_AFT_LIGHTS, incomingByte);
           break;
-       case SERIAL_COMM_BELLY_SECION:
-          //updateSaucerSection(SAUCER_SECTION_LOUNGE, Serial.read(), Serial.read());
+       case SERIAL_COMM_BELLY_SECTION:
+          incomingByte = Serial.read();
+          digitalWrite(PIN_DOWN_BELOW, incomingByte);
           break;
        case SERIAL_COMM_ENGINEERING_SECTION_1:
-          //updateSaucerSection(SAUCER_SECTION_LOUNGE, Serial.read(), Serial.read());
+          incomingByte = Serial.read();
+          digitalWrite(PIN_PORT_LIGHTS, incomingByte);
           break;
        case SERIAL_COMM_ENGINEERING_SECTION_2:
-          //updateSaucerSection(SAUCER_SECTION_LOUNGE, Serial.read(), Serial.read());
+          incomingByte = Serial.read();
+          digitalWrite(PIN_STARBOARD_LIGHTS, incomingByte);
           break;
        case SERIAL_COMM_NECK_SECTION:
-          //updateSaucerSection(SAUCER_SECTION_LOUNGE, Serial.read(), Serial.read());
+          incomingByte = Serial.read();
+          digitalWrite(PIN_NECK_LIGHTING, incomingByte);
           break;
        case SERIAL_COMM_ARBORITUM:
-          //updateSaucerSection(SAUCER_SECTION_LOUNGE, Serial.read(), Serial.read());
-          break;         
+          incomingByte = Serial.read();
+          digitalWrite(PIN_ARBORITUM, incomingByte);
+          break;        
        default:
           break;
      } ///end switch
