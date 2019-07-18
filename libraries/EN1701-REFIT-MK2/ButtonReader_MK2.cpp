@@ -12,7 +12,7 @@ unsigned long last_Button_E_DebounceTime = 0; //deflector mode
 unsigned long last_Button_F_DebounceTime = 0; //speed down
 unsigned long last_Button_G_DebounceTime = 0; //red alert
 unsigned long last_Button_H_DebounceTime = 0; //torpedos
-unsigned long buttonDebounceDelay = 100;
+unsigned long buttonDebounceDelay = 150;
 
 ButtonReader_MK2::ButtonReader_MK2() {
   pinMode(PIN_TEST_INTERRUPT, INPUT_PULLUP);

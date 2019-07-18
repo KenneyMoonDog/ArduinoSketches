@@ -1,7 +1,9 @@
 #include <EN1701-REFIT_MK2.h>
 #include <SERIAL_COMM_MK2.h>
 
-int incomingByte = 0;   // for incoming serial data
+byte incomingByte = 0;   // for incoming serial data
+byte stateIn = 0;
+
 unsigned long saucerSectionData = 0;
 byte newImpulseLevel=0;
 
@@ -374,7 +376,7 @@ void updateSaucerSectionDataRegister(){
 }
 
 void updateSaucerSection(byte section, byte set){
-  if (set){
+  if (set == 1){
      bitSet(saucerSectionData, (section-1)); 
   }  
   else {
@@ -450,72 +452,89 @@ void loop() {
           break;
           
        case SERIAL_COMM_SAUCER_SECTION_1:
-          incomingByte = Serial.read();
-          updateSaucerSection(SAUCER_SECTION_1, incomingByte);
+          stateIn = 0;
+          Serial.readBytes(&stateIn, 1);
+          updateSaucerSection(SAUCER_SECTION_1, stateIn);
           break;
        case SERIAL_COMM_SAUCER_SECTION_2:
-          incomingByte = Serial.read();
-          updateSaucerSection(SAUCER_SECTION_2, incomingByte);
+          stateIn = 0;
+          Serial.readBytes(&stateIn, 1);
+          updateSaucerSection(SAUCER_SECTION_2, stateIn);
           break;
        case SERIAL_COMM_SAUCER_SECTION_3:
-          incomingByte = Serial.read();
-          updateSaucerSection(SAUCER_SECTION_3, incomingByte);
+          stateIn = 0;
+          Serial.readBytes(&stateIn, 1);
+          updateSaucerSection(SAUCER_SECTION_3, stateIn);
           break;
        case SERIAL_COMM_SAUCER_SECTION_4:
-          incomingByte = Serial.read();
-          updateSaucerSection(SAUCER_SECTION_4, incomingByte);
+          stateIn = 0;
+          Serial.readBytes(&stateIn, 1);
+          updateSaucerSection(SAUCER_SECTION_4, stateIn);
           break;
        case SERIAL_COMM_SAUCER_SECTION_5:
-          incomingByte = Serial.read();
-          updateSaucerSection(SAUCER_SECTION_5, incomingByte);
+          stateIn = 0;
+          Serial.readBytes(&stateIn, 1);
+          updateSaucerSection(SAUCER_SECTION_5, stateIn);
           break;
        case SERIAL_COMM_SAUCER_SECTION_6:
-          incomingByte = Serial.read();
-          updateSaucerSection(SAUCER_SECTION_6, incomingByte);
+          stateIn = 0;
+          Serial.readBytes(&stateIn, 1);
+          updateSaucerSection(SAUCER_SECTION_6, stateIn);
           break;
        case SERIAL_COMM_SAUCER_SECTION_BRIDGE:
-          incomingByte = Serial.read();
-          updateSaucerSection(SAUCER_SECTION_BRIDGE, incomingByte);
+          stateIn = 0;
+          Serial.readBytes(&stateIn, 1);
+          updateSaucerSection(SAUCER_SECTION_BRIDGE, stateIn);
           break;
        case SERIAL_COMM_SAUCER_SECTION_LOUNGE:
-          incomingByte = Serial.read();
-          updateSaucerSection(SAUCER_SECTION_LOUNGE, incomingByte);
+          stateIn = 0;
+          Serial.readBytes(&stateIn, 1);
+          updateSaucerSection(SAUCER_SECTION_LOUNGE, stateIn);
           break;
        case SERIAL_COMM_FLOOD_1:
-          incomingByte = Serial.read();
-          digitalWrite(PIN_FLOOD_2, incomingByte);
+          stateIn = 0;
+          Serial.readBytes(&stateIn, 1);
+          digitalWrite(PIN_FLOOD_2, stateIn);
           break;
        case SERIAL_COMM_FLOOD_2: 
-          incomingByte = Serial.read();
-          digitalWrite(PIN_FLOOD_1, incomingByte);
+          stateIn = 0;
+          Serial.readBytes(&stateIn, 1);
+          digitalWrite(PIN_FLOOD_1, stateIn);
           break;
        case SERIAL_COMM_HANGER_SECTION:
-          incomingByte = Serial.read();
-          digitalWrite(PIN_HANGER, incomingByte);
+          stateIn = 0;
+          Serial.readBytes(&stateIn, 1);
+          digitalWrite(PIN_HANGER, stateIn);
           break;
        case SERIAL_COMM_AFT_SECTION:
-          incomingByte = Serial.read();
-          digitalWrite(PIN_AFT_LIGHTS, incomingByte);
+          stateIn = 0;
+          Serial.readBytes(&stateIn, 1);
+          digitalWrite(PIN_AFT_LIGHTS, stateIn);
           break;
        case SERIAL_COMM_BELLY_SECTION:
-          incomingByte = Serial.read();
-          digitalWrite(PIN_DOWN_BELOW, incomingByte);
+          stateIn = 0;
+          Serial.readBytes(&stateIn, 1);
+          digitalWrite(PIN_DOWN_BELOW, stateIn);
           break;
        case SERIAL_COMM_ENGINEERING_SECTION_1:
-          incomingByte = Serial.read();
-          digitalWrite(PIN_PORT_LIGHTS, incomingByte);
+          stateIn = 0;
+          Serial.readBytes(&stateIn, 1);
+          digitalWrite(PIN_PORT_LIGHTS, stateIn);
           break;
        case SERIAL_COMM_ENGINEERING_SECTION_2:
-          incomingByte = Serial.read();
-          digitalWrite(PIN_STARBOARD_LIGHTS, incomingByte);
+          stateIn = 0;
+          Serial.readBytes(&stateIn, 1);
+          digitalWrite(PIN_STARBOARD_LIGHTS, stateIn);
           break;
        case SERIAL_COMM_NECK_SECTION:
-          incomingByte = Serial.read();
-          digitalWrite(PIN_NECK_LIGHTING, incomingByte);
+          stateIn = 0;
+          Serial.readBytes(&stateIn, 1);
+          digitalWrite(PIN_NECK_LIGHTING, stateIn);
           break;
        case SERIAL_COMM_ARBORITUM:
-          incomingByte = Serial.read();
-          digitalWrite(PIN_ARBORITUM, incomingByte);
+          stateIn = 0;
+          Serial.readBytes(&stateIn, 1);
+          digitalWrite(PIN_ARBORITUM, stateIn);
           break;        
        default:
           break;

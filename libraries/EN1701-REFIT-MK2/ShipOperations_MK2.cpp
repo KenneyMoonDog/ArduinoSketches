@@ -111,64 +111,84 @@ void ShipOperations_MK2::ApplyShipLogic() {
   if ( EN1701A::console_mode == MODE_TRANSPORTER) {
      switch (EN1701A::buttonPressed) {
        case PIN_A_BUTTON:
+         EN1701A::buttonPressed = 0;
          break;
        case PIN_B_BUTTON:
+         EN1701A::buttonPressed = 0;
          break;
        case PIN_C_BUTTON:
+         EN1701A::buttonPressed = 0;
          EN1701A::sbAudioIndex = AUDIO_INDEX_BTS6;
          switchConsoleMode(MODE_HELM);
 //         switchConsoleLight(true);
          playFile();
+         delay(200);
          break;
        case PIN_D_BUTTON:
+         EN1701A::buttonPressed = 0;
          break;
        case PIN_E_BUTTON:
+         EN1701A::buttonPressed = 0;
          break;
        case PIN_F_BUTTON:
+         EN1701A::buttonPressed = 0;
          break;
        case PIN_G_BUTTON:
+         EN1701A::buttonPressed = 0;
          break;
        case PIN_H_BUTTON:
+         EN1701A::buttonPressed = 0;
          break;
        default:
+         EN1701A::buttonPressed = 0;
          break;
      }
-     EN1701A::buttonPressed = 0;
+
      return;
   }
 
   if ( EN1701A::console_mode == MODE_COMMUNICATIONS) {
     switch (EN1701A::buttonPressed) {
       case PIN_A_BUTTON:
+        EN1701A::buttonPressed = 0;
         break;
       case PIN_B_BUTTON:
+        EN1701A::buttonPressed = 0;
         break;
       case PIN_C_BUTTON:
+        EN1701A::buttonPressed = 0;
         EN1701A::sbAudioIndex = AUDIO_INDEX_BTS5;
         switchConsoleMode(MODE_TRANSPORTER);
 //        switchConsoleLight(false);
         playFile();
+        delay(200);
         break;
       case PIN_D_BUTTON:
+        EN1701A::buttonPressed = 0;
         break;
       case PIN_E_BUTTON:
+        EN1701A::buttonPressed = 0;
         break;
       case PIN_F_BUTTON:
+        EN1701A::buttonPressed = 0;
         break;
       case PIN_G_BUTTON:
+        EN1701A::buttonPressed = 0;
         break;
       case PIN_H_BUTTON:
+        EN1701A::buttonPressed = 0;
         break;
       default:
+        EN1701A::buttonPressed = 0;
         break;
     }
-    EN1701A::buttonPressed = 0;
     return;
   }
 
   if ( EN1701A::console_mode == MODE_HELM) {
     switch (EN1701A::buttonPressed) {
       case PIN_A_BUTTON:
+        EN1701A::buttonPressed = 0;
         if ( EN1701A::b_power_cycle) { //shutdown
           EN1701A::b_power_cycle = false;
           Serial.write(SERIAL_COMM_POWER_OFF);
@@ -185,12 +205,12 @@ void ShipOperations_MK2::ApplyShipLogic() {
 
           setShipSection(SERIAL_COMM_AFT_SECTION,0,500);
           setShipSection(SERIAL_COMM_SAUCER_SECTION_LOUNGE,0,500);
-          setShipSection(SERIAL_COMM_SAUCER_SECTION_3,0,0);
-          setShipSection(SERIAL_COMM_SAUCER_SECTION_4,0,750);
-          setShipSection(SERIAL_COMM_SAUCER_SECTION_2,0,0);
-          setShipSection(SERIAL_COMM_SAUCER_SECTION_5,0,750);
           setShipSection(SERIAL_COMM_SAUCER_SECTION_1,0,0);
           setShipSection(SERIAL_COMM_SAUCER_SECTION_6,0,750);
+          setShipSection(SERIAL_COMM_SAUCER_SECTION_2,0,0);
+          setShipSection(SERIAL_COMM_SAUCER_SECTION_5,0,750);
+          setShipSection(SERIAL_COMM_SAUCER_SECTION_3,0,0);
+          setShipSection(SERIAL_COMM_SAUCER_SECTION_4,0,750);
 
           setShipSection(SERIAL_COMM_NECK_SECTION,0,500);
           setShipSection(SERIAL_COMM_ARBORITUM,0,500);
@@ -216,24 +236,25 @@ void ShipOperations_MK2::ApplyShipLogic() {
           setTargetColor(SERIAL_COMM_NACELLE_COLOR, colorBlue);
           delay(750);
 
-          setShipSection(SERIAL_COMM_ENGINEERING_SECTION_2,0,750);
-          setShipSection(SERIAL_COMM_ENGINEERING_SECTION_1,0,750);
-          setShipSection(SERIAL_COMM_BELLY_SECTION,0,500);
-          setShipSection(SERIAL_COMM_HANGER_SECTION,0,500);
-          setShipSection(SERIAL_COMM_NECK_SECTION,0,500);
+          setShipSection(SERIAL_COMM_ENGINEERING_SECTION_2,1,750);
+          setShipSection(SERIAL_COMM_ENGINEERING_SECTION_1,1,750);
+          setShipSection(SERIAL_COMM_BELLY_SECTION,1,500);
+          setShipSection(SERIAL_COMM_HANGER_SECTION,1,500);
+          setShipSection(SERIAL_COMM_NECK_SECTION,1,500);
 
           setShipSection(SERIAL_COMM_SAUCER_SECTION_LOUNGE,1,500);
-          setShipSection(SERIAL_COMM_SAUCER_SECTION_3,1,0);
-          setShipSection(SERIAL_COMM_SAUCER_SECTION_4,1,500);
-          setShipSection(SERIAL_COMM_SAUCER_SECTION_2,1,0);
-          setShipSection(SERIAL_COMM_SAUCER_SECTION_5,1,500);
+
           setShipSection(SERIAL_COMM_SAUCER_SECTION_1,1,0);
           setShipSection(SERIAL_COMM_SAUCER_SECTION_6,1,500);
+          setShipSection(SERIAL_COMM_SAUCER_SECTION_2,1,0);
+          setShipSection(SERIAL_COMM_SAUCER_SECTION_5,1,500);
+          setShipSection(SERIAL_COMM_SAUCER_SECTION_3,1,0);
+          setShipSection(SERIAL_COMM_SAUCER_SECTION_4,1,500);
           setShipSection(SERIAL_COMM_SAUCER_SECTION_BRIDGE,1,500);
-          setShipSection(SERIAL_COMM_ARBORITUM,0,500);
-          setShipSection(SERIAL_COMM_AFT_SECTION,0,500);
-          setShipSection(SERIAL_COMM_FLOOD_1,0,0);
-          setShipSection(SERIAL_COMM_FLOOD_2,0,1000);
+          setShipSection(SERIAL_COMM_ARBORITUM,1,500);
+          setShipSection(SERIAL_COMM_AFT_SECTION,1,500);
+          setShipSection(SERIAL_COMM_FLOOD_1,1,0);
+          setShipSection(SERIAL_COMM_FLOOD_2,1,1000);
 
           setTargetColor(SERIAL_COMM_DEFLECTOR_COLOR, colorAmber);
         }
@@ -241,6 +262,7 @@ void ShipOperations_MK2::ApplyShipLogic() {
         break;
 
       case PIN_B_BUTTON: //speed up
+        EN1701A::buttonPressed = 0;
         if (EN1701A::b_warp_mode_on) { //warp
           EN1701A::sbAudioIndex = AUDIO_INDEX_WARP_UP;
           playFile();
@@ -254,13 +276,16 @@ void ShipOperations_MK2::ApplyShipLogic() {
         break;
 
       case PIN_C_BUTTON: //mode buttons
+        EN1701A::buttonPressed = 0;
         EN1701A::sbAudioIndex = AUDIO_INDEX_BTS4;
         switchConsoleMode(MODE_COMMUNICATIONS);
   //      switchConsoleLight(false);
         playFile();
+        delay(200);
         break;
 
       case PIN_D_BUTTON: //phaser
+        EN1701A::buttonPressed = 0;
         if (!EN1701A::b_phaser_on){
           EN1701A::sbAudioIndex = AUDIO_INDEX_PHASER;
           playFile();
@@ -276,6 +301,7 @@ void ShipOperations_MK2::ApplyShipLogic() {
         break;
 
       case PIN_E_BUTTON: //deflector mode
+        EN1701A::buttonPressed = 0;
         EN1701A::sbAudioIndex = AUDIO_INDEX_BTS1;
         playFile();
         //setTimer
@@ -297,6 +323,7 @@ void ShipOperations_MK2::ApplyShipLogic() {
         break;
 
       case PIN_F_BUTTON: //speed down
+        EN1701A::buttonPressed = 0;
         if(EN1701A::b_warp_mode_on){
           EN1701A::sbAudioIndex = AUDIO_INDEX_WARP_DOWN;
           playFile();
@@ -310,9 +337,11 @@ void ShipOperations_MK2::ApplyShipLogic() {
         break;
 
       case PIN_G_BUTTON: //red alert
+        EN1701A::buttonPressed = 0;
         break;
 
       case PIN_H_BUTTON: //torpedos
+        EN1701A::buttonPressed = 0;
         EN1701A::sbAudioIndex = AUDIO_INDEX_TORPEDO;
         playFile();
         Serial.write(SERIAL_COMM_TORPEDO);
@@ -321,7 +350,6 @@ void ShipOperations_MK2::ApplyShipLogic() {
       default:
         break;
     }
-    EN1701A::buttonPressed = 0;
     return;
   }
 }
