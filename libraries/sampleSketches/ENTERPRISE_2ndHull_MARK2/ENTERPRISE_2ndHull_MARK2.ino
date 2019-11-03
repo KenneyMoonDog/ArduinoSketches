@@ -27,6 +27,7 @@ byte newImpulseLevel=0;
 #define PIN_DEFLECTOR_G 10
 #define PIN_DEFLECTOR_B 11
 #define PIN_NAVIGATION_FLASHER 12
+#define PIN_RED_ALERT 13
 
 #define PIN_FLOOD_1 14
 #define PIN_HANGER 15
@@ -36,19 +37,26 @@ byte newImpulseLevel=0;
 #define PIN_FLOOD_2 19
 
 //timer constants
-#define RECEIVER_INTERRUPT_FREQUENCY 100 //ms
-#define FAST_RECEIVER_INTERRUPT_FREQUENCY 10 //ms
+#define RECEIVER_INTERRUPT_FREQ_FLASHER 100 //ms
+#define RECEIVER_INTERRUPT_FREQ_BEACON 10 //ms
+#define RECEIVER_INTERRUPT_FREQ_RED_ALERT 10 //ms
 #define flashTimeOn 10
 #define flashTimeOff 11
 #define beaconTimeOn 25
 #define beaconTimeOff 35
+#define redAlertTimeOff 100
+#define redAlertTimeEnd 180
 
 byte sectionSignal[] = {0,0};
-volatile unsigned long slowPreviousMillis = 0;
-volatile unsigned long fastPreviousMillis = 0;
+volatile unsigned long flasherPreviousMillis = 0;
+volatile unsigned long beaconPreviousMillis = 0;
+volatile unsigned long redAlertPreviousMillis = 0;
+
 boolean bPowerOn = false;
 boolean bNavBeaconOn = false;
 boolean bNavFlasherOn = false;
+boolean bRedAlertOn = false;
+boolean bRedLedOn = false;
 boolean fullImpulse = false;
 boolean testMode = false;
 
@@ -75,6 +83,7 @@ void setup() {
   pinMode(PIN_DEFLECTOR_G, OUTPUT);
   pinMode(PIN_DEFLECTOR_B, OUTPUT);
   pinMode(PIN_NAVIGATION_FLASHER, OUTPUT);
+  pinMode(PIN_RED_ALERT, OUTPUT);
   pinMode(PIN_FLOOD_1, OUTPUT);
   pinMode(PIN_HANGER, OUTPUT);
   pinMode(PIN_DOWN_BELOW, OUTPUT);
@@ -83,7 +92,6 @@ void setup() {
   pinMode(PIN_FLOOD_2, OUTPUT);
   pinMode(PIN_AFT_LIGHTS, OUTPUT);
 
-  setDeflector(colorOff);
   analogWrite(PIN_DEFLECTOR_R,255);
   analogWrite(PIN_DEFLECTOR_G,255);
   analogWrite(PIN_DEFLECTOR_B,255);
@@ -98,16 +106,21 @@ SIGNAL(TIMER0_COMPA_vect)
 {
   unsigned long currentMillis = millis();
 
-  if (currentMillis - slowPreviousMillis >= RECEIVER_INTERRUPT_FREQUENCY) {  //execute any timed operations every INTERRRUPT FREQ ms
+  if (currentMillis - flasherPreviousMillis >= RECEIVER_INTERRUPT_FREQ_FLASHER) {  //execute any timed operations every INTERRRUPT FREQ ms
     // save the last time you did a repeatable item clear
-    slowPreviousMillis = currentMillis;
+    flasherPreviousMillis = currentMillis;
     updateNavBeacon(bNavBeaconOn);
     //randomSaucerSectionUpdate(bPowerOn);
   } //end if timer
 
-  if (currentMillis - fastPreviousMillis >= FAST_RECEIVER_INTERRUPT_FREQUENCY) {
-    fastPreviousMillis = currentMillis;
+  if (currentMillis - beaconPreviousMillis >= RECEIVER_INTERRUPT_FREQ_BEACON) {
+    beaconPreviousMillis = currentMillis;
     checkDeflectorLevel();
+  }
+
+  if (currentMillis - redAlertPreviousMillis >= RECEIVER_INTERRUPT_FREQ_RED_ALERT) {
+    redAlertPreviousMillis = currentMillis;
+    updateRedAlert();
   }
 } 
 
@@ -149,6 +162,41 @@ void setDeflector(byte color[]) {
       newDeflectorRGB[0] = color[1];
       newDeflectorRGB[1] = color[2];
       newDeflectorRGB[2] = color[3];
+}
+
+void updateRedAlert() {
+  static int bREACounter=0;
+
+  if (bRedAlertOn) {
+     if (bREACounter < redAlertTimeOff){
+        if ( !bRedLedOn ) {
+          digitalWrite(PIN_RED_ALERT, true);
+          digitalWrite(PIN_HANGER, false);
+          bRedLedOn = true;
+        }
+     } 
+         
+     if (bREACounter >= redAlertTimeOff){
+        if (bRedLedOn){
+          digitalWrite(PIN_RED_ALERT, false);
+          digitalWrite(PIN_HANGER, true);
+          bRedLedOn = false;
+        }
+     }
+
+     if (bREACounter > redAlertTimeEnd ){
+        bREACounter=0;
+     }
+
+     bREACounter++;
+  }
+  else {  //no red alert
+    if ( bRedLedOn ){
+      bRedLedOn = false;
+      digitalWrite(PIN_RED_ALERT, false);
+      digitalWrite(PIN_HANGER, true);
+    }
+  }
 }
 
 void updateNavBeacon(boolean bPowerOn){
@@ -343,6 +391,7 @@ void runShutdownSequence(){
   bNavBeaconOn=false;
   bNavFlasherOn=false;
   bPowerOn = false;
+  bRedAlertOn = false;
 }
 
 void runStartUpSequence() {
@@ -387,11 +436,12 @@ void updateSaucerSection(byte section, byte set){
 
 void loop() {
   
-   /*if ( testMode ){
+   if ( testMode){
       runStartUpSequence();
+      bRedAlertOn = true;
       testMode = false;
       return;
-   }*/
+   }
    
    if (Serial.available() > 0) {
 
@@ -536,6 +586,18 @@ void loop() {
           Serial.readBytes(&stateIn, 1);
           digitalWrite(PIN_ARBORITUM, stateIn);
           break;        
+       case SERIAL_COMM_RED_ALERT_ON:
+          //bRedLedOn = true;
+          //digitalWrite(PIN_RED_ALERT, bRedLedOn);
+          //digitalWrite(PIN_HANGER, false);
+          bRedAlertOn = true;
+          break;
+       case SERIAL_COMM_RED_ALERT_OFF: 
+          //bRedLedOn = false;
+          //digitalWrite(PIN_RED_ALERT, bRedLedOn);
+          //digitalWrite(PIN_HANGER, true);
+          bRedAlertOn = false;
+          break;
        default:
           break;
      } ///end switch

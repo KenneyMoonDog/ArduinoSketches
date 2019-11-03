@@ -338,6 +338,18 @@ void ShipOperations_MK2::ApplyShipLogic() {
 
       case PIN_G_BUTTON: //red alert
         EN1701A::buttonPressed = 0;
+        if (!EN1701A::b_red_alert_on){
+          EN1701A::sbAudioIndex = AUDIO_INDEX_RED_ALERT;
+          playFile();
+          delay(300);
+          Serial.write(SERIAL_COMM_RED_ALERT_ON);
+          EN1701A::b_red_alert_on = true;
+        }
+        else {
+          stopPlaying();
+          Serial.write(SERIAL_COMM_RED_ALERT_OFF);
+          EN1701A::b_red_alert_on = false;
+        }
         break;
 
       case PIN_H_BUTTON: //torpedos
