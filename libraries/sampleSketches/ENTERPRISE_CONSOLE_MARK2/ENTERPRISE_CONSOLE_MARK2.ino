@@ -24,18 +24,6 @@ volatile boolean        EN1701A::b_red_alert_on = false;
 volatile boolean        EN1701A::b_phaser_on = false;
 volatile boolean        EN1701A::b_power_cycle = false;
 
-/*void EN1701A::svWriteShipState(bool set, byte pinset )
-{
-  EN1701A::suiPreviousShipState = EN1701A::suiCurrentShipState;
-  
-  if (set) {
-    bitSet(suiCurrentShipState, pinset);
-  }
-  else {
-    bitClear(suiCurrentShipState, pinset);
-  }
-}*/
-
 void setup()
 {
   Serial.begin(9600); 

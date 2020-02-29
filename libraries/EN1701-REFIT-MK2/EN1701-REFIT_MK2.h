@@ -45,6 +45,7 @@ an illuminated control section of the ship*/
 #define AUDIO_INDEX_P1_MESSAGE 1
 #define AUDIO_INDEX_TORPEDO 2
 #define AUDIO_INDEX_PHASER 3
+#define AUDIO_INDEX_DSTRT 6
 #define AUDIO_INDEX_HIT 7
 #define AUDIO_INDEX_BTS1 8
 #define AUDIO_INDEX_BTS2 9
@@ -57,11 +58,17 @@ an illuminated control section of the ship*/
 #define AUDIO_INDEX_POWER_UP 16
 #define AUDIO_INDEX_WARP_DOWN 15
 #define AUDIO_INDEX_WARP_UP 14
+#define AUDIO_INDEX_LOUNGE 19
+#define AUDIO_INDEX_MODE_T_BACKGROUND 20
+#define AUDIO_INDEX_MODE_T_LONG_TRANSPORT 21
+#define AUDIO_INDEX_MODE_T_SHORT_TRANSPORT 22
+#define AUDIO_INDEX_MODE_T_BUTTON 23
+
 //#define PIN_IR_RECEIVER 11
 
 static char* scAudioEffects[]={"KLAX.WAV", "P1MSG.WAV", "TORP1.WAV", "SPZER1.WAV", "BPD1.WAV",
 "BPUP1.WAV", "DSTRT.WAV", "HULHIT.WAV", "BTS1.WAV", "BTS2.WAV", "BTS3.WAV",
-"BT4.WAV", "BT5.WAV", "BT6.WAV", "WACC1.WAV", "WDCELL1.WAV", "PUP1A.WAV", "PUP1B.WAV", "PD1.WAV"};
+"BT4.WAV", "BT5.WAV", "BT6.WAV", "WACC1.WAV", "WDCELL1.WAV", "PUP1A.WAV", "PUP1B.WAV", "PD1.WAV", "LMIX.WAV", "TBGND.WAV", "TBBO.WAV", "TLBO.WAV", "TBTN.WAV"};
 
 static byte colorWhite[] = {10, 10, 10};
 static byte colorAmber[] = {250, 69, 0};
