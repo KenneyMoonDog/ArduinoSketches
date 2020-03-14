@@ -74,4 +74,3 @@ void loop() {
     EN1701A::buttonInterrupt = false;
   }
 }
-
