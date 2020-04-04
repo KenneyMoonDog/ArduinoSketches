@@ -52,7 +52,7 @@ void setup() {
 
   strip.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
   strip.show();            // Turn OFF all pixels ASAP
-  strip.setBrightness(60); // Set BRIGHTNESS to about 1/5 (max = 255)
+  //strip.setBrightness(60); // Set BRIGHTNESS to about 1/5 (max = 255)
 }
 
 
@@ -72,7 +72,8 @@ void loop() {
   //rainbow(5);             // Flowing rainbow cycle along the whole strip
   //theaterChaseRainbow(50); // Rainbow-enhanced theaterChase variant
 
-  warp_cruise_2();
+  warp_cruise_4();
+  exit;
 }
 
 
@@ -112,8 +113,14 @@ void warp_cruise_4(){
 
   long hue[5] = {blue, blue, blue, blue, blue}; //0 (red) to 65535 (red)
   byte sat[5] = {50, 255, 100, 230, 20}; //(0-255) grey to full color 
-  byte bright[5] = {60, 60, 60, 60, 60}; //(0-255) black to full bright
+  byte bright[5] = {25, 40, 20, 60, 10}; //(0-255) black to full bright
   byte inout[5] = {1,0,1,0,1}; //0 or 1 
+  byte satStep = 1;
+  byte brightStep[5] = {1,2,1,2,1};
+  byte tempSat;
+  byte tempBright;
+  byte maxBright = 150;
+  byte minBright = 1;
 
   //red = 0 or 65535
   //pink = 65536*5/6
@@ -128,81 +135,39 @@ void warp_cruise_4(){
   //seed hue with blue with various levels of saturation and inout
   
 
-while(1) {
+  while(1) {
 
     for (int nPix = 0; nPix < 5; nPix++){
-      if (nPix == 0){
-        if (primaryDirection == 1){
-           check = primaryPixelHue + increment;
-           if (check > endPixelHue) {
-             primaryPixelHue = primaryPixelHue - increment;
-             primaryDirection = 0;
-           }
-           else {
-             primaryPixelHue = check;
-           }
-         }
-         else {
-           check = primaryPixelHue - increment;
-           if (check < beginPixelHue) {
-             primaryPixelHue = primaryPixelHue + increment;
-             primaryDirection = 1;
-           }
-           else {
-             primaryPixelHue = check;
-           }       
-         }
-       }
-       
-       strip.setPixelColor(nPix, strip.gamma32(strip.ColorHSV(primaryPixelHue + ( nPix*750))));
-    }
+      if (inout[nPix] == 1){
+        tempBright = bright[nPix] + brightStep[nPix];
+        if (tempBright >= maxBright) {
+          inout[nPix] = 0;
+          bright[nPix] = maxBright;
+          brightStep[nPix] = random(2, 3);
+        }
+        else {
+           bright[nPix] = tempBright;
+        }
+      }
+      else {
+        tempBright = bright[nPix] - brightStep[nPix];
+        if (tempBright <= minBright) {
+          inout[nPix] = 1;
+          bright[nPix] = minBright;
+          brightStep[nPix] = random(1, 3);
+        }
+        else {
+          bright[nPix] = tempBright;
+        }
+      }       
+      //strip.setPixelColor(nPix, strip.gamma32(strip.ColorHSV(hue[nPix], sat[nPix], bright[nPix])));
+      strip.setPixelColor(nPix, strip.gamma32(strip.ColorHSV(hue[nPix], 255, bright[nPix])));
+    } //end for
     
     strip.show(); // Update strip with new contents
     delay(10);  // Pause for a moment
   }  //end while  
 }
-  /*long beginPixelHue = 65536/2;
-  long endPixelHue = (5*65536)/6;
-  int increment = 256;
-  int leadFactor = 750;
-  long primaryPixelHue = beginPixelHue;
-  byte primaryDirection;
-  long check = 0;
-
-  while(1) {
-
-    for (int nPix = 0; nPix < 5; nPix++){
-      if (nPix == 0){
-        if (primaryDirection == 1){
-           check = primaryPixelHue + increment;
-           if (check > endPixelHue) {
-             primaryPixelHue = primaryPixelHue - increment;
-             primaryDirection = 0;
-           }
-           else {
-             primaryPixelHue = check;
-           }
-         }
-         else {
-           check = primaryPixelHue - increment;
-           if (check < beginPixelHue) {
-             primaryPixelHue = primaryPixelHue + increment;
-             primaryDirection = 1;
-           }
-           else {
-             primaryPixelHue = check;
-           }       
-         }
-       }
-       
-       strip.setPixelColor(nPix, strip.gamma32(strip.ColorHSV(primaryPixelHue + ( nPix*750))));
-    }
-    
-    strip.show(); // Update strip with new contents
-    delay(10);  // Pause for a moment
-  }  //end while 
-  
-} */
 
 void warp_cruise_3(){
 

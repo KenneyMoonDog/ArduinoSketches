@@ -20,6 +20,14 @@ boolean bWarpOn = false;
 boolean enginePauseOn = true;
 boolean bPowerOn = false;
 
+#define PIN_NAVIGATION_FLASHER 18
+#define PIN_NACELLE_R 6
+#define PIN_NACELLE_G 5
+#define PIN_NACELLE_B 3
+
+//timer constants
+#define RECEIVER_INTERRUPT_FREQUENCY 7 //ms
+
 // Which pin on the Arduino is connected to the NeoPixels?
 // On a Trinket or Gemma we suggest changing this to 1:
 #define LED_PIN   9
@@ -37,14 +45,6 @@ Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 //   NEO_GRB     Pixels are wired for GRB bitstream (most NeoPixel products)
 //   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
 //   NEO_RGBW    Pixels are wired for RGBW bitstream (NeoPixel RGBW products
-
-#define PIN_NAVIGATION_FLASHER 18
-#define PIN_NACELLE_R 6
-#define PIN_NACELLE_G 5
-#define PIN_NACELLE_B 3
-
-//timer constants
-#define RECEIVER_INTERRUPT_FREQUENCY 7 //ms
 
 void setup() {    
   Serial.begin(9600);
@@ -84,13 +84,15 @@ SIGNAL(TIMER0_COMPA_vect)
     checkNacelleLevel();
   }
 
-  if (currentMillis - previousEngineMillis >= (RECEIVER_INTERRUPT_FREQUENCY * 8)) {
-    previousEngineMillis = currentMillis;
+  if ( bWarpOn) {
+    if (currentMillis - previousEngineMillis >= (RECEIVER_INTERRUPT_FREQUENCY * 8)) {
+      previousEngineMillis = currentMillis;
 
-    theaterChase(strip.Color(0,0,127)); // Blue, half brightness
-    if (theaterChaseIncrement++ == 3) {
-      theaterChaseIncrement = 0;
-    }  
+      theaterChase(strip.Color(0,0,127)); // Blue, half brightness
+      if (theaterChaseIncrement++ == 3) {
+        theaterChaseIncrement = 0;
+      }  
+    }
   }
 } 
 
@@ -151,13 +153,71 @@ void theaterChase(uint32_t color) {
     strip.show(); // Update strip with new contents
 }
 
+// Some functions of our own for creating animated effects -----------------
+
+// Fill strip pixels one after another with a color. Strip is NOT cleared
+// first; anything there will be covered pixel by pixel. Pass in color
+// (as a single 'packed' 32-bit value, which you can get by calling
+// strip.Color(red, green, blue) as shown in the loop() function above),
+// and a delay time (in milliseconds) between pixels.
+void colorWipe(uint32_t color, int wait) {
+  for(int i=0; i<strip.numPixels(); i++) { // For each pixel in strip...
+    strip.setPixelColor(i, color);         //  Set pixel's color (in RAM)
+    strip.show();                          //  Update strip to match
+    delay(wait);                           //  Pause for a moment
+  }
+}
+
+
+
+// Rainbow cycle along whole strip. Pass delay time (in ms) between frames.
+void rainbow(int wait) {
+  // Hue of first pixel runs 5 complete loops through the color wheel.
+  // Color wheel has a range of 65536 but it's OK if we roll over, so
+  // just count from 0 to 5*65536. Adding 256 to firstPixelHue each time
+  // means we'll make 5*65536/256 = 1280 passes through this outer loop:
+  for(long firstPixelHue = 0; firstPixelHue < 5*65536; firstPixelHue += 256) {
+    for(int i=0; i<strip.numPixels(); i++) { // For each pixel in strip...
+      // Offset pixel hue by an amount to make one full revolution of the
+      // color wheel (range of 65536) along the length of the strip
+      // (strip.numPixels() steps):
+      int pixelHue = firstPixelHue + (i * 65536L / strip.numPixels());
+      // strip.ColorHSV() can take 1 or 3 arguments: a hue (0 to 65535) or
+      // optionally add saturation and value (brightness) (each 0 to 255).
+      // Here we're using just the single-argument hue variant. The result
+      // is passed through strip.gamma32() to provide 'truer' colors
+      // before assigning to each pixel:
+      strip.setPixelColor(i, strip.gamma32(strip.ColorHSV(pixelHue)));
+    }
+    strip.show(); // Update strip with new contents
+    delay(wait);  // Pause for a moment
+  }
+}
+
+// Rainbow-enhanced theater marquee. Pass delay time (in ms) between frames.
+void theaterChaseRainbow(int wait) {
+  int firstPixelHue = 0;     // First pixel starts at red (hue 0)
+  for(int a=0; a<30; a++) {  // Repeat 30 times...
+    for(int b=0; b<3; b++) { //  'b' counts from 0 to 2...
+      strip.clear();         //   Set all pixels in RAM to 0 (off)
+      // 'c' counts up from 'b' to end of strip in increments of 3...
+      for(int c=b; c<strip.numPixels(); c += 3) {
+        // hue of pixel 'c' is offset by an amount to make one full
+        // revolution of the color wheel (range 65536) along the length
+        // of the strip (strip.numPixels() steps):
+        int      hue   = firstPixelHue + c * 65536L / strip.numPixels();
+        uint32_t color = strip.gamma32(strip.ColorHSV(hue)); // hue -> RGB
+        strip.setPixelColor(c, color); // Set pixel 'c' to value 'color'
+      }
+      strip.show();                // Update strip with new contents
+      delay(wait);                 // Pause for a moment
+      firstPixelHue += 65536 / 90; // One cycle of color wheel over 90 frames
+    }
+  }
+}
 
 void loop() {
 
-   //test
-   runStartUpSequence();
-   //theaterChase(strip.Color(  0,   0, 127), 50); // Blue, half brightness
-   
    if (Serial.available() > 0) {
      // read the incoming byte:
      incomingByte = Serial.read();
@@ -180,20 +240,23 @@ void loop() {
        case SERIAL_COMM_NACELLE_COLOR:
           Serial.readBytes(newNacelleRGB, 3);     
           break;
-   /*    case SERIAL_COMM_INCREASE_WARP_DRIVE:
-          coilPeriod+=25;
-          resetWarpEngine();
+       case SERIAL_COMM_INCREASE_WARP_DRIVE:
+          bWarpOn = false;
+          //rainbow(10);
+          colorWipe(strip.Color(127,0,0),50);
+          bWarpOn = true;
           break;
        case SERIAL_COMM_DECREASE_WARP_DRIVE:
-          coilPeriod-=25;
-          resetWarpEngine();
+          bWarpOn = false;
+          theaterChaseRainbow(50);
+          bWarpOn = true;
           break;       
        case SERIAL_COMM_START_WARP_DRIVE:
           bWarpOn = true;
           break;
        case SERIAL_COMM_STOP_WARP_DRIVE:
           bWarpOn = false;
-          break;*/     
+          break;     
        default:
           break;
      }
