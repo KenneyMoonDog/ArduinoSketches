@@ -33,13 +33,24 @@ Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 //   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
 //   NEO_RGBW    Pixels are wired for RGBW bitstream (NeoPixel RGBW products)
 
-long red = 0; // or 65535
-long pink = 65536*5/6;
-long blue = 65536*2/3;
-long teal = 65536/2;
-long green = 65536/3;
-long yellow = 65536/6;
+const long red = 0; // or 65535
+const long pink = 65536*5/6;
+const long blue = 65536*2/3;
+const long teal = 65536/2;
+const long green = 65536/3;
+const long yellow = 65536/6;
 
+long colorSet[6] = {red, pink, blue, teal, green, yellow};
+
+long hue[5] = {blue, blue, blue, blue, blue}; //0 (red) to 65535 (red)
+byte sat[5] = {50, 255, 100, 230, 20}; //(0-255) grey to full color 
+byte bright[5] = {25, 40, 20, 60, 10}; //(0-255) black to full bright
+byte inout[5] = {1,0,1,0,1}; //0 or 1 
+byte satStep[5] =  {1,1,1,1,1};
+byte brightStep[5] = {1,2,1,2,1};
+byte maxBright = 150;
+byte minBright = 1;
+  
 // setup() function -- runs once at startup --------------------------------
 
 void setup() {
@@ -71,7 +82,7 @@ void loop() {
 
   //rainbow(5);             // Flowing rainbow cycle along the whole strip
   //theaterChaseRainbow(50); // Rainbow-enhanced theaterChase variant
-
+  warp_start();
   warp_cruise_4();
   exit;
 }
@@ -109,33 +120,49 @@ void theaterChase(uint32_t color, int wait) {
   }
 }
 
-void warp_cruise_4(){
+void warp_start() {
 
-  long hue[5] = {blue, blue, blue, blue, blue}; //0 (red) to 65535 (red)
-  byte sat[5] = {50, 255, 100, 230, 20}; //(0-255) grey to full color 
-  byte bright[5] = {25, 40, 20, 60, 10}; //(0-255) black to full bright
-  byte inout[5] = {1,0,1,0,1}; //0 or 1 
-  byte satStep = 1;
-  byte brightStep[5] = {1,2,1,2,1};
-  byte tempSat;
-  byte tempBright;
-  byte maxBright = 150;
-  byte minBright = 1;
-
-  //red = 0 or 65535
-  //pink = 65536*5/6
-  //blue = 65536*2/3
-  //teal = 65536/2
-  //green = 65536/3
-  //yellow = 65536/6
-  
   //uint32_t rgbcolor = strip.gamma32(strip.ColorHSV(hue, sat, bright));
   //strip.setPixelColor(nPix, strip.gamma32(strip.ColorHSV(strip.ColorHSV(hue, sat, bright));
 
-  //seed hue with blue with various levels of saturation and inout
-  
+  for(byte tempBright=minBright; tempBright<maxBright; tempBright++) {
+    long tempHue = colorSet[random(4)]; 
+    for (int nPix = 0; nPix < 5; nPix++){
+      strip.setPixelColor(nPix, strip.gamma32(strip.ColorHSV((tempHue+(nPix+50000)), 255, tempBright)));
+      //strip.setPixelColor(nPix, strip.gamma32(strip.ColorHSV((colorSet[random(4)]), 255, tempBright)));
+    } //end for
+    
+    strip.show(); // Update strip with new contents
+    delay(25);  // Pause for a moment
+  }  
 
-  while(1) {
+  for(byte decreaseBright=(maxBright+50); decreaseBright>(maxBright/2); decreaseBright--) {
+    for (int npPix = 0; npPix < 5; npPix++){
+      bright[npPix]=decreaseBright;
+      strip.setPixelColor(npPix, strip.gamma32(strip.ColorHSV(blue, 255, decreaseBright)));
+    } //end for
+    
+    strip.show(); // Update strip with new contents
+    delay(25);
+  }
+
+  //long hue[5] = {blue, blue, blue, blue, blue}; //0 (red) to 65535 (red)
+  //byte sat[5] = {50, 255, 100, 230, 20}; //(0-255) grey to full color 
+  //byte bright[5] = {25, 40, 20, 60, 10}; //(0-255) black to full bright
+  //byte inout[5] = {1,0,1,0,1}; //0 or 1 
+  //byte satStep[5] =  {1,1,1,1,1};
+  //byte brightStep[5] = {1,2,1,2,1};
+}
+
+void warp_cruise_4(){
+
+  byte tempSat;
+  byte tempBright;
+
+  //uint32_t rgbcolor = strip.gamma32(strip.ColorHSV(hue, sat, bright));
+  //strip.setPixelColor(nPix, strip.gamma32(strip.ColorHSV(strip.ColorHSV(hue, sat, bright));
+  long startTime = millis();
+  while((millis() - startTime < 10000)) {
 
     for (int nPix = 0; nPix < 5; nPix++){
       if (inout[nPix] == 1){
@@ -160,7 +187,6 @@ void warp_cruise_4(){
           bright[nPix] = tempBright;
         }
       }       
-      //strip.setPixelColor(nPix, strip.gamma32(strip.ColorHSV(hue[nPix], sat[nPix], bright[nPix])));
       strip.setPixelColor(nPix, strip.gamma32(strip.ColorHSV(hue[nPix], 255, bright[nPix])));
     } //end for
     
@@ -188,7 +214,7 @@ void warp_cruise_3(){
 
     for (int nPix = 0; nPix < 5; nPix++){
       if (nPix == 0){
-        if (currentDirection[nPix] == 1){
+         if (currentDirection[nPix] == 1){
            check = currentPixelHue[nPix] + increment;
            if (check > endPixelHue) {
              currentPixelHue[nPix] = currentPixelHue[nPix] - increment;
