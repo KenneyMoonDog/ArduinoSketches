@@ -33,7 +33,7 @@ Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 //   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
 //   NEO_RGBW    Pixels are wired for RGBW bitstream (NeoPixel RGBW products)
 
-const long red = 0; // or 65535
+const long red = 65535;
 const long pink = 65536*5/6;
 const long blue = 65536*2/3;
 const long teal = 65536/2;
@@ -84,6 +84,8 @@ void loop() {
   //theaterChaseRainbow(50); // Rainbow-enhanced theaterChase variant
   warp_start();
   warp_cruise_4();
+  //warp_decell();
+  warp_decell_2();
   exit;
 }
 
@@ -128,7 +130,7 @@ void warp_start() {
   for(byte tempBright=minBright; tempBright<maxBright; tempBright++) {
     long tempHue = colorSet[random(4)]; 
     for (int nPix = 0; nPix < 5; nPix++){
-      strip.setPixelColor(nPix, strip.gamma32(strip.ColorHSV((tempHue+(nPix+50000)), 255, tempBright)));
+      strip.setPixelColor(nPix, strip.gamma32(strip.ColorHSV((tempHue+(nPix+2500)), 255, tempBright)));
       //strip.setPixelColor(nPix, strip.gamma32(strip.ColorHSV((colorSet[random(4)]), 255, tempBright)));
     } //end for
     
@@ -154,10 +156,18 @@ void warp_start() {
   //byte brightStep[5] = {1,2,1,2,1};
 }
 
+void resetHue(long color) {
+  for (byte hIndex = 0; hIndex < 5; hIndex++) {
+    hue[hIndex] = color; 
+  }
+}
+
 void warp_cruise_4(){
 
   byte tempSat;
   byte tempBright;
+
+  resetHue(blue);
 
   //uint32_t rgbcolor = strip.gamma32(strip.ColorHSV(hue, sat, bright));
   //strip.setPixelColor(nPix, strip.gamma32(strip.ColorHSV(strip.ColorHSV(hue, sat, bright));
@@ -193,6 +203,127 @@ void warp_cruise_4(){
     strip.show(); // Update strip with new contents
     delay(10);  // Pause for a moment
   }  //end while  
+}
+
+void warp_decell_2(){
+  
+  int tempBright = maxBright;
+
+  long startColor = blue;
+  long endColor = red;
+
+  float colorDelta = (abs(endColor - startColor))/5;
+ 
+  //long colorSet[6] = {red, pink, blue, teal, green, yellow};
+  
+  long startTime = millis();
+  byte deadPos = 4; 
+  byte deadPosCount = 0;
+  int deadPosCountLimit = 1;
+  
+  while((millis() - startTime < 10000) && (tempBright > 10)) {
+
+       for (byte pload = 0; pload < 5; pload++){
+         hue[pload] = startColor - (4-pload) * colorDelta;
+
+         if (pload == deadPos) {
+           bright[pload] = 0;
+         }
+         else {
+           bright[pload] = tempBright; // - ((4-pload) * brightDelta);
+         }
+         
+         strip.setPixelColor(pload, strip.gamma32(strip.ColorHSV(hue[pload], 255, bright[pload])));
+       }
+
+       //if (deadPosCount++ > deadPosCountLimit ){
+       //  deadPosCount = 0;
+         if (deadPos > 0) {
+            deadPos--;
+         }
+         else {
+            deadPos = 4;
+         }
+       //}
+       
+       strip.show(); // Update strip with new contents
+       
+       ( tempBright > 0 ) ? tempBright-=1 : tempBright = 0;
+       startColor += 100;
+       endColor -=100; 
+       colorDelta = (abs(endColor - startColor))/4;
+       delay(20);
+  } //end while 
+}
+
+void warp_decell(){
+
+  int tepBright = maxBright;
+  long brightPosCounter = millis(); 
+  long startTime = millis();
+  byte brightPos = 0; 
+  
+  while((millis() - startTime < 10000) && (tepBright > 0)) {
+      if ( (millis() - brightPosCounter) > 25){
+        if (brightPos > 0) {
+           brightPos--;
+        }
+        else {
+           brightPos = 4;
+        }
+        brightPosCounter = millis();
+
+         //int slope = tepBright/4;
+         switch ( brightPos ){
+           case 0:
+              bright[0] = tepBright;
+              bright[1] = 0.6 * tepBright;
+              bright[2] = 0.3 * tepBright;
+              bright[3] = 0.15 * tepBright;
+              bright[4] = 0;
+              break;
+           case 1:
+              bright[0] = 0.6 * tepBright;
+              bright[1] = tepBright;
+              bright[2] = 0.6 * tepBright;
+              bright[3] = 0.3 * tepBright;
+              bright[4] = 0.1 * tepBright;
+              break;  
+           case 2:
+              bright[0] = 0.3 * tepBright;
+              bright[1] = 0.6 * tepBright;
+              bright[2] = tepBright;
+              bright[3] = 0.6 * tepBright;
+              bright[4] = 0.3* tepBright;
+              break;
+           case 3:
+              bright[0] = 0.15 * tepBright;
+              bright[1] = 0.3 * tepBright;
+              bright[2] = 0.6 * tepBright;
+              bright[3] = tepBright;
+              bright[4] = 0.6 * tepBright;
+              break;
+           case 4:
+              bright[0] = 0;
+              bright[1] = 0.15 * tepBright;
+              bright[2] = 0.3 * tepBright;
+              bright[3] = 0.6 * tepBright;
+              bright[4] = tepBright;
+              break;
+         }
+
+         for (byte pload = 0; pload < 5; pload++){
+           strip.setPixelColor(pload, strip.gamma32(strip.ColorHSV(hue[pload], 255, bright[pload])));
+         }
+         
+         strip.show(); // Update strip with new contents
+         tepBright -=1;
+      } //end if
+  } //end while 
+}
+
+void warp_stop(){
+  
 }
 
 void warp_cruise_3(){

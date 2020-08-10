@@ -53,17 +53,17 @@ volatile unsigned long beaconPreviousMillis = 0;
 volatile unsigned long redAlertPreviousMillis = 0;
 
 boolean bPowerOn = false;
-boolean bNavBeaconOn = false;
-boolean bNavFlasherOn = false;
-boolean bRedAlertOn = false;
-boolean bRedLedOn = false;
+volatile boolean bNavBeaconOn = false;
+volatile boolean bNavFlasherOn = false;
+volatile boolean bRedAlertOn = false;
+volatile boolean bRedLedOn = false;
 boolean fullImpulse = false;
 boolean testMode = false;
 
 byte crystalSignal[] = {0,0,0,0};
 byte nacelleSignal[] = {0,0,0,0};
-byte newDeflectorRGB[] = {0,0,0};
-byte oldDeflectorRGB[] = {0,0,0};
+volatile byte newDeflectorRGB[] = {0,0,0};
+volatile byte oldDeflectorRGB[] = {0,0,0};
 byte impulseLevelSignal[] = {SERIAL_COMM_IMPULSE_DRIVE, 0};
 
 byte torpedo_tube = PIN_PHOTON_TORPEDO_1;
@@ -165,7 +165,7 @@ void setDeflector(byte color[]) {
 }
 
 void updateRedAlert() {
-  static int bREACounter=0;
+  static volatile int bREACounter=0;
 
   if (bRedAlertOn) {
      if (bREACounter < redAlertTimeOff){
@@ -201,9 +201,9 @@ void updateRedAlert() {
 
 void updateNavBeacon(boolean bPowerOn){
 
-  static byte bCounter=0;
-  static boolean bBeaconOn=false;
-  static boolean bFlasherOn=false;
+  static volatile byte bCounter=0;
+  static volatile boolean bBeaconOn=false;
+  static volatile boolean bFlasherOn=false;
   
   if (bPowerOn) {
      if (bCounter >= beaconTimeOn && bCounter < beaconTimeOff ){
