@@ -8,18 +8,24 @@ volatile unsigned long previousMillis = 0;
 volatile unsigned long previousEngineMillis = 0;
 
 int incomingByte = 0;   // for incoming serial data
+byte newNacelleRGB[] = {10,10,10};
+byte oldNacelleRGB[] = {0,0,0};
 
-volatile boolean bWarpOn = false;
-boolean enginePauseOn = true;
+boolean bWarpOn = false;
+boolean enginePauseOn = false;
 boolean bPowerOn = false;
 
 //timer constants
 #define RECEIVER_INTERRUPT_FREQUENCY 7 //ms
 
 #define PIN_NAVIGATION_FLASHER 18
+#define PIN_NACELLE_R 6
+#define PIN_NACELLE_G 5
+#define PIN_NACELLE_B 3
+
 // Which pin on the Arduino is connected to the NeoPixels?
 // On a Trinket or Gemma we suggest changing this to 1:
-#define LED_PIN    6
+#define LED_PIN   9
 // How many NeoPixels are attached to the Arduino?
 #define LED_COUNT 5
 
@@ -57,6 +63,13 @@ void setup() {
   pinMode(PIN_NAVIGATION_FLASHER, OUTPUT);   
   digitalWrite(PIN_NAVIGATION_FLASHER, LOW);
 
+  pinMode(PIN_NACELLE_R, OUTPUT);
+  pinMode(PIN_NACELLE_G, OUTPUT);
+  pinMode(PIN_NACELLE_B, OUTPUT);
+  
+  analogWrite(PIN_NACELLE_R, 255);
+  analogWrite(PIN_NACELLE_G, 255);
+  analogWrite(PIN_NACELLE_B, 255);
   //resetWarpEngine();
   
   OCR0A = 0xAF;
@@ -80,6 +93,7 @@ SIGNAL(TIMER0_COMPA_vect)
 
   if (currentMillis - previousMillis >= RECEIVER_INTERRUPT_FREQUENCY) { //execute any timed operations every INTERRRUPT FREQ ms
     previousMillis = currentMillis;
+    checkNacelleLevel();
   }
 
   /*if (currentMillis - beaconPreviousMillis >= RECEIVER_INTERRUPT_FREQ_BEACON) {
@@ -98,7 +112,42 @@ SIGNAL(TIMER0_COMPA_vect)
    */
 } 
 
-void warp_start() {
+
+void checkNacelleLevel() {
+
+    bool oper_R = (oldNacelleRGB[0] >= newNacelleRGB[0]) ? 0:1;
+    bool oper_G = (oldNacelleRGB[1] >= newNacelleRGB[1]) ? 0:1;
+    bool oper_B = (oldNacelleRGB[2] >= newNacelleRGB[2]) ? 0:1;
+  
+     if ( oldNacelleRGB[0] != newNacelleRGB[0] ) {
+        if ( oper_R ) {
+          analogWrite(PIN_NACELLE_R, (255-(++oldNacelleRGB[0])));
+        }
+        else {
+          analogWrite(PIN_NACELLE_R, (255-(--oldNacelleRGB[0])));
+        }
+     }
+
+     if ( oldNacelleRGB[1] != newNacelleRGB[1] ) {
+        if ( oper_G ) {
+          analogWrite(PIN_NACELLE_G, (255-(++oldNacelleRGB[1])));
+        }
+        else {
+          analogWrite(PIN_NACELLE_G, (255-(--oldNacelleRGB[1])));
+        }
+     }
+
+     if ( oldNacelleRGB[2] != newNacelleRGB[2] ) {
+        if ( oper_B ) {
+          analogWrite(PIN_NACELLE_B, (255-(++oldNacelleRGB[2])));
+        }
+        else {
+          analogWrite(PIN_NACELLE_B, (255-(--oldNacelleRGB[2])));
+        }
+     }
+}
+
+void warp_engage() {
 
   for(byte tempBright=minBright; tempBright<maxBright; tempBright++) {
     long tempHue = colorSet[random(4)]; 
@@ -119,6 +168,9 @@ void warp_start() {
     strip.show(); // Update strip with new contents
     delay(25);
   }
+  
+  resetHue(blue);
+  bWarpOn=true;
 }
 
 void resetHue(long color) {
@@ -127,16 +179,22 @@ void resetHue(long color) {
   }
 }
 
-void warp_cruise_4(){
+void warp_cruise(){
 
-  byte tempSat;
-  byte tempBright;
+    byte tempSat;
+    byte tempBright;
 
-  resetHue(blue);
-
-  long startTime = millis();
-  while((millis() - startTime < 10000)) {
-
+    if (!bWarpOn) {
+      return;
+    }
+    
+    if ( (previousEngineMillis + 10 ) < millis() ) {
+      previousEngineMillis = millis();
+    }
+    else {
+      return;
+    }
+    
     for (int nPix = 0; nPix < 5; nPix++){
       if (inout[nPix] == 1){
         tempBright = bright[nPix] + brightStep[nPix];
@@ -164,11 +222,11 @@ void warp_cruise_4(){
     } //end for
     
     strip.show(); // Update strip with new contents
-    delay(10);  // Pause for a moment
-  }  //end while  
 }
 
-void warp_decell_2(){
+void warp_decell(){
+
+  bWarpOn = false;
   
   int tempBright = maxBright;
 
@@ -224,8 +282,20 @@ void runStartUpSequence() {
   bPowerOn = true;
 }
 
+void powerUpNacelle() {
+  
+}
+
+void powerDownNacelle(){
+
+  
+}
+
 void loop() {
 
+   if (!bWarpOn){
+    warp_engage();
+   }
    if (Serial.available() > 0) {
      // read the incoming byte:
      incomingByte = Serial.read();
@@ -248,17 +318,21 @@ void loop() {
        case SERIAL_COMM_NACELLE_COLOR:
           break;
        case SERIAL_COMM_INCREASE_WARP_DRIVE:
+          warp_engage();
           break;
        case SERIAL_COMM_DECREASE_WARP_DRIVE:
+          warp_decell();
           break;       
        case SERIAL_COMM_START_WARP_DRIVE:
-          bWarpOn = true;
           break;
        case SERIAL_COMM_STOP_WARP_DRIVE:
-          bWarpOn = false;
+          warp_decell();
+          powerDownNacelle();
           break;     
        default:
           break;
      }
    }
+
+   warp_cruise();
 }
