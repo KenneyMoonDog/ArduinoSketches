@@ -244,7 +244,10 @@ void ShipOperations_MK2::ApplyShipLogic() {
           clearAll();
           playFile();
 
-          Serial.write(SERIAL_COMM_STOP_WARP_DRIVE);
+          if (EN1701A::b_warp_mode_on){
+            Serial.write(SERIAL_COMM_STOP_WARP_DRIVE);
+          }
+
           Serial.write(SERIAL_COMM_RED_ALERT_OFF);
           setImpulseLevel(stop_impulse);
 

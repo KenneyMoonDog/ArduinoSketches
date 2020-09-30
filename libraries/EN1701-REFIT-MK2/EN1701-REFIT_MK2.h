@@ -66,9 +66,7 @@ an illuminated control section of the ship*/
 
 //#define PIN_IR_RECEIVER 11
 
-static char* scAudioEffects[]={"KLAX.WAV", "P1MSG.WAV", "TORP1.WAV", "SPZER1.WAV", "BPD1.WAV",
-"BPUP1.WAV", "DSTRT.WAV", "HULHIT.WAV", "BTS1.WAV", "BTS2.WAV", "BTS3.WAV",
-"BT4.WAV", "BT5.WAV", "BT6.WAV", "WACC1.WAV", "WDCELL1.WAV", "PUP1A.WAV", "PUP1B.WAV", "PD1.WAV", "LMIX.WAV", "TBGND.WAV", "TBBO.WAV", "TLBO.WAV", "TBTN.WAV"};
+static char* scAudioEffects[]={(char*)"KLAX.WAV", (char*)"P1MSG.WAV", (char*)"TORP1.WAV", (char*)"SPZER1.WAV", (char*)"BPD1.WAV", (char*)"BPUP1.WAV", (char*)"DSTRT.WAV", (char*)"HULHIT.WAV", (char*)"BTS1.WAV", (char*)"BTS2.WAV", (char*)"BTS3.WAV", (char*)"BT4.WAV", (char*)"BT5.WAV", (char*)"BT6.WAV", (char*)"WACC1.WAV", (char*)"WDCELL1.WAV", (char*)"PUP1A.WAV", (char*)"PUP1B.WAV", (char*)"PD1.WAV", (char*)"LMIX.WAV", (char*)"TBGND.WAV", (char*)"TBBO.WAV", (char*)"TLBO.WAV", (char*)"TBTN.WAV"};
 
 static byte colorWhite[] = {10, 10, 10};
 static byte colorAmber[] = {250, 69, 0};

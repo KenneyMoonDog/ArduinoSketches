@@ -24,8 +24,8 @@ byte newImpulseLevel=0;
 #define PIN_PHOTON_TORPEDO_1 6
 #define PIN_AFT_LIGHTS 8
 #define PIN_DEFLECTOR_R 9
-#define PIN_DEFLECTOR_G 10
-#define PIN_DEFLECTOR_B 11
+#define PIN_DEFLECTOR_G 11
+#define PIN_DEFLECTOR_B 10
 #define PIN_NAVIGATION_FLASHER 12
 #define PIN_RED_ALERT 13
 
@@ -159,9 +159,9 @@ void checkDeflectorLevel(){
 }
 
 void setDeflector(byte color[]) {
-      newDeflectorRGB[0] = color[1];
-      newDeflectorRGB[1] = color[2];
-      newDeflectorRGB[2] = color[3];
+      newDeflectorRGB[0] = color[0];
+      newDeflectorRGB[1] = color[1];
+      newDeflectorRGB[2] = color[2];
 }
 
 void updateRedAlert() {

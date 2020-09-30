@@ -16,9 +16,10 @@ boolean enginePauseOn = false;
 boolean bPowerOn = false;
 
 //timer constants
-#define RECEIVER_INTERRUPT_FREQUENCY 7 //ms
+#define RECEIVER_INTERRUPT_FREQUENCY 10 //ms
 
 #define PIN_NAVIGATION_FLASHER 18
+#define PIN_BEACON_FLASHER 19
 #define PIN_NACELLE_R 6
 #define PIN_NACELLE_G 5
 #define PIN_NACELLE_B 3
@@ -61,7 +62,9 @@ byte minBright = 1;
 void setup() {    
   Serial.begin(9600);
   pinMode(PIN_NAVIGATION_FLASHER, OUTPUT);   
+  pinMode(PIN_BEACON_FLASHER, OUTPUT);
   digitalWrite(PIN_NAVIGATION_FLASHER, LOW);
+  digitalWrite(PIN_BEACON_FLASHER, LOW);
 
   pinMode(PIN_NACELLE_R, OUTPUT);
   pinMode(PIN_NACELLE_G, OUTPUT);
@@ -96,12 +99,7 @@ SIGNAL(TIMER0_COMPA_vect)
     checkNacelleLevel();
   }
 
-  /*if (currentMillis - beaconPreviousMillis >= RECEIVER_INTERRUPT_FREQ_BEACON) {
-    beaconPreviousMillis = currentMillis;
-    checkDeflectorLevel();
-  }
-
-  if (currentMillis - redAlertPreviousMillis >= RECEIVER_INTERRUPT_FREQ_RED_ALERT) {
+  /*if (currentMillis - redAlertPreviousMillis >= RECEIVER_INTERRUPT_FREQ_RED_ALERT) {
     redAlertPreviousMillis = currentMillis;
     updateRedAlert();
   }*/
@@ -112,6 +110,11 @@ SIGNAL(TIMER0_COMPA_vect)
    */
 } 
 
+void setNacelle(byte color[]) {
+      newNacelleRGB[0] = color[0];
+      newNacelleRGB[1] = color[1];
+      newNacelleRGB[2] = color[2];
+}
 
 void checkNacelleLevel() {
 
@@ -149,6 +152,12 @@ void checkNacelleLevel() {
 
 void warp_engage() {
 
+  long startTime = millis();
+  long endTime = startTime + 2500;
+  bool firstPass = true;
+  int startPause = 0;
+  int endPause = 0;
+  
   for(byte tempBright=minBright; tempBright<maxBright; tempBright++) {
     long tempHue = colorSet[random(4)]; 
     for (int nPix = 0; nPix < 5; nPix++){
@@ -156,9 +165,15 @@ void warp_engage() {
     } //end for
     
     strip.show(); // Update strip with new contents
-    delay(25);  // Pause for a moment
+    if (firstPass) {
+      firstPass = false;
+      startPause = (2750/(maxBright - minBright)) - (millis() - startTime); 
+    }
+    delay(startPause);  // pause for a moment
   }  
 
+  startPause = true;
+  
   for(byte decreaseBright=(maxBright+50); decreaseBright>(maxBright/2); decreaseBright--) {
     for (int npPix = 0; npPix < 5; npPix++){
       bright[npPix]=decreaseBright;
@@ -166,7 +181,12 @@ void warp_engage() {
     } //end for
     
     strip.show(); // Update strip with new contents
-    delay(25);
+    if (firstPass) {
+      firstPass = false;
+      endPause = 500;
+    }
+    delay(endPause);
+    endPause = 25;
   }
   
   resetHue(blue);
@@ -240,7 +260,7 @@ void warp_decell(){
   byte deadPosCount = 0;
   int deadPosCountLimit = 1;
   
-  while((millis() - startTime < 10000) && (tempBright > 10)) {
+  while((millis() - startTime < 20000) && (tempBright > 10)) {
 
        for (byte pload = 0; pload < 5; pload++){
          hue[pload] = startColor - (4-pload) * colorDelta;
@@ -274,7 +294,8 @@ void warp_decell(){
 
 void runShutdownSequence(){
   bPowerOn = false;
-  digitalWrite(PIN_NAVIGATION_FLASHER, LOW);   
+  digitalWrite(PIN_NAVIGATION_FLASHER, LOW);  
+  digitalWrite(PIN_BEACON_FLASHER, LOW);   
 }
 
 void runStartUpSequence() {
@@ -293,9 +314,9 @@ void powerDownNacelle(){
 
 void loop() {
 
-   if (!bWarpOn){
-    warp_engage();
-   }
+   //if (!bWarpOn){
+    //warp_engage();
+   //}
    if (Serial.available() > 0) {
      // read the incoming byte:
      incomingByte = Serial.read();
@@ -307,6 +328,14 @@ void loop() {
        case SERIAL_COMM_POWER_ON: //power on
           runStartUpSequence();
           break;
+       case SERIAL_COMM_NAV_BEACON_ON:
+          if (bPowerOn) {
+            digitalWrite(PIN_BEACON_FLASHER, HIGH);
+          }
+          break;
+       case SERIAL_COMM_NAV_BEACON_OFF:
+          digitalWrite(PIN_BEACON_FLASHER, LOW);
+          break;
        case SERIAL_COMM_NAV_FLASHER_ON:
           if (bPowerOn) {
             digitalWrite(PIN_NAVIGATION_FLASHER, HIGH);
@@ -316,6 +345,9 @@ void loop() {
           digitalWrite(PIN_NAVIGATION_FLASHER, LOW);
           break;
        case SERIAL_COMM_NACELLE_COLOR:
+          byte color[3];
+          Serial.readBytes(&color[0],3);
+          setNacelle(color);
           break;
        case SERIAL_COMM_INCREASE_WARP_DRIVE:
           warp_engage();
