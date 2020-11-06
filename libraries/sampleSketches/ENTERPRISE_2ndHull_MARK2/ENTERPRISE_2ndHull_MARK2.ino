@@ -599,6 +599,7 @@ void loop() {
           bRedAlertOn = false;
           break;
        default:
+          Serial.write(incomingByte);
           break;
      } ///end switch
    } //if serial

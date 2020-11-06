@@ -252,9 +252,13 @@ void ShipOperations_MK2::ApplyShipLogic() {
           setImpulseLevel(stop_impulse);
 
           delay(500);
-          setShipSection(SERIAL_COMM_FLOOD_1,0,0);
-          setShipSection(SERIAL_COMM_FLOOD_2,0,1000);
 
+          setShipSection(SERIAL_COMM_FLOOD_1,0,500);
+          setShipSection(SERIAL_COMM_FLOOD_2,0,500);
+          Serial.write(SERIAL_COMM_FLOOD_ENGINE_OFF);
+          delay(500);
+          Serial.write(SERIAL_COMM_FLOOD_FORWARD_OFF);
+          delay(500);
           setShipSection(SERIAL_COMM_AFT_SECTION,0,500);
           setShipSection(SERIAL_COMM_SAUCER_SECTION_LOUNGE,0,500);
           setShipSection(SERIAL_COMM_SAUCER_SECTION_1,0,0);
@@ -306,8 +310,13 @@ void ShipOperations_MK2::ApplyShipLogic() {
           setShipSection(SERIAL_COMM_SAUCER_SECTION_BRIDGE,1,500);
           setShipSection(SERIAL_COMM_ARBORITUM,1,500);
           setShipSection(SERIAL_COMM_AFT_SECTION,1,500);
-          setShipSection(SERIAL_COMM_FLOOD_1,1,0);
+          setShipSection(SERIAL_COMM_FLOOD_1,1,500);
           setShipSection(SERIAL_COMM_FLOOD_2,1,1000);
+
+          Serial.write(SERIAL_COMM_FLOOD_ENGINE_ON);
+          delay(500);
+          Serial.write(SERIAL_COMM_FLOOD_FORWARD_ON);
+          delay(500);
 
           setTargetColor(SERIAL_COMM_DEFLECTOR_COLOR, colorAmber);
         }

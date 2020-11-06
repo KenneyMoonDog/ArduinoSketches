@@ -8,6 +8,7 @@ volatile unsigned long previousMillis = 0;
 volatile unsigned long previousEngineMillis = 0;
 
 int incomingByte = 0;   // for incoming serial data
+byte stateIn = 0;
 byte newNacelleRGB[] = {10,10,10};
 byte oldNacelleRGB[] = {0,0,0};
 
@@ -18,17 +19,19 @@ boolean bPowerOn = false;
 //timer constants
 #define RECEIVER_INTERRUPT_FREQUENCY 10 //ms
 
-#define PIN_NAVIGATION_FLASHER 18
-#define PIN_BEACON_FLASHER 19
-#define PIN_NACELLE_R 6
-#define PIN_NACELLE_G 5
-#define PIN_NACELLE_B 3
+#define PIN_NAVIGATION_FLASHER 15
+#define PIN_BEACON_FLASHER 16
+#define PIN_ENGINE_FLOOD 8
+#define PIN_FORWARD_FLOOD 3
+#define PIN_NACELLE_B 9
+#define PIN_NACELLE_G 10
+#define PIN_NACELLE_R 11
 
 // Which pin on the Arduino is connected to the NeoPixels?
 // On a Trinket or Gemma we suggest changing this to 1:
-#define LED_PIN   9
+#define LED_PIN   17
 // How many NeoPixels are attached to the Arduino?
-#define LED_COUNT 5
+#define LED_COUNT 6
 
 // Declare our NeoPixel strip object:
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
@@ -48,21 +51,22 @@ const long teal = 65536/2;
 const long green = 65536/3;
 const long yellow = 65536/6;
 
-long colorSet[6] = {red, pink, blue, teal, green, yellow};
-
-long hue[5] = {blue, blue, blue, blue, blue}; //0 (red) to 65535 (red)
-byte sat[5] = {50, 255, 100, 230, 20}; //(0-255) grey to full color 
-byte bright[5] = {25, 40, 20, 60, 10}; //(0-255) black to full bright
-byte inout[5] = {1,0,1,0,1}; //0 or 1 
-byte satStep[5] =  {1,1,1,1,1};
-byte brightStep[5] = {1,2,1,2,1};
-byte maxBright = 150;
+long colorSet[LED_COUNT] = {red, pink, blue, teal, green, yellow};
+long hue[LED_COUNT] = {blue, blue, blue, blue, blue, blue}; //0 (red) to 65535 (red)
+byte sat[LED_COUNT] = {50, 255, 100, 230, 20, 175}; //(0-255) grey to full color 
+byte bright[LED_COUNT] = {25, 40, 20, 60, 10, 50}; //(0-255) black to full bright
+byte inout[LED_COUNT] = {1,0,1,0,1,0}; //0 or 1 
+byte satStep[LED_COUNT] =  {1,1,1,1,1,1};
+byte brightStep[LED_COUNT] = {1,2,1,2,1,2};
+byte maxBright = 180;
 byte minBright = 1;
 
 void setup() {    
   Serial.begin(9600);
   pinMode(PIN_NAVIGATION_FLASHER, OUTPUT);   
   pinMode(PIN_BEACON_FLASHER, OUTPUT);
+  pinMode(PIN_ENGINE_FLOOD, OUTPUT);   
+  pinMode(PIN_FORWARD_FLOOD, OUTPUT);
   digitalWrite(PIN_NAVIGATION_FLASHER, LOW);
   digitalWrite(PIN_BEACON_FLASHER, LOW);
 
@@ -159,8 +163,8 @@ void warp_engage() {
   int endPause = 0;
   
   for(byte tempBright=minBright; tempBright<maxBright; tempBright++) {
-    long tempHue = colorSet[random(4)]; 
-    for (int nPix = 0; nPix < 5; nPix++){
+    long tempHue = colorSet[random((LED_COUNT-1))]; 
+    for (int nPix = 0; nPix < LED_COUNT; nPix++){
       strip.setPixelColor(nPix, strip.gamma32(strip.ColorHSV((tempHue+(nPix+2500)), 255, tempBright)));
     } //end for
     
@@ -175,7 +179,7 @@ void warp_engage() {
   startPause = true;
   
   for(byte decreaseBright=(maxBright+50); decreaseBright>(maxBright/2); decreaseBright--) {
-    for (int npPix = 0; npPix < 5; npPix++){
+    for (int npPix = 0; npPix < LED_COUNT; npPix++){
       bright[npPix]=decreaseBright;
       strip.setPixelColor(npPix, strip.gamma32(strip.ColorHSV(blue, 255, decreaseBright)));
     } //end for
@@ -194,7 +198,7 @@ void warp_engage() {
 }
 
 void resetHue(long color) {
-  for (byte hIndex = 0; hIndex < 5; hIndex++) {
+  for (byte hIndex = 0; hIndex < LED_COUNT; hIndex++) {
     hue[hIndex] = color; 
   }
 }
@@ -215,7 +219,7 @@ void warp_cruise(){
       return;
     }
     
-    for (int nPix = 0; nPix < 5; nPix++){
+    for (int nPix = 0; nPix < LED_COUNT; nPix++){
       if (inout[nPix] == 1){
         tempBright = bright[nPix] + brightStep[nPix];
         if (tempBright >= maxBright) {
@@ -262,8 +266,8 @@ void warp_decell(){
   
   while((millis() - startTime < 20000) && (tempBright > 10)) {
 
-       for (byte pload = 0; pload < 5; pload++){
-         hue[pload] = startColor - (4-pload) * colorDelta;
+       for (byte pload = 0; pload < LED_COUNT; pload++){
+         hue[pload] = startColor - ((LED_COUNT-1)-pload) * colorDelta;
 
          if (pload == deadPos) {
            bright[pload] = 0;
@@ -279,7 +283,7 @@ void warp_decell(){
           deadPos--;
        }
        else {
-          deadPos = 4;
+          deadPos = (LED_COUNT-1);
        }
        
        strip.show(); // Update strip with new contents
@@ -287,7 +291,7 @@ void warp_decell(){
        ( tempBright > 0 ) ? tempBright-=1 : tempBright = 0;
        startColor += 100;
        endColor -=100; 
-       colorDelta = (abs(endColor - startColor))/4;
+       colorDelta = (abs(endColor - startColor))/(LED_COUNT-1);
        delay(20);
   } //end while 
 }
@@ -360,7 +364,19 @@ void loop() {
        case SERIAL_COMM_STOP_WARP_DRIVE:
           warp_decell();
           powerDownNacelle();
-          break;     
+          break;  
+       case SERIAL_COMM_FLOOD_ENGINE_ON:
+          digitalWrite(PIN_ENGINE_FLOOD, HIGH);
+          break;   
+       case SERIAL_COMM_FLOOD_ENGINE_OFF:
+          digitalWrite(PIN_ENGINE_FLOOD, LOW);
+          break;  
+       case SERIAL_COMM_FLOOD_FORWARD_ON:
+          digitalWrite(PIN_FORWARD_FLOOD, HIGH);
+          break;  
+       case SERIAL_COMM_FLOOD_FORWARD_OFF:
+          digitalWrite(PIN_FORWARD_FLOOD, LOW);
+          break;   
        default:
           break;
      }
