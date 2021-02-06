@@ -22,10 +22,28 @@ ShipOperations_MK2::ShipOperations_MK2() {
 void ShipOperations_MK2::clearAll(){
   EN1701A::buttonPressed = 0;
   EN1701A::b_warp_mode_on = false;
-  EN1701A::b_red_alert_on = false;
-  EN1701A::b_phaser_on = false;
-  EN1701A::b_power_cycle = false;
-  impulseLevel[1] = half_impulse;
+
+  if (EN1701A::b_warp_engine_on){
+     Serial.write(SERIAL_COMM_STOP_WARP_DRIVE);
+     EN1701A::b_warp_engine_on=false;
+  }
+
+  if (EN1701A::b_red_alert_on){
+     Serial.write(SERIAL_COMM_RED_ALERT_OFF);
+     EN1701A::b_red_alert_on = false;
+  }
+
+  if (EN1701A::b_phaser_on){
+    Serial.write(SERIAL_COMM_PHASER_OFF);
+    EN1701A::b_phaser_on = false;
+  }
+
+  if (EN1701A::b_power_cycle){
+    EN1701A::b_power_cycle = false;
+    Serial.write(SERIAL_COMM_POWER_OFF);
+  }
+
+  setImpulseLevel(stop_impulse);
 }
 
 void ShipOperations_MK2::setTargetColor(byte target, byte* color) {
@@ -53,18 +71,18 @@ void ShipOperations_MK2::switchConsoleMode(byte mode) {
    switch (mode) {
      case MODE_HELM:
        switchConsoleLight(true);
-       EN1701A::sbAudioIndex = AUDIO_INDEX_POWER_CONTINUE;
-       EN1701A::b_power_cycle = true;
+       EN1701A::sbAudioIndex = AUDIO_INDEX_TLIFT_BRIDGE;
+       //EN1701A::b_power_cycle = true;
        playFile();
        break;
-     case MODE_COMMUNICATIONS:
+     case MODE_AUX_CONTROL:
        switchConsoleLight(false);
-       EN1701A::sbAudioIndex = AUDIO_INDEX_POWER_CONTINUE;
+       EN1701A::sbAudioIndex = AUDIO_INDEX_TLIFT_AUXCONTROL;
        playFile();
        break;
-     case MODE_TRANSPORTER:
+     case MODE_ENGINEERING:
        switchConsoleLight(false);
-       EN1701A::sbAudioIndex = AUDIO_INDEX_MODE_T_BACKGROUND;;
+       EN1701A::sbAudioIndex = AUDIO_INDEX_TLIFT_ENGINEERING;;
        playFile();
        break;
      default:
@@ -115,43 +133,59 @@ void ShipOperations_MK2::decreaseImpulseDrive(){
 
 void ShipOperations_MK2::ApplyShipLogic() {
 
-  if ( EN1701A::console_mode == MODE_TRANSPORTER) {
+  if ( EN1701A::console_mode == MODE_ENGINEERING) {
+
      switch (EN1701A::buttonPressed) {
-       case PIN_A_BUTTON: //enable MODE_TRANSPORTER
+       case PIN_A_BUTTON: //red alert
          EN1701A::buttonPressed = 0;
-         EN1701A::sbAudioIndex = AUDIO_INDEX_MODE_T_BUTTON;
-         playFile();
+
+         if (!EN1701A::b_red_alert_on){
+           EN1701A::sbAudioIndex = AUDIO_INDEX_RED_ALERT;
+           playFile();
+           delay(300);
+           Serial.write(SERIAL_COMM_RED_ALERT_ON);
+           EN1701A::b_red_alert_on = true;
+         }
+         else {
+           stopPlaying();
+           Serial.write(SERIAL_COMM_RED_ALERT_OFF);
+           EN1701A::b_red_alert_on = false;
+         }
          break;
        case PIN_B_BUTTON: //large beam out
-         EN1701A::buttonPressed = AUDIO_INDEX_MODE_T_LONG_TRANSPORT;
-         EN1701A::sbAudioIndex = AUDIO_INDEX_MODE_T_BUTTON;
-         playFile();
-         break;
-       case PIN_C_BUTTON: //mode up
-         EN1701A::buttonPressed = 0;
-         EN1701A::sbAudioIndex = AUDIO_INDEX_BTS6;
-         playFile();
-         switchConsoleMode(MODE_COMMUNICATIONS);
-         break;
-       case PIN_D_BUTTON: //??
-         EN1701A::buttonPressed = 0;
-         break;
-       case PIN_E_BUTTON: //??
-         EN1701A::buttonPressed = 0;
-         break;
-       case PIN_F_BUTTON: //small beam out
          EN1701A::buttonPressed = 0;
          EN1701A::sbAudioIndex = AUDIO_INDEX_MODE_T_SHORT_TRANSPORT;
          playFile();
          break;
-       case PIN_G_BUTTON: //mode down
+       case PIN_C_BUTTON: //mode up
+         EN1701A::buttonPressed = 0;
+         switchConsoleMode(MODE_AUX_CONTROL);
+         break;
+       case PIN_D_BUTTON: //??
          EN1701A::buttonPressed = 0;
          EN1701A::sbAudioIndex = AUDIO_INDEX_BTS6;
          playFile();
+         break;
+       case PIN_E_BUTTON: //??
+         EN1701A::buttonPressed = 0;
+         EN1701A::sbAudioIndex = AUDIO_INDEX_P1_MESSAGE;
+         playFile();
+         delay(200);
+         break;
+       case PIN_F_BUTTON: //night mode
+         EN1701A::buttonPressed = 0;
+         EN1701A::sbAudioIndex = AUDIO_INDEX_BTS6;
+         playFile();
+         break;
+       case PIN_G_BUTTON: //mode down
+         EN1701A::buttonPressed = 0;
          switchConsoleMode(MODE_HELM);
          break;
-       case PIN_H_BUTTON: //??
+       case PIN_H_BUTTON: //destruct
          EN1701A::buttonPressed = 0;
+         EN1701A::sbAudioIndex = AUDIO_INDEX_DSTRT;
+         playFile();
+         delay(200);
          break;
        default:
          EN1701A::buttonPressed = 0;
@@ -161,64 +195,43 @@ void ShipOperations_MK2::ApplyShipLogic() {
      return;
   }
 
-  if ( EN1701A::console_mode == MODE_COMMUNICATIONS) {
+  if ( EN1701A::console_mode == MODE_AUX_CONTROL) {
     switch (EN1701A::buttonPressed) {
-      case PIN_A_BUTTON:  //red alert
+      case PIN_A_BUTTON:
         EN1701A::buttonPressed = 0;
-
-        if (!EN1701A::b_red_alert_on){
-          EN1701A::sbAudioIndex = AUDIO_INDEX_RED_ALERT;
-          playFile();
-          delay(300);
-          Serial.write(SERIAL_COMM_RED_ALERT_ON);
-          EN1701A::b_red_alert_on = true;
-        }
-        else {
-          stopPlaying();
-          Serial.write(SERIAL_COMM_RED_ALERT_OFF);
-          EN1701A::b_red_alert_on = false;
-        }
+        EN1701A::sbAudioIndex = AUDIO_INDEX_BTS6;
+        playFile();
         break;
       case PIN_B_BUTTON:  //LMIX
         //add button press
         EN1701A::buttonPressed = 0;
-        EN1701A::sbAudioIndex = AUDIO_INDEX_LOUNGE;
+        EN1701A::sbAudioIndex = AUDIO_INDEX_BTS6;
         playFile();
-        delay(200);
         break;
       case PIN_C_BUTTON: //MODE UP
         //add button press
         EN1701A::buttonPressed = 0;
-        EN1701A::sbAudioIndex = AUDIO_INDEX_BTS6;
-        playFile();
         switchConsoleMode(MODE_HELM);
         break;
       case PIN_D_BUTTON: //auto destruct ENGAGED
-        //add button press
         EN1701A::buttonPressed = 0;
-        EN1701A::sbAudioIndex = AUDIO_INDEX_DSTRT;
+        EN1701A::sbAudioIndex = AUDIO_INDEX_BTS6;
         playFile();
-        delay(200);
         break;
-
       case PIN_E_BUTTON:   //PI message
         EN1701A::buttonPressed = 0;
-        EN1701A::sbAudioIndex = AUDIO_INDEX_P1_MESSAGE;
+        EN1701A::sbAudioIndex = AUDIO_INDEX_BTS6;
         playFile();
-        delay(200);
         break;
       case PIN_F_BUTTON: //THEME
         EN1701A::buttonPressed = 0;
-        EN1701A::sbAudioIndex = AUDIO_INDEX_LOUNGE;  //add correct theme
+        EN1701A::sbAudioIndex = AUDIO_INDEX_BTS6;
         playFile();
-        delay(200);
         break;
       case PIN_G_BUTTON: //mode down
         //add button press
         EN1701A::buttonPressed = 0;
-        EN1701A::sbAudioIndex = AUDIO_INDEX_BTS6;
-        playFile();
-        switchConsoleMode(MODE_TRANSPORTER);
+        switchConsoleMode(MODE_ENGINEERING);
         break;
       case PIN_H_BUTTON:  //??
         EN1701A::buttonPressed = 0;
@@ -238,18 +251,9 @@ void ShipOperations_MK2::ApplyShipLogic() {
       case PIN_A_BUTTON:
         EN1701A::buttonPressed = 0;
         if ( EN1701A::b_power_cycle) { //shutdown
-          EN1701A::b_power_cycle = false;
-          Serial.write(SERIAL_COMM_POWER_OFF);
           EN1701A::sbAudioIndex = AUDIO_INDEX_POWER_DOWN;
           clearAll();
           playFile();
-
-          if (EN1701A::b_warp_mode_on){
-            Serial.write(SERIAL_COMM_STOP_WARP_DRIVE);
-          }
-
-          Serial.write(SERIAL_COMM_RED_ALERT_OFF);
-          setImpulseLevel(stop_impulse);
 
           delay(500);
 
@@ -282,7 +286,6 @@ void ShipOperations_MK2::ApplyShipLogic() {
           setTargetColor(SERIAL_COMM_CRYSTAL_COLOR, colorWhite);
         }
         else {
-          clearAll();
           Serial.write(SERIAL_COMM_POWER_ON);
           EN1701A::sbAudioIndex = AUDIO_INDEX_POWER_UP;
           EN1701A::b_power_cycle = true;
@@ -329,6 +332,7 @@ void ShipOperations_MK2::ApplyShipLogic() {
           EN1701A::sbAudioIndex = AUDIO_INDEX_WARP_UP;
           playFile();
           Serial.write(SERIAL_COMM_INCREASE_WARP_DRIVE);
+          EN1701A::b_warp_engine_on = true;
         }
         else {  //impulse
           EN1701A::sbAudioIndex = AUDIO_INDEX_WARP_UP;
@@ -341,7 +345,7 @@ void ShipOperations_MK2::ApplyShipLogic() {
         EN1701A::buttonPressed = 0;
         EN1701A::sbAudioIndex = AUDIO_INDEX_BTS6;
         playFile();
-        switchConsoleMode(MODE_TRANSPORTER);
+        switchConsoleMode(MODE_ENGINEERING);
         break;
 
       case PIN_D_BUTTON: //phaser
@@ -371,13 +375,17 @@ void ShipOperations_MK2::ApplyShipLogic() {
           setTargetColor(SERIAL_COMM_DEFLECTOR_COLOR, colorAmber);
           setTargetColor(SERIAL_COMM_CRYSTAL_COLOR, colorAmber);
           setImpulseLevel(half_impulse);
-          Serial.write(SERIAL_COMM_STOP_WARP_DRIVE);
+          if (EN1701A::b_warp_engine_on){
+            Serial.write(SERIAL_COMM_STOP_WARP_DRIVE);
+            EN1701A::b_warp_engine_on = false;
+          }
         }
         else {
           setTargetColor(SERIAL_COMM_DEFLECTOR_COLOR, colorBlue);
           setTargetColor(SERIAL_COMM_CRYSTAL_COLOR, colorBlue);
           setImpulseLevel(stop_impulse);
-          Serial.write(SERIAL_COMM_START_WARP_DRIVE);
+          //Serial.write(SERIAL_COMM_START_WARP_DRIVE);
+          //EN1701A::b_warp_engine_on = true;
         }
         EN1701A::b_warp_mode_on = !EN1701A::b_warp_mode_on;
         break;
@@ -400,7 +408,7 @@ void ShipOperations_MK2::ApplyShipLogic() {
         EN1701A::buttonPressed = 0;
         EN1701A::sbAudioIndex = AUDIO_INDEX_BTS6;
         playFile();
-        switchConsoleMode(MODE_COMMUNICATIONS);
+        switchConsoleMode(MODE_AUX_CONTROL);
         break;
 
       case PIN_H_BUTTON: //torpedos
@@ -502,10 +510,10 @@ void ShipOperations_MK2::audioCheck() {
          case MODE_HELM:
            EN1701A::sbAudioIndex = AUDIO_INDEX_POWER_CONTINUE;
            break;
-         case MODE_COMMUNICATIONS:
-           EN1701A::sbAudioIndex = AUDIO_INDEX_POWER_CONTINUE;
+         case MODE_AUX_CONTROL:
+           EN1701A::sbAudioIndex = AUDIO_INDEX_AUXCONTROL_CONTINUE;
            break;
-         case MODE_TRANSPORTER:
+         case MODE_ENGINEERING:
            EN1701A::sbAudioIndex = AUDIO_INDEX_MODE_T_BACKGROUND;
            break;
          default:

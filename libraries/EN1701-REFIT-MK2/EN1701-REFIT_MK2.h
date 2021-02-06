@@ -5,8 +5,8 @@
 #include "SERIAL_COMM_MK2.h"
 
 #define MODE_HELM 1
-#define MODE_COMMUNICATIONS 2
-#define MODE_TRANSPORTER 3
+#define MODE_AUX_CONTROL 2
+#define MODE_ENGINEERING 3
 
 /*This set maps bits in an unsigned int to
 an illuminated control section of the ship*/
@@ -54,19 +54,27 @@ an illuminated control section of the ship*/
 #define AUDIO_INDEX_BTS5 12
 #define AUDIO_INDEX_BTS6 13
 #define AUDIO_INDEX_POWER_DOWN 18
-#define AUDIO_INDEX_POWER_CONTINUE 17
-#define AUDIO_INDEX_POWER_UP 16
+
 #define AUDIO_INDEX_WARP_DOWN 15
 #define AUDIO_INDEX_WARP_UP 14
 #define AUDIO_INDEX_LOUNGE 19
-#define AUDIO_INDEX_MODE_T_BACKGROUND 20
+
 #define AUDIO_INDEX_MODE_T_LONG_TRANSPORT 21
 #define AUDIO_INDEX_MODE_T_SHORT_TRANSPORT 22
 #define AUDIO_INDEX_MODE_T_BUTTON 23
 
+#define AUDIO_INDEX_POWER_UP 16    //"PUP1A.WAV"
+#define AUDIO_INDEX_POWER_CONTINUE 17 //PUP1B.WAV
+#define AUDIO_INDEX_MODE_T_BACKGROUND 20 //TBGND.WAV
+
+#define AUDIO_INDEX_TLIFT_AUXCONTROL 24
+#define AUDIO_INDEX_AUXCONTROL_CONTINUE 25
+#define AUDIO_INDEX_TLIFT_BRIDGE 26
+#define AUDIO_INDEX_TLIFT_ENGINEERING 27
+
 //#define PIN_IR_RECEIVER 11
 
-static char* scAudioEffects[]={(char*)"KLAX.WAV", (char*)"P1MSG.WAV", (char*)"TORP1.WAV", (char*)"SPZER1.WAV", (char*)"BPD1.WAV", (char*)"BPUP1.WAV", (char*)"DSTRT.WAV", (char*)"HULHIT.WAV", (char*)"BTS1.WAV", (char*)"BTS2.WAV", (char*)"BTS3.WAV", (char*)"BT4.WAV", (char*)"BT5.WAV", (char*)"BT6.WAV", (char*)"WACC1.WAV", (char*)"WDCELL1.WAV", (char*)"PUP1A.WAV", (char*)"PUP1B.WAV", (char*)"PD1.WAV", (char*)"LMIX.WAV", (char*)"TBGND.WAV", (char*)"TBBO.WAV", (char*)"TLBO.WAV", (char*)"TBTN.WAV"};
+static char* scAudioEffects[]={(char*)"KLAX.WAV", (char*)"P1MSG.WAV", (char*)"TORP1.WAV", (char*)"SPZER1.WAV", (char*)"BPD1.WAV", (char*)"BPUP1.WAV", (char*)"DSTRT.WAV", (char*)"HULHIT.WAV", (char*)"BTS1.WAV", (char*)"BTS2.WAV", (char*)"BTS3.WAV", (char*)"BT4.WAV", (char*)"BT5.WAV", (char*)"BT6.WAV", (char*)"WACC1.WAV", (char*)"WDCELL1.WAV", (char*)"PUP1A.WAV", (char*)"PUP1B.WAV", (char*)"PD1.WAV", (char*)"LMIX.WAV", (char*)"TBGND.WAV", (char*)"TBBO.WAV", (char*)"TLBO.WAV", (char*)"TBTN.WAV", (char*)"TLAXA.WAV", (char*)"TLAXB.WAV", (char*)"TLBDG.WAV", (char*)"TLENG.WAV"};
 
 static byte colorWhite[] = {10, 10, 10};
 static byte colorAmber[] = {250, 69, 0};
@@ -77,6 +85,7 @@ class EN1701A
 {
   public:
     volatile static boolean buttonInterrupt;
+    volatile static boolean b_warp_engine_on;
     volatile static boolean b_warp_mode_on;
     volatile static boolean b_red_alert_on;
     volatile static boolean b_phaser_on;

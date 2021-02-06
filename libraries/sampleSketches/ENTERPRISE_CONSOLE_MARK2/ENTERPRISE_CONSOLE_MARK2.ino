@@ -20,6 +20,7 @@ volatile boolean        EN1701A::console_light_state = false;
 volatile byte           EN1701A::buttonPressed = 0;
 volatile boolean        EN1701A::buttonInterrupt = false;
 volatile boolean        EN1701A::b_warp_mode_on = false;
+volatile boolean        EN1701A::b_warp_engine_on = false;
 volatile boolean        EN1701A::b_red_alert_on = false;
 volatile boolean        EN1701A::b_phaser_on = false;
 volatile boolean        EN1701A::b_power_cycle = false;
@@ -51,7 +52,7 @@ SIGNAL(TIMER0_COMPA_vect)
     pShipOperations->audioCheck();
   }
 
-  if ( EN1701A::console_mode == MODE_COMMUNICATIONS ){
+  if ( EN1701A::console_mode == MODE_AUX_CONTROL ){
     if (currentMillis - mode2_previousMillis >= CONSOLE_MODE_SINGLE_PERIOD) {
       mode2_previousMillis = currentMillis;
       pShipOperations->switchConsoleLight(!(EN1701A::console_light_state));
@@ -59,7 +60,7 @@ SIGNAL(TIMER0_COMPA_vect)
     return;
   }
 
-  if ( EN1701A::console_mode == MODE_TRANSPORTER ){
+  if ( EN1701A::console_mode == MODE_ENGINEERING ){
     if (currentMillis - mode3_previousMillis >= CONSOLE_MODE_DOUBLE_PERIOD) {
       mode3_previousMillis = currentMillis;
       pShipOperations->switchConsoleLight(!(EN1701A::console_light_state));
