@@ -68,6 +68,13 @@ byte impulseLevelSignal[] = {SERIAL_COMM_IMPULSE_DRIVE, 0};
 
 byte torpedo_tube = PIN_PHOTON_TORPEDO_1;
 
+void enablePinInterupt(byte pin)
+{
+    *digitalPinToPCMSK(pin) |= bit (digitalPinToPCMSKbit(pin));  // enable pin
+    PCIFR  |= bit (digitalPinToPCICRbit(pin)); // clear any outstanding interrupt
+    PCICR  |= bit (digitalPinToPCICRbit(pin)); // enable interrupt for the group
+}
+
 void setup() {
   //pinMode(PIN_SR_ENABLE, OUTPUT);
   //digitalWrite(PIN_SR_ENABLE,HIGH);
