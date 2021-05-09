@@ -3,6 +3,7 @@
 
 volatile unsigned long flasherPreviousMillis = 0;
 volatile bool bPowerOn = false;
+
 uint8_t currentBright = 0;
 
 //timer constants
