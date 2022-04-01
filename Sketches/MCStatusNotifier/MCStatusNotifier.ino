@@ -1,10 +1,13 @@
 
 #include <WiFi.h>
-#include "types.h"
+//#include "types.h";
 #include "TinyGPS++.h";
 #include "HardwareSerial.h";
 #include <Wire.h>
 #include <Adafruit_NeoPixel.h>
+#include <Adafruit_MPU6050.h>
+#include <Adafruit_Sensor.h>
+
 
 //#include "SSD1306.h"
 
@@ -13,22 +16,11 @@
 const char* ssid     = "JeffreysHotspot";
 const char* password = "JeffreyRocks01";
 
+unsigned long lastWifiPoll = 0;
+unsigned long pollWifiLimit = 3000;
 
-unsigned long previousMillis = 0;
-unsigned long interval = 30000;
-
-void initWiFi() {
-  //WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
-  Serial.print("Connecting to WiFi ..");
-  while (WiFi.status() != WL_CONNECTED) {
-    Serial.print('.');
-    delay(1000);
-  }
-  Serial.println(WiFi.localIP());
-
-  updateWifiStatusLeds();
-}
+unsigned long lastGPSPoll = 0;
+unsigned long pollGPSLimit = 3000;
 
 //---------------------------------------
 //GPS Globals
@@ -73,22 +65,20 @@ const long teal = 65536/2;
 const long green = 65536/3;
 const long yellow = 65536/6;*/
 
-
-
 enum GPS_STATUS {
   GPS_DISCONNECTED,
   GPS_CONNECTED_NO_DATA,
   GPS_CONNECTED
 };
 
-enum WIFI_STATUS {
-   WIFI_DISCONNECTED,
-   WIFI_CONNECTED 
-};
+//enum WIFI_STATUS {
+//   WL_CONNECTED,
+//   WIFI_CONNECTED 
+//};
 
 typedef struct{
-     GPS_STATUS gps_status = GPS_DISCONNECTED;
-     WIFI_STATUS wifi_status = WIFI_DISCONNECTED;
+   GPS_STATUS gps_status = GPS_DISCONNECTED;
+   uint8_t wifi_status = WL_DISCONNECTED;
 } TRACKER_STATUS;
 
 TRACKER_STATUS tracker_status;
@@ -163,29 +153,12 @@ void IRAM_ATTR buttonPress() {
   button_5.onButtonChangeDown();
 }
 
-
 //---------------------------------------
 
 void setup() {
 
   Serial.begin(115200); //Serial port of USB
   delay(10);
-    /*Serial.println();
-    Serial.println();
-    Serial.print("Connecting to ");
-    Serial.println(ssid);
-
-    WiFi.begin(ssid, password);
-
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(1000);
-        Serial.print(".");
-    }
-
-    Serial.println("");
-    Serial.println("WiFi connected.");
-    Serial.println("IP address: ");
-    Serial.println(WiFi.localIP());*/
   
   pinMode(BUTTON_PIN_INTERRUPT, INPUT_PULLUP);
   attachInterrupt(BUTTON_PIN_INTERRUPT, buttonPress, FALLING);
@@ -195,59 +168,75 @@ void setup() {
   pinMode(button_3.getPIN(), INPUT_PULLUP);
   pinMode(button_4.getPIN(), INPUT_PULLUP);
   pinMode(button_5.getPIN(), INPUT_PULLUP);
+
+  initializeLEDs();
   
   SerialGPS.begin(9600, SERIAL_8N1, 16, 17);
-  strip.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
-  initializeLEDs();
-
-  initWiFi();   
-  Serial.print("RRSI: ");
-  Serial.println(WiFi.RSSI());
+  lastGPSPoll = millis() + 1500;
+  initWiFi();
+  lastWifiPoll = millis();
 }
 
 void initializeLEDs(){
-
-    for (int nPix = 0; nPix < LED_COUNT; nPix++){
-      strip.setPixelColor(LED_GPS_STATUS, 200, 0, 0);
-    } //end for
-    
-    strip.show(); // Update strip with new contents
+  strip.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
+  for (uint8_t nPix = 0; nPix < LED_COUNT; nPix++){
+    strip.setPixelColor(0, 200, 0, 0);
+  } //end for
+  strip.show(); // Update strip with new contents
 }
 
+void initWiFi() {
+
+  uint8_t wifiAttemptLimit = 7;
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+  Serial.print("Connecting to WiFi ..");
+
+  tracker_status.wifi_status = WiFi.status();
+  while ((tracker_status.wifi_status != WL_CONNECTED) && (wifiAttemptLimit-- > 0)) {
+    Serial.print('.');
+    delay(1000);
+  }
+
+  if ( tracker_status.wifi_status == WL_CONNECTED){
+    Serial.println("WiFi connected.");
+    Serial.println("IP address: ");
+    Serial.println(WiFi.localIP());
+  }
+  else {
+    Serial.println("Wifi failed to connect to "); 
+    Serial.print(ssid);
+  }
+    
+  updateWifiStatusLeds();
+}
 
 void checkWifiStatus() {
-    unsigned long currentMillis = millis();
 
+    tracker_status.wifi_status = WiFi.status();
+  
     if (WiFi.status() != WL_CONNECTED) {
-      if (currentMillis - previousMillis >=interval) {
-   
-        //Serial.print(millis());
         Serial.println("Reconnecting to WiFi...");
         WiFi.disconnect();
         WiFi.reconnect();
-        previousMillis = currentMillis;
-        tracker_status.wifi_status = WIFI_DISCONNECTED;
-      }
+        tracker_status.wifi_status = WiFi.status();
    }
-   else {
-     tracker_status.wifi_status = WIFI_CONNECTED;
-   }
-
    updateWifiStatusLeds();
 }
 
 void updateWifiStatusLeds() {
   switch (tracker_status.wifi_status) {
-     case WIFI_DISCONNECTED:
+     case WL_DISCONNECTED:
        //strip.setPixelColor(LED_GPS_STATUS, strip.gamma32(strip.ColorHSV(red, 255, 120)));
        strip.setPixelColor(LED_WIFI_STATUS, 200, 0, 0);
-
        break;
-     case WIFI_CONNECTED:
+     case WL_CONNECTED:
        //strip.setPixelColor(LED_GPS_STATUS, strip.gamma32(strip.ColorHSV(green, 255, 120)));
        strip.setPixelColor(LED_WIFI_STATUS, 0, 200, 0);
        break;
      default:
+       strip.setPixelColor(LED_WIFI_STATUS, 0, 0, 200);
        break;
   }
 
@@ -257,6 +246,7 @@ void updateWifiStatusLeds() {
 void checkGPSStatus() {
 
    bool gpsDataReady = false;
+   static uint8_t gpsDataFails = 0;
     
    while (SerialGPS.available() > 0){
      gps.encode(SerialGPS.read());
@@ -271,6 +261,8 @@ void checkGPSStatus() {
      dAltitude = gps.altitude.meters();
      mNumSat = gps.satellites.value();
 
+      gpsDataFails = 0;
+
      if ((dLatitude == 0) || dLongitude == 0) {
        tracker_status.gps_status = GPS_CONNECTED_NO_DATA;
      }
@@ -278,8 +270,9 @@ void checkGPSStatus() {
        tracker_status.gps_status = GPS_CONNECTED;
      }
    } 
-   else {
-    // tracker_status.gps_status = GPS_DISCONNECTED;
+   else if (gpsDataFails++ > 1){
+     tracker_status.gps_status = GPS_DISCONNECTED;
+     gpsDataFails = 0;
    }
 
    updateGPSStatusLeds();
@@ -301,27 +294,134 @@ void updateGPSStatusLeds() {
        strip.setPixelColor(LED_GPS_STATUS, 0, 200, 0);
        break;
      default:
+       strip.setPixelColor(LED_GPS_STATUS, 200,0,0);
        break;
   }
 
   strip.show();
 }
 
+void gpsLogDump(){
+  if (gps.location.isUpdated()){
+    Serial.print(F("LOCATION   Fix Age="));
+    Serial.print(gps.location.age());
+    Serial.print(F("ms Raw Lat="));
+    Serial.print(gps.location.rawLat().negative ? "-" : "+");
+    Serial.print(gps.location.rawLat().deg);
+    Serial.print("[+");
+    Serial.print(gps.location.rawLat().billionths);
+    Serial.print(F(" billionths],  Raw Long="));
+    Serial.print(gps.location.rawLng().negative ? "-" : "+");
+    Serial.print(gps.location.rawLng().deg);
+    Serial.print("[+");
+    Serial.print(gps.location.rawLng().billionths);
+    Serial.print(F(" billionths],  Lat="));
+    Serial.print(gps.location.lat(), 6);
+    Serial.print(F(" Long="));
+    Serial.println(gps.location.lng(), 6);
+  }
+  else if (gps.date.isUpdated()){
+    Serial.print(F("DATE       Fix Age="));
+    Serial.print(gps.date.age());
+    Serial.print(F("ms Raw="));
+    Serial.print(gps.date.value());
+    Serial.print(F(" Year="));
+    Serial.print(gps.date.year());
+    Serial.print(F(" Month="));
+    Serial.print(gps.date.month());
+    Serial.print(F(" Day="));
+    Serial.println(gps.date.day());
+  }
+  else if (gps.time.isUpdated()){
+    Serial.print(F("TIME       Fix Age="));
+    Serial.print(gps.time.age());
+    Serial.print(F("ms Raw="));
+    Serial.print(gps.time.value());
+    Serial.print(F(" Hour="));
+    Serial.print(gps.time.hour());
+    Serial.print(F(" Minute="));
+    Serial.print(gps.time.minute());
+    Serial.print(F(" Second="));
+    Serial.print(gps.time.second());
+    Serial.print(F(" Hundredths="));
+    Serial.println(gps.time.centisecond());
+  }
+  else if (gps.speed.isUpdated()){
+    Serial.print(F("SPEED      Fix Age="));
+    Serial.print(gps.speed.age());
+    Serial.print(F("ms Raw="));
+    Serial.print(gps.speed.value());
+    Serial.print(F(" Knots="));
+    Serial.print(gps.speed.knots());
+    Serial.print(F(" MPH="));
+    Serial.print(gps.speed.mph());
+    Serial.print(F(" m/s="));
+    Serial.print(gps.speed.mps());
+    Serial.print(F(" km/h="));
+    Serial.println(gps.speed.kmph());
+  }
+  else if (gps.course.isUpdated()){
+    Serial.print(F("COURSE     Fix Age="));
+    Serial.print(gps.course.age());
+    Serial.print(F("ms Raw="));
+    Serial.print(gps.course.value());
+    Serial.print(F(" Deg="));
+    Serial.println(gps.course.deg());
+  }
+  else if (gps.altitude.isUpdated()){
+    Serial.print(F("ALTITUDE   Fix Age="));
+    Serial.print(gps.altitude.age());
+    Serial.print(F("ms Raw="));
+    Serial.print(gps.altitude.value());
+    Serial.print(F(" Meters="));
+    Serial.print(gps.altitude.meters());
+    Serial.print(F(" Miles="));
+    Serial.print(gps.altitude.miles());
+    Serial.print(F(" KM="));
+    Serial.print(gps.altitude.kilometers());
+    Serial.print(F(" Feet="));
+    Serial.println(gps.altitude.feet());
+  }
+  else if (gps.satellites.isUpdated()){
+    Serial.print(F("SATELLITES Fix Age="));
+    Serial.print(gps.satellites.age());
+    Serial.print(F("ms Value="));
+    Serial.println(gps.satellites.value());
+  }
+  else if (gps.hdop.isUpdated()){
+    Serial.print(F("HDOP       Fix Age="));
+    Serial.print(gps.hdop.age());
+    Serial.print(F("ms raw="));
+    Serial.print(gps.hdop.value());
+    Serial.print(F(" hdop="));
+    Serial.println(gps.hdop.hdop());
+  }  
+}
+
 void loop() {
 
-   checkWifiStatus();
-   checkGPSStatus();
+    if (millis() > (lastWifiPoll + pollWifiLimit)) {
+      checkWifiStatus();
+      lastWifiPoll = millis();
+    }
+
+    
+    if (millis() > (lastGPSPoll + pollGPSLimit)) {
+      checkGPSStatus();
+      lastGPSPoll = millis();
+    }
  
-   if (button_1.readButtonState()) {
+   if (button_1.readButtonState()) { //Panic Button
      Serial.print("LAT="); Serial.println(dLatitude, 6);
      Serial.print("LONG="); Serial.println(dLongitude, 6);
      Serial.print("ALT="); Serial.println(dAltitude, 2);
      Serial.print("Sats="); Serial.println(mNumSat);
    }
-   else if (button_2.readButtonState()) {
+   else if (button_2.readButtonState()) { //All clear Button
      Serial.println("button 2 pressed");
    }
    else if (button_3.readButtonState()) {
+     gpsLogDump();
      Serial.println("button 3 pressed");
    }
    else if (button_4.readButtonState()) {
@@ -330,6 +430,4 @@ void loop() {
    else if (button_5.readButtonState()) {
      Serial.println("button 5 pressed");
    }
-
-   //updateStatusLeds();
 }
