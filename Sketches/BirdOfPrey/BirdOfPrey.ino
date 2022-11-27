@@ -1,9 +1,6 @@
 #include "Arduino.h"
 #include <PinChangeInt.h>
 
-
-ksnbvksdjbvskdjv
-
 volatile unsigned long flasherPreviousMillis = 0;
 volatile bool bPowerOn = false;
 
@@ -14,18 +11,21 @@ uint8_t currentBright = 0;
 #define flashTimeOn 10
 #define flashTimeOff 11
 
-#define PIN_FLOODS 6 //analog
-#define PIN_NACELLES 9 //analog
-#define PIN_ENGINE 10 //analog
-#define PIN_PLASMA_CANNON 11 //analog
-#define PIN_BEACONS 12
-#define PIN_NAVIGATION_FLASHER 13
+#define PIN_ENG_1 3 //analog
+#define PIN_ENG_2 5 //analog
+#define PIN_NAV_LIGHTS 4 //analog
+#define PIN_BUZZARDS 6 //analog
+#define PIN_PLASMA_CANNON 9
+#define PIN_WING_FLOOD_PORT 10 //analog
+#define PIN_WING_FLOOD_STARBOARD 11 //analog
+#define PIN_HANGER 12
 
-#define BUTTON_PIN_1 5
-#define BUTTON_PIN_2 4
-#define BUTTON_PIN_INTERRUPT 3
+#define BUTTON_PIN_1 14
+#define BUTTON_PIN_2 15
+#define BUTTON_PIN_3 16
+#define BUTTON_PIN_4 17
 
-class jButton {
+/*class jButton {
   public:
     jButton(uint8_t pin) {
       PIN=pin;
@@ -66,33 +66,48 @@ class jButton {
     volatile bool resetOnRead = true;
 }; //class jButton
 
+void enablePinInterupt(byte pin)  //is this required?   Not sure..  try without
+{
+    *digitalPinToPCMSK(pin) |= bit (digitalPinToPCMSKbit(pin));  // enable pin
+    PCIFR  |= bit (digitalPinToPCICRbit(pin)); // clear any outstanding interrupt
+    PCICR  |= bit (digitalPinToPCICRbit(pin)); // enable interrupt for the group
+}
+
 jButton button_1(BUTTON_PIN_1);
 jButton button_2(BUTTON_PIN_2);
 
 void buttonPress() {
   button_1.onButtonChangeDown();
   button_2.onButtonChangeDown();
-}
+)
+*/
 
 void setup() {    
   Serial.begin(9600);
-  pinMode(PIN_NAVIGATION_FLASHER, OUTPUT);   
-  pinMode(PIN_BEACONS, OUTPUT);
-  pinMode(PIN_ENGINE, OUTPUT);   
-  pinMode(PIN_FLOODS, OUTPUT); 
-  pinMode(PIN_PLASMA_CANNON, OUTPUT);
-  digitalWrite(PIN_NAVIGATION_FLASHER, LOW);
-  digitalWrite(PIN_BEACONS, LOW);
-  digitalWrite(PIN_ENGINE, LOW);
-  digitalWrite(PIN_FLOODS, LOW);
-  digitalWrite(PIN_PLASMA_CANNON, LOW);
 
-  pinMode(BUTTON_PIN_INTERRUPT, INPUT_PULLUP);
-  //enablePinInterupt(BUTTON_PIN_INTERRUPT);
+  pinMode(PIN_ENG_1, OUTPUT);   
+  pinMode(PIN_ENG_2, OUTPUT);
+  pinMode(PIN_NAV_LIGHTS, OUTPUT);   
+  pinMode(PIN_BUZZARDS, OUTPUT); 
+  pinMode(PIN_PLASMA_CANNON, OUTPUT);
+  pinMode(PIN_WING_FLOOD_PORT, OUTPUT); 
+  pinMode(PIN_WING_FLOOD_STARBOARD, OUTPUT);
+  pinMode(PIN_HANGER, OUTPUT);
+  
+  digitalWrite(PIN_ENG_1, LOW);
+  digitalWrite(PIN_ENG_2, LOW);
+  digitalWrite(PIN_NAV_LIGHTS, LOW);
+  digitalWrite(PIN_BUZZARDS, LOW);
+  digitalWrite(PIN_PLASMA_CANNON, LOW);
+  digitalWrite(PIN_WING_FLOOD_PORT, LOW);
+  digitalWrite(PIN_WING_FLOOD_STARBOARD, LOW);
+  digitalWrite(PIN_HANGER, LOW);
+  
+  /*pinMode(BUTTON_PIN_INTERRUPT, INPUT_PULLUP);
   PCintPort::attachInterrupt(BUTTON_PIN_INTERRUPT, buttonPress, FALLING);
 
   pinMode(button_1.getPIN(), INPUT_PULLUP);
-  pinMode(button_2.getPIN(), INPUT_PULLUP);
+  pinMode(button_2.getPIN(), INPUT_PULLUP);*/
   
   OCR0A = 0xAF;
   TIMSK0 |= _BV(OCIE0A);
@@ -107,19 +122,12 @@ SIGNAL(TIMER0_COMPA_vect)
   if (currentMillis - flasherPreviousMillis >= RECEIVER_INTERRUPT_FREQ_FLASHER) {  //execute any timed operations every INTERRRUPT FREQ ms
     // save the last time you did a repeatable item clear
     flasherPreviousMillis = currentMillis;
-    updateNavBeacon();
   } //end if timer
 } 
 
-void enablePinInterupt(byte pin)
-{
-    *digitalPinToPCMSK(pin) |= bit (digitalPinToPCMSKbit(pin));  // enable pin
-    PCIFR  |= bit (digitalPinToPCICRbit(pin)); // clear any outstanding interrupt
-    PCICR  |= bit (digitalPinToPCICRbit(pin)); // enable interrupt for the group
-}
 
 void startUp() {
-  digitalWrite(PIN_BEACONS, HIGH);
+ /* digitalWrite(PIN_BEACONS, HIGH);
 
   for (int brightness=15; brightness<=255; brightness+=1){
       analogWrite(PIN_NACELLES, brightness);
@@ -134,11 +142,11 @@ void startUp() {
   for (int brightness=0; brightness<=200; brightness+=1){
       analogWrite(PIN_FLOODS, brightness);
       delay(5);
-  }   
+  }   */
 }
 
 void shutDown() {
-  digitalWrite(PIN_BEACONS, LOW);
+  /*digitalWrite(PIN_BEACONS, LOW);
   delay(1000);
 
   for (int brightness=200; brightness>=0; brightness-=1){
@@ -154,11 +162,11 @@ void shutDown() {
   for (int brightness=255; brightness>=5; brightness-=1){
       analogWrite(PIN_NACELLES, brightness);
       delay(10);
-  }   
+  }   */
 
 }
 
-void updateNavBeacon(){
+/*void updateNavBeacon(){
 
   static volatile byte bCounter=0;
   static volatile boolean bFlasherOn=false;
@@ -178,17 +186,17 @@ void updateNavBeacon(){
     }  
     bCounter++; 
   }
-}
+}*/
 
 void enablePlasmaCannon( uint8_t maxBright, uint8_t loopDelay ){
-   for (currentBright; currentBright<=maxBright; currentBright+=1){
+   for (currentBright; currentBright<maxBright; currentBright+=1){
       analogWrite(PIN_PLASMA_CANNON, currentBright);
       delay(loopDelay);
    }   
 }
 
 void disablePlasmaCannon (uint8_t minBright, uint8_t loopDelay){
-   for (currentBright; currentBright>=minBright; currentBright-=1){
+   for (currentBright; currentBright>minBright; currentBright-=1){
       analogWrite(PIN_PLASMA_CANNON, currentBright);
       delay(loopDelay);
    }  
@@ -202,7 +210,7 @@ void firePlasmaCannon(){
 }
 
 void loop() {
-   if (button_1.readButtonState()) { //Power Button
+   /*if (button_1.readButtonState()) { //Power Button
 
      if (bPowerOn == false) {
        bPowerOn = true;
@@ -216,5 +224,9 @@ void loop() {
    else if (button_2.readButtonState()) { //fire plasma 
      //Serial.println("BUTTON2");
      firePlasmaCannon();
-   }
+   }*/
+
+   enablePlasmaCannon(255, 10);
+   disablePlasmaCannon(0, 10);
+   
 }
