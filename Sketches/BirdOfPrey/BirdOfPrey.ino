@@ -1,15 +1,12 @@
 #include "Arduino.h"
-#include <PinChangeInt.h>
+//#include <PinChangeInt.h>
 
-volatile unsigned long flasherPreviousMillis = 0;
 volatile bool bPowerOn = false;
 
-uint8_t currentBright = 0;
-
 //timer constants
-#define RECEIVER_INTERRUPT_FREQ_FLASHER 100 //ms
-#define flashTimeOn 10
-#define flashTimeOff 11
+//#define RECEIVER_INTERRUPT_FREQ_FLASHER 100 //ms
+//#define flashTimeOn 10
+//#define flashTimeOff 11
 
 #define PIN_ENG_1 3 //analog
 #define PIN_ENG_2 5 //analog
@@ -23,12 +20,143 @@ uint8_t currentBright = 0;
 #define BUTTON_PIN_1 14
 #define BUTTON_PIN_2 15
 #define BUTTON_PIN_3 16
-#define BUTTON_PIN_4 17
+#define INTERRUPT_PIN 17
 
-/*class jButton {
+
+
+class timedOutputPinHandler {
+    
+  private:
+  bool rising = true;
+  uint8_t executionCount = 1;
+  uint8_t executionCountLimit = 1;
+  
+  public: 
+  uint8_t maxLimit = 255;
+  uint8_t minLimit = 0;
+ 
+  uint8_t currentOutputValue = 0;
+  uint8_t PIN = 0;
+     
+  timedOutputPinHandler(uint8_t pin, uint8_t initialValue, uint8_t minlimit, uint8_t maxlimit, uint8_t executioncountlimit){
+     PIN=pin;
+     pinMode(PIN, OUTPUT); 
+     digitalWrite(PIN, LOW);
+     currentOutputValue = initialValue;
+     minLimit=minlimit;
+     maxLimit=maxlimit;
+     executionCountLimit = executioncountlimit;
+  }
+
+  uint8_t getValue(){
+    return currentOutputValue;
+  }
+
+  uint8_t getPIN() {
+    return PIN;
+  }
+
+  void setMaxLimit(uint8_t maxlimit) {
+    maxLimit = maxlimit;
+  }
+
+  void setMinLimit(uint8_t minlimit){
+    minLimit=minlimit;
+  }
+  
+  void setExecutionCountLimit(uint8_t limit) {
+    executionCountLimit = limit;
+  }
+  
+  virtual void timedAction() {
+    if (executionCount < executionCountLimit) {
+      executionCount++;
+      return;
+    }
+    else {
+      executionCount=1;
+    }
+    
+    if ( rising ) {
+      if (currentOutputValue < maxLimit  ){
+        currentOutputValue++;
+        analogWrite(PIN, currentOutputValue);
+      }
+      else {
+        rising=!rising;
+      }
+    }
+    else {
+      if (currentOutputValue > minLimit  ){
+        currentOutputValue--;
+        analogWrite(PIN, currentOutputValue);
+      }
+      else {
+        rising=!rising;
+      }      
+    }    
+  }
+};
+
+class WarpEngine : timedOutputPinHandler{
+   private:
+     bool rising = true;
+      
+   public:
+     WarpEngine(uint8_t pin, uint8_t initialValue, uint8_t minlimit, uint8_t maxlimit, uint8_t maxcount) : timedOutputPinHandler(pin, initialValue, minlimit, maxlimit, maxcount) {
+     }
+
+   void timedAction() {
+      timedOutputPinHandler::timedAction();
+   }
+};
+
+class plasmaCannon : timedOutputPinHandler{
+   private:
+     bool rising = true;
+      
+   public:
+     plasmaCannon(uint8_t pin, uint8_t initialValue, uint8_t minlimit, uint8_t maxlimit, uint8_t maxcount) : timedOutputPinHandler(pin, initialValue, minlimit, maxlimit, maxcount) {
+     }
+
+   void timedAction() {
+      timedOutputPinHandler::timedAction();
+   }
+};
+
+class pinInterrupt {
+  private:
+    uint8_t PIN = 0;
+    
+  public:
+    void *pHandler = 0;
+  
+    pinInterrupt(uint8_t pin) {
+      PIN=pin;
+      pinMode(PIN, INPUT_PULLUP);
+      //pHandler = handler;
+
+      *digitalPinToPCMSK(pin) |= bit (digitalPinToPCMSKbit(PIN));  // enable pin
+      PCIFR  |= bit (digitalPinToPCICRbit(PIN)); // clear any outstanding interrupt
+      PCICR  |= bit (digitalPinToPCICRbit(PIN)); // enable interrupt for the group
+
+      //PCintPort::attachInterrupt(PIN, pHandler, FALLING);
+    }
+};
+
+class jButton {
+    
+  private:
+    volatile uint8_t PIN = 0;
+    volatile unsigned long buttonDebounceDelay = 250;
+    volatile unsigned long debounceTarget = 0;
+    volatile bool pressed = false;
+    volatile bool resetOnRead = true;
+
   public:
     jButton(uint8_t pin) {
       PIN=pin;
+      pinMode(PIN, INPUT_PULLUP);
     }
 
     virtual volatile bool readButtonState(){
@@ -57,74 +185,71 @@ uint8_t currentBright = 0;
     virtual volatile uint8_t getPIN() {
       return PIN;
     }
-  
-  private:
-    volatile uint8_t PIN = 0;
-    volatile unsigned long buttonDebounceDelay = 250;
-    volatile unsigned long debounceTarget = 0;
-    volatile bool pressed = false;
-    volatile bool resetOnRead = true;
 }; //class jButton
 
-void enablePinInterupt(byte pin)  //is this required?   Not sure..  try without
-{
-    *digitalPinToPCMSK(pin) |= bit (digitalPinToPCMSKbit(pin));  // enable pin
-    PCIFR  |= bit (digitalPinToPCICRbit(pin)); // clear any outstanding interrupt
-    PCICR  |= bit (digitalPinToPCICRbit(pin)); // enable interrupt for the group
-}
+plasmaCannon mCannon(PIN_PLASMA_CANNON,50,10,100,12);
+WarpEngine mOuterEngine(PIN_ENG_1,1,25,150,6);
+WarpEngine mInnerEngine(PIN_ENG_2,150,25,150,6);
 
 jButton button_1(BUTTON_PIN_1);
 jButton button_2(BUTTON_PIN_2);
-
-void buttonPress() {
-  button_1.onButtonChangeDown();
-  button_2.onButtonChangeDown();
-)
-*/
+jButton button_3(BUTTON_PIN_3);
+pinInterrupt button_trigger(INTERRUPT_PIN);
 
 void setup() {    
   Serial.begin(9600);
 
-  pinMode(PIN_ENG_1, OUTPUT);   
-  pinMode(PIN_ENG_2, OUTPUT);
   pinMode(PIN_NAV_LIGHTS, OUTPUT);   
   pinMode(PIN_BUZZARDS, OUTPUT); 
-  pinMode(PIN_PLASMA_CANNON, OUTPUT);
   pinMode(PIN_WING_FLOOD_PORT, OUTPUT); 
   pinMode(PIN_WING_FLOOD_STARBOARD, OUTPUT);
   pinMode(PIN_HANGER, OUTPUT);
   
-  digitalWrite(PIN_ENG_1, LOW);
-  digitalWrite(PIN_ENG_2, LOW);
   digitalWrite(PIN_NAV_LIGHTS, LOW);
   digitalWrite(PIN_BUZZARDS, LOW);
-  digitalWrite(PIN_PLASMA_CANNON, LOW);
   digitalWrite(PIN_WING_FLOOD_PORT, LOW);
   digitalWrite(PIN_WING_FLOOD_STARBOARD, LOW);
   digitalWrite(PIN_HANGER, LOW);
   
-  /*pinMode(BUTTON_PIN_INTERRUPT, INPUT_PULLUP);
-  PCintPort::attachInterrupt(BUTTON_PIN_INTERRUPT, buttonPress, FALLING);
-
-  pinMode(button_1.getPIN(), INPUT_PULLUP);
-  pinMode(button_2.getPIN(), INPUT_PULLUP);*/
-  
+  //interrupt time0 roughly halfway throuh 
   OCR0A = 0xAF;
   TIMSK0 |= _BV(OCIE0A);
+  
+  //pinMode(INTERRUPT_PIN, INPUT_PULLUP);
+  //  *digitalPinToPCMSK(INTERRUPT_PIN) |= bit (digitalPinToPCMSKbit(INTERRUPT_PIN));  // enable pin
+  //  PCIFR  |= bit (digitalPinToPCICRbit(INTERRUPT_PIN)); // clear any outstanding interrupt
+  //  PCICR  |= bit (digitalPinToPCICRbit(INTERRUPT_PIN)); // enable interrupt for the group
+  //PCintPort::attachInterrupt(INTERRUPT_PIN, buttonPress, FALLING);
+}//end setup
 
-  enablePlasmaCannon(5, 50);
-}
-
-SIGNAL(TIMER0_COMPA_vect) 
+SIGNAL(TIMER0_COMPA_vect) //handler for timed interrupts
 {
-  unsigned long currentMillis = millis();
-
-  if (currentMillis - flasherPreviousMillis >= RECEIVER_INTERRUPT_FREQ_FLASHER) {  //execute any timed operations every INTERRRUPT FREQ ms
-    // save the last time you did a repeatable item clear
-    flasherPreviousMillis = currentMillis;
-  } //end if timer
+  mCannon.timedAction();
+  mOuterEngine.timedAction();
+  mInnerEngine.timedAction();
 } 
 
+ISR (PCINT0_vect) // handle pin change interrupt for D8 to D13 here
+{    
+  // if I wired up D8-D13 then I'd need some code here
+} 
+
+ISR (PCINT1_vect) // handle pin change interrupt for A0 to A5 here // NAV0
+{
+  // check it was NAV0 and nothing else
+}
+
+ISR (PCINT2_vect) // handle pin change interrupt for D0 to D7 here // NAV1, NAV2
+{
+  // Check it was NAV1 or NAV2 and nothing else
+}
+
+
+void buttonPress() {
+  button_1.onButtonChangeDown();
+  button_2.onButtonChangeDown();
+  button_3.onButtonChangeDown();
+}
 
 void startUp() {
  /* digitalWrite(PIN_BEACONS, HIGH);
@@ -188,45 +313,8 @@ void shutDown() {
   }
 }*/
 
-void enablePlasmaCannon( uint8_t maxBright, uint8_t loopDelay ){
-   for (currentBright; currentBright<maxBright; currentBright+=1){
-      analogWrite(PIN_PLASMA_CANNON, currentBright);
-      delay(loopDelay);
-   }   
-}
 
-void disablePlasmaCannon (uint8_t minBright, uint8_t loopDelay){
-   for (currentBright; currentBright>minBright; currentBright-=1){
-      analogWrite(PIN_PLASMA_CANNON, currentBright);
-      delay(loopDelay);
-   }  
-}
-
-void firePlasmaCannon(){
-   enablePlasmaCannon(30, 50);
-   digitalWrite(PIN_PLASMA_CANNON, HIGH);
-   delay(100);
-   disablePlasmaCannon(1,25);
-}
 
 void loop() {
-   /*if (button_1.readButtonState()) { //Power Button
-
-     if (bPowerOn == false) {
-       bPowerOn = true;
-       startUp();
-     } 
-     else {
-       bPowerOn = false;
-       shutDown();
-     }
-   }
-   else if (button_2.readButtonState()) { //fire plasma 
-     //Serial.println("BUTTON2");
-     firePlasmaCannon();
-   }*/
-
-   enablePlasmaCannon(255, 10);
-   disablePlasmaCannon(0, 10);
    
 }

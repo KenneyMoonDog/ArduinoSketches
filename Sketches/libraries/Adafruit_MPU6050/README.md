@@ -22,17 +22,20 @@ To install, use the Arduino Library Manager and search for "Adafruit MPU6050" an
 
 # Contributing
 
-Contributions are welcome! Please read our [Code of Conduct](https://github.com/adafruit/Adafruit_MPU6050/blob/master/CODE_OF_CONDUCT.md>)
+Contributions are welcome! Please read our [Code of Conduct](https://github.com/adafruit/Adafruit_MPU6050/blob/master/code-of-conduct.md)
 before contributing to help this project stay welcoming.
 
 ## Documentation and doxygen
+
+[Documentation on Github pages](https://adafruit.github.io/Adafruit_MPU6050/html/class_adafruit___m_p_u6050.html)
+
 Documentation is produced by doxygen. Contributions should include documentation for any new code added.
 
 Some examples of how to use doxygen can be found in these guide pages:
 
-https://learn.adafruit.com/the-well-automated-arduino-library/doxygen
+[About Doxygen](https://learn.adafruit.com/the-well-automated-arduino-library/doxygen)
 
-https://learn.adafruit.com/the-well-automated-arduino-library/doxygen-tips
+[Doxygen Tips](https://learn.adafruit.com/the-well-automated-arduino-library/doxygen-tips)
 
 ## Formatting and clang-format
 This library uses [`clang-format`](https://releases.llvm.org/download.html) to standardize the formatting of `.cpp` and `.h` files.

@@ -17,6 +17,7 @@ IMAP_MSG_List   KEYWORD1
 SelectedFolderInfo  KEYWORD1
 ESP_Mail_Session    KEYWORD1
 smtpStatusCallback  KEYWORD1
+imapResponseCallback    KEYWORD1
 SMTP_Attachment KEYWORD1
 SMTP_Result KEYWORD1
 IMAP_MSG_Item   KEYWORD1
@@ -28,12 +29,18 @@ MessageList   KEYWORD1
 ###############################################
 
 sendMail    KEYWORD2
+appendMessage   KEYWORD2
 readMail    KEYWORD2
 setFlag KEYWORD2
 addFlag KEYWORD2
 removeFlag  KEYWORD2
+networkReconnect    KEYWORD2
 sdBegin KEYWORD2
+sdMMCBegin  KEYWORD2
+getFreeHeap KEYWORD2
 connect KEYWORD2
+connected   KEYWORD2
+customConnect   KEYWORD2
 closeSession    KEYWORD2
 debug   KEYWORD2
 getFolders  KEYWORD2
@@ -71,7 +78,9 @@ getItem KEYWORD2
 size    KEYWORD2
 flagCount   KEYWORD2
 msgCount    KEYWORD2
+recentCount KEYWORD2
 nextUID KEYWORD2
+pollingStatus   KEYWORD2
 searchCount KEYWORD2
 availableMessages   KEYWORD2
 flag    KEYWORD2
@@ -94,33 +103,73 @@ getCurrentTimestamp KEYWORD2
 getTimeFromSec  KEYWORD2
 getDateTimeString   KEYWORD2
 copyMessages    KEYWORD2
+moveMessages    KEYWORD2
 deleteMessages  KEYWORD2
+getQuota    KEYWORD2
+setQuota    KEYWORD2
+getQuotaRoot    KEYWORD2
+getACL  KEYWORD2
+setACL  KEYWORD2
+deleteACL   KEYWORD2
+myRights    KEYWORD2
+enable  KEYWORD2
+getNamespace    KEYWORD2
 createFolder    KEYWORD2
+renameFolder    KEYWORD2
+getSubscribesMailboxes  KEYWORD2
+subscribe   KEYWORD2
+unSubscribe KEYWORD2
 deleteFolder    KEYWORD2
+listen  KEYWORD2
+stopListen  KEYWORD2
+folderChanged   KEYWORD2
+sendCustomCommand   KEYWORD2
+sendCustomData  KEYWORD2
+toBase64    KEYWORD2
+getFlags    KEYWORD2
+getUID  KEYWORD2
+setClient   KEYWORD2
+connectionRequestCallback   KEYWORD2
+connectionUpgradeRequestCallback    KEYWORD2
+networkConnectionRequestCallback    KEYWORD2
+networkDisconnectionRequestCallback KEYWORD2
+networkStatusRequestCallback    KEYWORD2
+setSystemTime   KEYWORD2
+mimeDataStreamCallback  KEYWORD2
+characterDecodingCallback   KEYWORD2
 
 
 #######################################
-# Struct (LITERAL1)
+# Struct (KEYWORD3)
 #######################################
 
-esp_mail_email_info_t   LITERAL1
-esp_mail_plain_body_t   LITERAL1
-esp_mail_html_body_t    LITERAL1
-esp_mail_smtp_msg_response_t    LITERAL1
-esp_mail_smtp_enable_option_t   LITERAL1
-esp_mail_email_info_t   LITERAL1
-esp_mail_folder_info_item_t LITERAL1
-esp_mail_sesson_sever_config_t  LITERAL1
-esp_mail_sesson_login_config_t  LITERAL1
-esp_mail_sesson_secure_config_t LITERAL1
-esp_mail_sesson_cert_config_t   LITERAL1
-esp_mail_imap_fetch_config_t    LITERAL1
-esp_mail_imap_search_config_t   LITERAL1
-esp_mail_imap_limit_config_t    LITERAL1
-esp_mail_imap_enable_config_t   LITERAL1
-esp_mail_imap_download_config_t LITERAL1
-esp_mail_imap_storage_config_t  LITERAL1
+esp_mail_email_info_t   KEYWORD3
+esp_mail_plain_body_t   KEYWORD3
+esp_mail_html_body_t    KEYWORD3
+esp_mail_smtp_msg_response_t    KEYWORD3
+esp_mail_smtp_enable_option_t   KEYWORD3
+esp_mail_email_info_t   KEYWORD3
+esp_mail_folder_info_item_t KEYWORD3
+esp_mail_sesson_sever_config_t  KEYWORD3
+esp_mail_sesson_login_config_t  KEYWORD3
+esp_mail_sesson_secure_config_t KEYWORD3
+esp_mail_sesson_cert_config_t   KEYWORD3
+esp_mail_imap_fetch_config_t    KEYWORD3
+esp_mail_imap_search_config_t   KEYWORD3
+esp_mail_imap_limit_config_t    KEYWORD3
+esp_mail_imap_enable_config_t   KEYWORD3
+esp_mail_imap_download_config_t KEYWORD3
+esp_mail_imap_storage_config_t  KEYWORD3
+esp_mail_imap_polling_status_t  KEYWORD3
+IMAP_Polling_Status KEYWORD3
 
-esp_mail_file_storage_type_none LITERAL1
-esp_mail_file_storage_type_flash    LITERAL1
-esp_mail_file_storage_type_sd   LITERAL1
+
+esp_mail_file_storage_type_none KEYWORD3
+esp_mail_file_storage_type_flash    KEYWORD3
+esp_mail_file_storage_type_sd   KEYWORD3
+
+######################################
+# Constants (LITERAL1)
+#######################################
+
+ESP_MAIL_PRINTF LITERAL1

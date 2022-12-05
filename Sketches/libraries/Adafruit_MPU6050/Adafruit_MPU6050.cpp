@@ -75,9 +75,17 @@ bool Adafruit_MPU6050::begin(uint8_t i2c_address, TwoWire *wire,
 
   i2c_dev = new Adafruit_I2CDevice(i2c_address, wire);
 
-  if (!i2c_dev->begin()) {
-    return false;
+  // For boards with I2C bus power control, may need to delay to allow
+  // MPU6050 to come up after initial power.
+  bool mpu_found = false;
+  for (uint8_t tries = 0; tries < 5; tries++) {
+    mpu_found = i2c_dev->begin();
+    if (mpu_found)
+      break;
+    delay(10);
   }
+  if (!mpu_found)
+    return false;
 
   Adafruit_BusIO_Register chip_id =
       Adafruit_BusIO_Register(i2c_dev, MPU6050_WHO_AM_I, 1);
@@ -337,6 +345,36 @@ void Adafruit_MPU6050::setFilterBandwidth(mpu6050_bandwidth_t bandwidth) {
 
 /**************************************************************************/
 /*!
+ *     @brief  Gets bandwidth of the Digital High Pass Filter
+ *     @return  The current `mpu6050_highpass_t` filter bandwidth
+ */
+/**************************************************************************/
+mpu6050_highpass_t Adafruit_MPU6050::getHighPassFilter(void) {
+  Adafruit_BusIO_Register config =
+      Adafruit_BusIO_Register(i2c_dev, MPU6050_ACCEL_CONFIG, 1);
+
+  Adafruit_BusIO_RegisterBits filter_config =
+      Adafruit_BusIO_RegisterBits(&config, 3, 0);
+  return (mpu6050_highpass_t)filter_config.read();
+}
+
+/**************************************************************************/
+/*!
+ *    @brief Sets the bandwidth of the Digital High-Pass Filter
+ *    @param bandwidth the new `mpu6050_highpass_t` bandwidth
+ */
+/**************************************************************************/
+void Adafruit_MPU6050::setHighPassFilter(mpu6050_highpass_t bandwidth) {
+  Adafruit_BusIO_Register config =
+      Adafruit_BusIO_Register(i2c_dev, MPU6050_ACCEL_CONFIG, 1);
+
+  Adafruit_BusIO_RegisterBits filter_config =
+      Adafruit_BusIO_RegisterBits(&config, 3, 0);
+  filter_config.write(bandwidth);
+}
+
+/**************************************************************************/
+/*!
 *     @brief  Sets the polarity of the INT pin when active
 *     @param  active_low
               If `true` the pin will be low when an interrupt is active
@@ -349,6 +387,77 @@ void Adafruit_MPU6050::setInterruptPinPolarity(bool active_low) {
   Adafruit_BusIO_RegisterBits int_level =
       Adafruit_BusIO_RegisterBits(&int_pin_config, 1, 7);
   int_level.write(active_low);
+}
+
+/**************************************************************************/
+/*!
+*     @brief  Sets the latch behavior of the INT pin when active
+*     @param  held
+              If `true` the pin will remain held until cleared
+              If `false` the pin will reset after a 50us pulse
+*/
+/**************************************************************************/
+void Adafruit_MPU6050::setInterruptPinLatch(bool held) {
+  Adafruit_BusIO_Register int_pin_config =
+      Adafruit_BusIO_Register(i2c_dev, MPU6050_INT_PIN_CONFIG, 1);
+  Adafruit_BusIO_RegisterBits int_latch =
+      Adafruit_BusIO_RegisterBits(&int_pin_config, 1, 5);
+  int_latch.write(held);
+}
+
+/**************************************************************************/
+/*!
+*     @brief  Sets the motion interrupt
+*     @param  active
+              If `true` motion interrupt will activate based on thr and dur
+              If `false` motion interrupt will be disabled
+*/
+/**************************************************************************/
+void Adafruit_MPU6050::setMotionInterrupt(bool active) {
+  Adafruit_BusIO_Register int_enable =
+      Adafruit_BusIO_Register(i2c_dev, MPU6050_INT_ENABLE, 1);
+  Adafruit_BusIO_RegisterBits int_motion =
+      Adafruit_BusIO_RegisterBits(&int_enable, 1, 6);
+  int_motion.write(active);
+}
+
+/**************************************************************************/
+/*!
+ *     @brief  Gets motion interrupt status
+ *     @return  motion_interrupt
+ */
+/**************************************************************************/
+bool Adafruit_MPU6050::getMotionInterruptStatus(void) {
+  Adafruit_BusIO_Register status =
+      Adafruit_BusIO_Register(i2c_dev, MPU6050_INT_STATUS, 1);
+
+  Adafruit_BusIO_RegisterBits motion =
+      Adafruit_BusIO_RegisterBits(&status, 1, 6);
+  return (bool)motion.read();
+}
+
+/**************************************************************************/
+/*!
+ *     @brief  Sets the motion detection threshold
+ *     @param  thr
+ */
+/**************************************************************************/
+void Adafruit_MPU6050::setMotionDetectionThreshold(uint8_t thr) {
+  Adafruit_BusIO_Register threshold =
+      Adafruit_BusIO_Register(i2c_dev, MPU6050_MOT_THR, 1);
+  threshold.write(thr);
+}
+
+/**************************************************************************/
+/*!
+ *     @brief  Sets the motion detection duration
+ *     @param  dur
+ */
+/**************************************************************************/
+void Adafruit_MPU6050::setMotionDetectionDuration(uint8_t dur) {
+  Adafruit_BusIO_Register duration =
+      Adafruit_BusIO_Register(i2c_dev, MPU6050_MOT_DUR, 1);
+  duration.write(dur);
 }
 
 /**************************************************************************/
@@ -448,6 +557,77 @@ void Adafruit_MPU6050::setCycleRate(mpu6050_cycle_rate_t rate) {
   Adafruit_BusIO_RegisterBits cycle_rate =
       Adafruit_BusIO_RegisterBits(&pwr_mgmt_2, 2, 6);
   cycle_rate.write(rate);
+}
+
+/**************************************************************************/
+/*!
+ *     @brief  Sets standbye mode for each of the gyroscope axes.
+ *     @param  xAxisStandby
+ *             If `true` the gyroscope stops sensing in the X-axis.
+ *             Setting `false` resumes X-axis sensing.
+ *     @param  yAxisStandby
+ *             If `true` the gyroscope stops sensing in the Y-axis.
+ *             Setting `false` resumes Y-axis sensing.
+ *     @param  zAxisStandby
+ *             If `true` the gyroscope stops sensing in the Z-axis.
+ *             Setting `false` resumes Z-axis sensing.
+ *     @return True if setting was successful, otherwise false.
+ */
+/**************************************************************************/
+bool Adafruit_MPU6050::setGyroStandby(bool xAxisStandby, bool yAxisStandby,
+                                      bool zAxisStandby) {
+  Adafruit_BusIO_Register pwr_mgmt_2 =
+      Adafruit_BusIO_Register(i2c_dev, MPU6050_PWR_MGMT_2, 1);
+
+  Adafruit_BusIO_RegisterBits gyro_stdby =
+      Adafruit_BusIO_RegisterBits(&pwr_mgmt_2, 3, 0);
+  return gyro_stdby.write(xAxisStandby << 2 | yAxisStandby << 1 | zAxisStandby);
+}
+
+/**************************************************************************/
+/*!
+ *     @brief  Sets standbye mode for each of the accelerometer axes.
+ *     @param  xAxisStandby
+ *             If `true` the accelerometer stops sensing in the X-axis.
+ *             Setting `false` resumes X-axis sensing.
+ *     @param  yAxisStandby
+ *             If `true` the accelerometer stops sensing in the Y-axis.
+ *             Setting `false` resumes Y-axis sensing.
+ *     @param  zAxisStandby
+ *             If `true` the accelerometer stops sensing in the Z-axis.
+ *             Setting `false` resumes Z-axis sensing.
+ *     @return True if setting was successful, otherwise false.
+ */
+/**************************************************************************/
+bool Adafruit_MPU6050::setAccelerometerStandby(bool xAxisStandby,
+                                               bool yAxisStandby,
+                                               bool zAxisStandby) {
+  Adafruit_BusIO_Register pwr_mgmt_2 =
+      Adafruit_BusIO_Register(i2c_dev, MPU6050_PWR_MGMT_2, 1);
+
+  Adafruit_BusIO_RegisterBits accel_stdby =
+      Adafruit_BusIO_RegisterBits(&pwr_mgmt_2, 3, 3);
+  return accel_stdby.write(xAxisStandby << 2 | yAxisStandby << 1 |
+                           zAxisStandby);
+}
+
+/**************************************************************************/
+/*!
+ *     @brief  Sets disable mode for thermometer sensor.
+ *     @param  enable
+ *             If `true` the temperature sensor will stop taking measurements.
+ *             Setting `false` returns the temperature sensor to the normal
+ *             measurement mode.
+ *     @return True if setting was successful, otherwise false.
+ */
+/**************************************************************************/
+bool Adafruit_MPU6050::setTemperatureStandby(bool enable) {
+  Adafruit_BusIO_Register pwr_mgmt =
+      Adafruit_BusIO_Register(i2c_dev, MPU6050_PWR_MGMT_1, 1);
+
+  Adafruit_BusIO_RegisterBits temp_stdby =
+      Adafruit_BusIO_RegisterBits(&pwr_mgmt, 1, 3);
+  return temp_stdby.write(enable);
 }
 
 /******************* Adafruit_Sensor functions *****************/

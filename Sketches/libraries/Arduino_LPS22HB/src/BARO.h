@@ -37,6 +37,7 @@ public:
   void end();
 
   float readPressure(int units = KILOPASCAL);
+  float readTemperature(void);
 
 private:
   int i2cRead(uint8_t reg);
@@ -44,6 +45,7 @@ private:
 
 private:
   TwoWire* _wire;
+  bool _initialized;
 };
 
 extern LPS22HBClass BARO;
