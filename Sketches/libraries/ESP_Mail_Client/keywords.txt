@@ -11,11 +11,13 @@ IMAPSession KEYWORD1
 SMTPSession KEYWORD1
 SMTP_Message    KEYWORD1
 IMAP_Config KEYWORD1
+IMAP_Data   KEYWORD2
 FoldersCollection   KEYWORD1
 imapStatusCallback  KEYWORD1
 IMAP_MSG_List   KEYWORD1
 SelectedFolderInfo  KEYWORD1
 ESP_Mail_Session    KEYWORD1
+Session_Config  KEYWORD1
 smtpStatusCallback  KEYWORD1
 imapResponseCallback    KEYWORD1
 SMTP_Attachment KEYWORD1
@@ -39,6 +41,10 @@ sdBegin KEYWORD2
 sdMMCBegin  KEYWORD2
 getFreeHeap KEYWORD2
 connect KEYWORD2
+loginWithPassword   KEYWORD2
+loginWithAccessToken    KEYWORD2
+isAuthenticated KEYWORD2
+isLoggedIn  KEYWORD2
 connected   KEYWORD2
 customConnect   KEYWORD2
 closeSession    KEYWORD2
@@ -52,6 +58,9 @@ headerOnly  KEYWORD2
 data    KEYWORD2
 selectedFolder  KEYWORD2
 errorReason KEYWORD2
+statusCode  KEYWORD2
+statusMessage   KEYWORD2
+errorCode   KEYWORD2
 empty   KEYWORD2
 resetAttachItem KEYWORD2
 clear   KEYWORD2
@@ -137,7 +146,13 @@ networkStatusRequestCallback    KEYWORD2
 setSystemTime   KEYWORD2
 mimeDataStreamCallback  KEYWORD2
 characterDecodingCallback   KEYWORD2
-
+clearAP KEYWORD2
+addAP   KEYWORD2
+isFirmwareUpdated   KEYWORD2
+id  KEYWORD2
+serverID    KEYWORD2
+fileList    KEYWORD2
+status  KEYWORD2
 
 #######################################
 # Struct (KEYWORD3)
@@ -162,7 +177,7 @@ esp_mail_imap_download_config_t KEYWORD3
 esp_mail_imap_storage_config_t  KEYWORD3
 esp_mail_imap_polling_status_t  KEYWORD3
 IMAP_Polling_Status KEYWORD3
-
+IMAP_Identification KEYWORD3
 
 esp_mail_file_storage_type_none KEYWORD3
 esp_mail_file_storage_type_flash    KEYWORD3

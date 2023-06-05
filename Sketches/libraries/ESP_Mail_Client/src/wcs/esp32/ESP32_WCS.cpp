@@ -1,10 +1,10 @@
 /*
- * ESP32 WiFi Client Secure v2.0.0
+ * ESP32 WiFi Client Secure v2.0.3
  *
- * Created July 20, 2022
+ * Created March 20, 2023
  *
  * The MIT License (MIT)
- * Copyright (c) 2022 K. Suwatchai (Mobizt)
+ * Copyright (c) 2023 K. Suwatchai (Mobizt)
  *
  *
  *
@@ -49,7 +49,9 @@
 #ifndef ESP32_WCS_CPP
 #define ESP32_WCS_CPP
 
-#ifdef ESP32
+#include <Arduino.h>
+#include "ESP_Mail_FS.h"
+#if defined(ESP32) && (defined(ENABLE_SMTP) || defined(ENABLE_IMAP))
 
 #include "ESP32_WCS.h"
 #include <lwip/sockets.h>
@@ -84,6 +86,7 @@ ESP32_WCS::~ESP32_WCS()
     if (_client && _use_internal_basic_client)
     {
         delete _client;
+        _client = nullptr;
         _ssl->client = nullptr;
         _use_internal_basic_client = false;
     }
@@ -176,6 +179,8 @@ int ESP32_WCS::_connect(const char *host, uint16_t port)
 #if defined(ENABLE_CUSTOM_CLIENT)
     if (connection_cb)
         connection_cb(host, port);
+    else
+        _ssl->client->connect(host, port);
 #else
     _ssl->client->connect(host, port);
 #endif
@@ -218,7 +223,9 @@ int ESP32_WCS::connect(const char *host, uint16_t port, const char *CA_cert, con
     _lastError = ret;
     if (ret < 0)
     {
+#if !defined(SILENT_MODE)
         log_e("ESP32_WCS Error: upgrade connection, %d", ret);
+#endif
         stop();
         return 0;
     }
@@ -236,7 +243,9 @@ int ESP32_WCS::connect(const char *host, uint16_t port, const char *pskIdent, co
 
     _withKey = true;
 
+#if !defined(SILENT_MODE)
     log_v("ESP32_WCS connect with PSK");
+#endif
 
     if (!_connect(host, port))
         return 0;
@@ -259,7 +268,10 @@ int ESP32_WCS::connect(const char *host, uint16_t port, const char *pskIdent, co
     _lastError = ret;
     if (ret < 0)
     {
+
+#if !defined(SILENT_MODE)
         log_e("ESP32_WCS Error: upgrade connection, %d", ret);
+#endif
         stop();
         return 0;
     }
@@ -273,7 +285,6 @@ bool ESP32_WCS::connectSSL(bool verify)
     if (!_ssl->client || !_ssl->client->connected())
         return false;
 
-
     setVerify(verify);
 
     int ret = 0;
@@ -285,7 +296,10 @@ bool ESP32_WCS::connectSSL(bool verify)
     _lastError = ret;
     if (ret < 0)
     {
+
+#if !defined(SILENT_MODE)
         log_e("ESP32_WCS Error: upgrade connection, %d", ret);
+#endif
         stop();
         return 0;
     }

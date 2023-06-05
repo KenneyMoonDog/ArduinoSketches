@@ -1,9 +1,14 @@
-// Created November 26, 2022
+// Created April 15, 2022
 
 #pragma once
 
 #ifndef ESP_MAIL_CONST_H
 #define ESP_MAIL_CONST_H
+
+#include "ESP_Mail_Client_Version.h"
+#if !VALID_VERSION_CHECK(30110)
+#error "Mixed versions compilation."
+#endif
 
 #include "ESP_Mail_FS.h"
 #include "ESP_Mail_Error.h"
@@ -17,7 +22,29 @@
 #include <algorithm>
 #endif
 
+#if defined(MB_ARDUINO_PICO)
+#if __has_include(<WiFiMulti.h>)
+#define HAS_WIFIMULTI
+#endif
+#endif
+
 #include "extras/MB_List.h"
+#include "extras/SDK_Version_Common.h"
+
+#if defined(ESP8266)
+#if __has_include(<core_esp8266_version.h>)
+#include <core_esp8266_version.h>
+#endif
+#endif
+
+#if defined(ENABLE_IMAP) && (defined(ESP32) || defined(ESP8266) || defined(MB_ARDUINO_PICO))
+#if defined(ESP32)
+#include <Update.h>
+#elif defined(ESP8266) || defined(MB_ARDUINO_PICO)
+#include <Updater.h>
+#endif
+#define ESP_MAIL_OTA_UPDATE_ENABLED
+#endif
 
 #if defined(ENABLE_SMTP) || defined(ENABLE_IMAP)
 
@@ -34,6 +61,7 @@
 
 #endif
 
+/* The filesystem types enum */
 enum esp_mail_file_storage_type
 {
     esp_mail_file_storage_type_none,
@@ -47,6 +75,406 @@ using namespace mb_string;
 
 typedef void (*NetworkConnectionHandler)(void);
 
+/* The file types enum */
+enum esp_mail_file_extension
+{
+    /** The arrangement is related to mimeinfo struct.
+     *  Do not modify or remove.
+     */
+    esp_mail_file_extension_html,
+    esp_mail_file_extension_htm,
+    esp_mail_file_extension_css,
+    esp_mail_file_extension_txt,
+    esp_mail_file_extension_js,
+    esp_mail_file_extension_json,
+    esp_mail_file_extension_png,
+    esp_mail_file_extension_gif,
+    esp_mail_file_extension_jpg,
+    esp_mail_file_extension_ico,
+    esp_mail_file_extension_svg,
+    esp_mail_file_extension_ttf,
+    esp_mail_file_extension_otf,
+    esp_mail_file_extension_woff,
+    esp_mail_file_extension_woff2,
+    esp_mail_file_extension_eot,
+    esp_mail_file_extension_sfnt,
+    esp_mail_file_extension_xml,
+    esp_mail_file_extension_pdf,
+    esp_mail_file_extension_zip,
+    esp_mail_file_extension_gz,
+    esp_mail_file_extension_appcache,
+    esp_mail_file_extension_dat,
+    esp_mail_file_extension_binary,
+    esp_mail_file_extension_maxType
+};
+
+struct esp_mail_mime_prop_t
+{
+    char endsWith[10];
+    char mimeType[30];
+};
+
+const struct esp_mail_mime_prop_t mimeinfo[esp_mail_file_extension_maxType] PROGMEM = {
+    /** The arrangement is related to esp_mail_file_extension enum.
+     *  Do not modify or remove.
+     */
+    {".html", "text/html"},
+    {".htm", "text/html"},
+    {".css", "text/css"},
+    {".txt", "text/plain"},
+    {".js", "application/javascript"},
+    {".json", "application/json"},
+    {".png", "image/png"},
+    {".gif", "image/gif"},
+    {".jpg", "image/jpeg"},
+    {".ico", "image/x-icon"},
+    {".svg", "image/svg+xml"},
+    {".ttf", "application/x-font-ttf"},
+    {".otf", "application/x-font-opentype"},
+    {".woff", "application/font-woff"},
+    {".woff2", "application/font-woff2"},
+    {".eot", "application/vnd.ms-fontobject"},
+    {".sfnt", "application/font-sfnt"},
+    {".xml", "text/xml"},
+    {".pdf", "application/pdf"},
+    {".zip", "application/zip"},
+    {".gz", "application/x-gzip"},
+    {".appcache", "text/cache-manifest"},
+    {".dat", "application/dat"},
+    {"", "application/octet-stream"}};
+
+#if defined(ENABLE_SMTP)
+
+/* The SMTP commands types enum */
+enum esp_mail_smtp_command_types
+{
+    /** The SMTP commands per stansards.
+     *  The arrangement is related to smtp_commands struct.
+     *  Do not modify or remove.
+     */
+    esp_mail_smtp_command_auth,
+    esp_mail_smtp_command_login,
+    esp_mail_smtp_command_helo,
+    esp_mail_smtp_command_ehlo,
+    esp_mail_smtp_command_quit,
+    esp_mail_smtp_command_mail,
+    esp_mail_smtp_command_rcpt,
+    esp_mail_smtp_command_data,
+    esp_mail_smtp_command_bdat,
+    esp_mail_smtp_command_last,
+    esp_mail_smtp_command_plain,
+    esp_mail_smtp_command_from,
+    esp_mail_smtp_command_to,
+    esp_mail_smtp_command_notify,
+    esp_mail_smtp_command_success,
+    esp_mail_smtp_command_failure,
+    esp_mail_smtp_command_delay,
+    esp_mail_smtp_command_body,
+    esp_mail_smtp_command_terminate,
+    esp_mail_smtp_command_starttls,
+    esp_mail_smtp_command_maxType
+};
+
+/* The SMTP server capability types enum (except for SASL) */
+enum esp_mail_smtp_send_capability_types
+{
+    /** The server capability keywords per standard.
+     *  The arrangement is related to smtp_send_capabilities struct.
+     *  Do not modify or remove.
+     */
+    esp_mail_smtp_send_capability_binary_mime,
+    esp_mail_smtp_send_capability_8bit_mime,
+    esp_mail_smtp_send_capability_chunking,
+    esp_mail_smtp_send_capability_utf8,
+    esp_mail_smtp_send_capability_pipelining,
+    esp_mail_smtp_send_capability_dsn,
+    esp_mail_smtp_send_capability_esmtp,
+    esp_mail_smtp_send_capability_maxType
+};
+
+#endif
+
+#if defined(ENABLE_IMAP)
+
+/* The IMAP server response types enum */
+enum esp_mail_imap_response_types
+{
+    /** The IMAP response.
+     *  The arrangement is related to imap_responses struct.
+     *  Do not modify or remove.
+     */
+    esp_mail_imap_response_ok,
+    esp_mail_imap_response_no,
+    esp_mail_imap_response_bad,
+    esp_mail_imap_response_list,
+    esp_mail_imap_response_flags,
+    esp_mail_imap_response_search,
+    esp_mail_imap_response_fetch,
+    esp_mail_imap_response_nil,
+    esp_mail_imap_response_uid,
+    esp_mail_imap_response_capability_untagged,
+    esp_mail_imap_response_capability,
+    esp_mail_imap_response_lsub,
+    esp_mail_imap_response_quota,
+    esp_mail_imap_response_quotaroot,
+    esp_mail_imap_response_acl,
+    esp_mail_imap_response_myrights,
+    esp_mail_imap_response_namespace,
+    esp_mail_imap_response_untagged,
+    esp_mail_imap_response_exists,
+    esp_mail_imap_response_expunge,
+    esp_mail_imap_response_recent,
+    esp_mail_imap_response_uidnext,
+    esp_mail_imap_response_unseen,
+    esp_mail_imap_response_id,
+    esp_mail_imap_response_highest_modsec,
+    esp_mail_imap_response_nomodsec,
+    esp_mail_imap_response_permanent_flags,
+    esp_mail_imap_response_uidvalidity,
+    esp_mail_imap_response_maxType
+};
+
+/* The IMAP commands types enum */
+enum esp_mail_imap_command_types
+{
+    /** The IMAP commands per standards.
+     *  The arrangement is related to imap_commands struct.
+     *  Do not modify or remove.
+     */
+    esp_mail_imap_command_starttls,
+    esp_mail_imap_command_append,
+    esp_mail_imap_command_capability,
+    esp_mail_imap_command_authenticate,
+    esp_mail_imap_command_plain,
+    esp_mail_imap_command_uid,
+    esp_mail_imap_command_fetch,
+    esp_mail_imap_command_flags,
+    esp_mail_imap_command_login,
+    esp_mail_imap_command_list,
+    esp_mail_imap_command_examine,
+    esp_mail_imap_command_search,
+    esp_mail_imap_command_logout,
+    esp_mail_imap_command_body,
+    esp_mail_imap_command_mime,
+    esp_mail_imap_command_close,
+    esp_mail_imap_command_exists,
+    esp_mail_imap_command_peek,
+    esp_mail_imap_command_text,
+    esp_mail_imap_command_fields,
+    esp_mail_imap_command_header,
+    esp_mail_imap_command_new,
+    esp_mail_imap_command_all,
+    esp_mail_imap_command_select,
+    esp_mail_imap_command_expunge,
+    esp_mail_imap_command_create,
+    esp_mail_imap_command_delete,
+    esp_mail_imap_command_idle,
+    esp_mail_imap_command_done,
+    esp_mail_imap_command_recent,
+    esp_mail_imap_command_unseen,
+    esp_mail_imap_command_rename,
+    esp_mail_imap_command_lsub,
+    esp_mail_imap_command_subscribe,
+    esp_mail_imap_command_unsubscribe,
+    esp_mail_imap_command_silent,
+    esp_mail_imap_command_move,
+    esp_mail_imap_command_getquota,
+    esp_mail_imap_command_setquota,
+    esp_mail_imap_command_root,
+    esp_mail_imap_command_get_acl,
+    esp_mail_imap_command_set_acl,
+    esp_mail_imap_command_delete_acl,
+    esp_mail_imap_command_myrights,
+    esp_mail_imap_command_namespace,
+    esp_mail_imap_command_enable,
+    esp_mail_imap_command_xoauth2,
+    esp_mail_imap_command_store,
+    esp_mail_imap_command_plus_flags,
+    esp_mail_imap_command_minus_flags,
+    esp_mail_imap_command_copy,
+    esp_mail_imap_command_id,
+    esp_mail_imap_command_unselect,
+    esp_mail_imap_command_condstore,
+    esp_mail_imap_command_noop,
+    esp_mail_imap_command_unchangedsince,
+    esp_mail_imap_command_changedsince,
+    esp_mail_imap_command_modsec,
+    esp_mail_imap_command_maxType
+};
+
+/* The IMAP server capability types enum (except for SASL) */
+enum esp_mail_imap_read_capability_types
+{
+    /** The server capability keywords per standard.
+     *  The arrangement is related imap_read_capabilities struct.
+     *  Do not modify or remove.
+     */
+
+    esp_mail_imap_read_capability_imap4,
+    esp_mail_imap_read_capability_imap4rev1,
+    // rfc2177
+    esp_mail_imap_read_capability_idle,
+    esp_mail_imap_read_capability_literal_plus,
+    esp_mail_imap_read_capability_literal_minus,
+    esp_mail_imap_read_capability_multiappend,
+    esp_mail_imap_read_capability_uidplus,
+    // rfc4314
+    esp_mail_imap_read_capability_acl,
+    esp_mail_imap_read_capability_binary,
+    esp_mail_imap_read_capability_logindisable,
+    // rfc6851
+    esp_mail_imap_read_capability_move,
+    // rfc2087
+    esp_mail_imap_read_capability_quota,
+    // rfc2342
+    esp_mail_imap_read_capability_namespace,
+    // rfc5161
+    esp_mail_imap_read_capability_enable,
+    // rfc2971
+    esp_mail_imap_read_capability_id,
+    esp_mail_imap_read_capability_unselect,
+    esp_mail_imap_read_capability_children,
+    // rfc7162 (rfc4551 obsoleted)
+    esp_mail_imap_read_capability_condstore,
+    esp_mail_imap_read_capability_auto_caps,
+    esp_mail_imap_read_capability_maxType
+};
+
+/* The Identification keys enum used for IMAP ID command */
+enum esp_mail_imap_identification_keys
+{
+    /** The identification keys per standard.
+     *  The arrangement is related imap_identification_keys struct.
+     *  Do not modify or remove.
+     */
+
+    esp_mail_imap_identification_key_name,
+    esp_mail_imap_identification_key_version,
+    esp_mail_imap_identification_key_os,
+    esp_mail_imap_identification_key_os_version,
+    esp_mail_imap_identification_key_vendor,
+    esp_mail_imap_identification_key_support_url,
+    esp_mail_imap_identification_key_address,
+    esp_mail_imap_identification_key_date,
+    esp_mail_imap_identification_key_command,
+    esp_mail_imap_identification_key_arguments,
+    esp_mail_imap_identification_key_environment,
+    esp_mail_imap_identification_key_maxType
+};
+
+#endif
+
+/* The character encoding types enum used for decoding */
+enum esp_mail_char_decoding_types
+{
+    /** Supported charactor encodings.
+     *  The arrangement is related to char_decodings struct.
+     *  Do not modify or remove.
+     */
+    esp_mail_char_decoding_utf8,
+    esp_mail_char_decoding_iso_8859_1,
+    esp_mail_char_decoding_iso_8859_11,
+    esp_mail_char_decoding_tis_620,
+    esp_mail_char_decoding_windows_874,
+    esp_mail_char_decoding_maxType
+};
+
+/* The MIME multipart message types */
+enum esp_mail_multipart_types
+{
+    /** MultiPart MIME.
+     *  The arrangement is related to multipart_types struct.
+     *  Do not modify or remove.
+     */
+    esp_mail_multipart_type_mixed,
+    esp_mail_multipart_type_related,
+    esp_mail_multipart_type_parallel,
+    esp_mail_multipart_type_alternative,
+    esp_mail_multipart_maxType
+};
+
+/* The rfc822 message header fileds types enum */
+enum esp_mail_rfc822_header_field_types
+{
+    /** The rfc822 message header fields.
+     *  The arrangement is related to rfc822_headers struct.
+     *  Do not modify or remove.
+     */
+    esp_mail_rfc822_header_field_from,
+    esp_mail_rfc822_header_field_sender,
+    esp_mail_rfc822_header_field_to,
+    esp_mail_rfc822_header_field_cc,
+    esp_mail_rfc822_header_field_subject,
+    esp_mail_rfc822_header_field_date,
+    esp_mail_rfc822_header_field_msg_id,
+    esp_mail_rfc822_header_field_return_path,
+    esp_mail_rfc822_header_field_reply_to,
+    esp_mail_rfc822_header_field_in_reply_to,
+    esp_mail_rfc822_header_field_references,
+    esp_mail_rfc822_header_field_comments,
+    esp_mail_rfc822_header_field_keywords,
+    esp_mail_rfc822_header_field_bcc,
+    esp_mail_rfc822_header_field_flags,
+    esp_mail_rfc822_header_field_maxType
+};
+
+/* The message header fileds types enum and its subproperties enum */
+enum esp_mail_message_header_field_types
+{
+    /** Additional fields and props.
+     *  Some are used for the library information data field name.
+     *  The arrangement is related to message_headers struct.
+     *  Do not modify or remove.
+     */
+    esp_mail_message_header_field_number,
+    esp_mail_message_header_field_uid,
+    esp_mail_message_header_field_accept_language,
+    esp_mail_message_header_field_content_language,
+    esp_mail_message_header_field_filename,
+    esp_mail_message_header_field_name,
+    esp_mail_message_header_field_size,
+    esp_mail_message_header_field_mime,
+    esp_mail_message_header_field_type,
+    esp_mail_message_header_field_description,
+    esp_mail_message_header_field_creation_date,
+    esp_mail_message_header_field_x_priority,
+    esp_mail_message_header_field_x_msmail_priority,
+    esp_mail_message_header_field_importance,
+    esp_mail_message_header_field_content_type,
+    esp_mail_message_header_field_content_transfer_encoding,
+    esp_mail_message_header_field_content_disposition,
+    esp_mail_message_header_field_content_location,
+    esp_mail_message_header_field_content_id,
+    esp_mail_message_header_field_content_description,
+    esp_mail_message_header_field_mime_version,
+    esp_mail_message_header_field_charset,
+    esp_mail_message_header_field_format,
+    esp_mail_message_header_field_delsp,
+    esp_mail_message_header_field_modification_date,
+    esp_mail_message_header_field_maxType
+};
+
+/* The auth capability types enum which shared usage between SMTP and IMAP */
+enum esp_mail_auth_capability_types
+{
+    /** The server capability keywords per standard.
+     *  The arrangement is related to smtp_auth_capabilities and imap_auth_capabilities structs.
+     *  Do not modify or remove.
+     */
+
+    esp_mail_auth_capability_plain,
+    esp_mail_auth_capability_xoauth2,
+    esp_mail_auth_capability_cram_md5,
+    esp_mail_auth_capability_digest_md5,
+    esp_mail_auth_capability_login,
+    esp_mail_auth_capability_starttls,
+    // imap rfc4959
+    esp_mail_auth_capability_sasl_ir,
+
+    esp_mail_auth_capability_maxType,
+};
+
+/* The smessage types enum */
 enum esp_mail_message_type
 {
     esp_mail_msg_type_none = 0,
@@ -55,12 +483,35 @@ enum esp_mail_message_type
     esp_mail_msg_type_enriched = 1
 };
 
+/* The string mark types enum used in joinStringx functions */
+enum esp_mail_string_mark_type
+{
+    esp_mail_string_mark_type_none,
+    esp_mail_string_mark_type_double_quote,
+    esp_mail_string_mark_type_angle_bracket,
+    esp_mail_string_mark_type_round_bracket,
+    esp_mail_string_mark_type_curly_bracket,
+    esp_mail_string_mark_type_square_bracket
+};
+
+/* The debug TAG types enum */
+enum esp_mail_debug_tag_type
+{
+    esp_mail_debug_tag_type_client,
+    esp_mail_debug_tag_type_server,
+    esp_mail_debug_tag_type_error,
+    esp_mail_debug_tag_type_info,
+    esp_mail_debug_tag_type_warning
+};
+
+/* The embed attachment types enum */
 enum esp_mail_smtp_embed_message_type
 {
     esp_mail_smtp_embed_message_type_attachment = 0,
     esp_mail_smtp_embed_message_type_inline
 };
 
+/* The attachment types enum */
 enum esp_mail_attach_type
 {
     esp_mail_att_type_none,
@@ -68,13 +519,7 @@ enum esp_mail_attach_type
     esp_mail_att_type_inline
 };
 
-enum esp_mail_auth_type
-{
-    esp_mail_auth_type_psw,
-    esp_mail_auth_type_oath2,
-    esp_mail_auth_type_token
-};
-
+/* The debug levels for printing the debug information via Serial port */
 enum esp_mail_debug_level
 {
     esp_mail_debug_level_none = 0,
@@ -83,6 +528,7 @@ enum esp_mail_debug_level
     esp_mail_debug_level_developer = esp_mail_debug_level_maintener + 1
 };
 
+/* The content transfer encoding enum */
 enum esp_mail_msg_xencoding
 {
     esp_mail_msg_xencoding_none,
@@ -96,6 +542,7 @@ enum esp_mail_msg_xencoding
     esp_mail_msg_xencoding_binary
 };
 
+/* The port protocols enum */
 enum esp_mail_protocol
 {
     esp_mail_protocol_plain_text,
@@ -103,18 +550,21 @@ enum esp_mail_protocol
     esp_mail_protocol_tls
 };
 
+/* The internal use strct */
 struct esp_mail_internal_use_t
 {
     esp_mail_msg_xencoding xencoding = esp_mail_msg_xencoding_none;
     MB_String cid;
 };
 
+/* The struct contains port number and its protocol */
 struct port_function
 {
-    uint16_t port = 0;
-    esp_mail_protocol protocol = esp_mail_protocol_plain_text;
+    uint16_t port;
+    esp_mail_protocol protocol;
 };
 
+/* The struct that contains the list of port_function and its size */
 struct esp_mail_ports_functions
 {
     friend class IMAPSession;
@@ -126,7 +576,8 @@ struct esp_mail_ports_functions
     bool use_internal_list = false;
 };
 
-struct esp_mail_content_transfer_encoding_t
+/* The content transfer encoding type struct */
+struct esp_mail_transfer_encoding_t
 {
     /* The default 7-bit transfer encoding for US-ACII characters*/
     static constexpr const char *enc_7bit = "7bit";
@@ -145,6 +596,22 @@ struct esp_mail_content_transfer_encoding_t
     static constexpr const char *enc_binary = "binary";
 };
 
+/* The content disposition types strucr (rfc 2183) */
+struct esp_mail_content_disposition_type_t
+{
+    /** if it is intended to be displayed automatically
+     * upon display of the message.
+     */
+    static constexpr const char *inline_ = "inline";
+
+    /** to indicate that they are separate from the main body
+     * of the mail message, and that their display should not
+     * be automatic, but contingent upon some further action of the user.
+     */
+    static constexpr const char *attachment = "attachment";
+};
+
+/* The file (SD/flash) message content struct used for providing SMTP message content from file  */
 struct esp_mail_file_message_content_t
 {
     /* The file path include its name */
@@ -158,6 +625,7 @@ struct esp_mail_file_message_content_t
     esp_mail_file_storage_type type = esp_mail_file_storage_type_flash;
 };
 
+/* The blob or flash string message content struct used for providing SMTP message content from blob or flash string  */
 struct esp_mail_blob_message_content_t
 {
     /* The array of content in flash memory */
@@ -183,28 +651,34 @@ struct esp_mail_smtp_embed_message_body_t
     esp_mail_smtp_embed_message_type type = esp_mail_smtp_embed_message_type_attachment;
 };
 
-/* The PLAIN text body details of the message */
-struct esp_mail_plain_body_t
+/** This is the base struct for SMTP message.
+ *  This is for input and later used as esp_mail_plain_body_t
+ *  and esp_mail_html_body_t.
+ *  Its members are similar to esp_mail_imap_plain_body_t
+ *  and esp_mail_imap_html_body_t unless it contains
+ *  MB_String object to hold the string.
+ */
+struct esp_mail_message_body_t
 {
     /* The option to embed this message content as a file */
     struct esp_mail_smtp_embed_message_body_t embed;
 
-    /* The PLAIN text content of the message */
+    /* The PLAIN/HTML content of the message */
     MB_String content;
 
     const char *nonCopyContent = "";
 
-    /* The blob that contins PLAIN text content of the message */
+    /* The blob that contins PLAIN/HTML content of the message */
     struct esp_mail_blob_message_content_t blob;
 
-    /* The file that contins PLAIN text content of the message */
+    /* The file that contins PLAIN/HTML content of the message */
     struct esp_mail_file_message_content_t file;
 
-    /* The charset of the PLAIN text content of the message */
+    /* The charset of the PLAIN/HTML content of the message */
     MB_String charSet = "UTF-8";
 
     /* The content type of message */
-    MB_String content_type = "text/plain";
+    MB_String content_type = mimeinfo[esp_mail_file_extension_txt].mimeType;
 
     /* The option to encode the content for data transfer */
     MB_String transfer_encoding = "7bit";
@@ -216,36 +690,12 @@ struct esp_mail_plain_body_t
     struct esp_mail_internal_use_t _int;
 };
 
-struct esp_mail_html_body_t
-{
-    /* The option to embedded the content as a file */
-    struct esp_mail_smtp_embed_message_body_t embed;
-
-    /* The HTML content of the message */
-    MB_String content;
-
-    const char *nonCopyContent = "";
-
-    /* The blob that contins HTML content of the message */
-    struct esp_mail_blob_message_content_t blob;
-
-    /* The file that contins HTML content of the message */
-    struct esp_mail_file_message_content_t file;
-
-    /* The charset of the HTML content of the message */
-    MB_String charSet = "UTF-8";
-
-    /* The content type of message */
-    MB_String content_type = "text/html";
-
-    /* The option to encode the content for data transfer */
-    MB_String transfer_encoding = "7bit";
-
-    /* The internal usage data */
-    struct esp_mail_internal_use_t _int;
-};
-
-/* The PLAIN text body details of the message */
+/** The PLAIN text body details of the fetching message.
+ *  This is for output and its members are similar to
+ *  esp_mail_message_body_t unless there is no string object
+ *  to hold string data unless the pointer to the const strings
+ *  in IMAPSession object.
+ */
 struct esp_mail_imap_plain_body_t
 {
     /* The option to embed this message content as a file */
@@ -264,7 +714,7 @@ struct esp_mail_imap_plain_body_t
     const char *charSet = "UTF-8";
 
     /* The content type of message */
-    const char *content_type = "text/plain";
+    const char *content_type = mimeinfo[esp_mail_file_extension_txt].mimeType;
 
     /* The option to encode the content for data transfer */
     const char *transfer_encoding = "7bit";
@@ -276,6 +726,12 @@ struct esp_mail_imap_plain_body_t
     struct esp_mail_internal_use_t _int;
 };
 
+/** The HTML body details of the fetching message.
+ *  This is for output and its members are similar to
+ *  esp_mail_message_body_t unless there is no string object
+ *  to hold string data unless the pointer to the const strings
+ *  in IMAPSession object.
+ */
 struct esp_mail_imap_html_body_t
 {
     /* The option to embedded the content as a file */
@@ -294,7 +750,7 @@ struct esp_mail_imap_html_body_t
     const char *charSet = "UTF-8";
 
     /* The content type of message */
-    const char *content_type = "text/html";
+    const char *content_type = mimeinfo[esp_mail_file_extension_html].mimeType;
 
     /* The option to encode the content for data transfer */
     const char *transfer_encoding = "7bit";
@@ -303,6 +759,13 @@ struct esp_mail_imap_html_body_t
     struct esp_mail_internal_use_t _int;
 };
 
+/* The PLAIN text body details of the message */
+typedef struct esp_mail_message_body_t esp_mail_plain_body_t;
+
+/* The HTML text body details of the message */
+typedef struct esp_mail_message_body_t esp_mail_html_body_t;
+
+/* The attachment info struct used for output */
 struct esp_mail_attachment_info_t
 {
     const char *filename = "";
@@ -314,10 +777,512 @@ struct esp_mail_attachment_info_t
     size_t size;
 };
 
+#if defined(ENABLE_SMTP)
+
+struct esp_mail_smtp_command_t
+{
+    char text[9];
+};
+
+/** The SMTP commands per stansards.
+ *  The arrangement is related to esp_mail_smtp_command_types enum.
+ *  Do not modify or remove.
+ */
+const struct esp_mail_smtp_command_t smtp_commands[esp_mail_smtp_command_maxType] PROGMEM = {
+    "AUTH",
+    "LOGIN",
+    "HELO",
+    "EHLO",
+    "QUIT",
+    "MAIL",
+    "RCPT",
+    "DATA",
+    "BDAT",
+    "LAST",
+    "PLAIN",
+    "FROM:",
+    "TO:",
+    "NOTIFY",
+    "SUCCESS",
+    "FAILURE",
+    "DELAY",
+    "BODY",
+    "\r\n.\r\n",
+    "STARTTLS"};
+
+struct esp_mail_smtp_commands_tokens
+{
+public:
+    esp_mail_smtp_commands_tokens(bool pre)
+    {
+        preToken = pre;
+    }
+    MB_String operator[](size_t index)
+    {
+        MB_String s = preToken ? " " : smtp_commands[index].text;
+        s += !preToken ? " " : smtp_commands[index].text;
+        return s;
+    }
+
+private:
+    bool preToken = false;
+};
+
+// The smtp commands with leading space.
+static esp_mail_smtp_commands_tokens smtp_cmd_pre_tokens(true);
+
+// The smtp commands with trailing space.
+static esp_mail_smtp_commands_tokens smtp_cmd_post_tokens(false);
+
+#endif
+
+#if defined(ENABLE_IMAP)
+
+struct esp_mail_imap_command_t
+{
+    char text[15];
+};
+
+/** The IMAP commands per standards.
+ *  The arrangement is related to esp_mail_imap_command_types enum.
+ *  Do not modify or remove.
+ */
+const struct esp_mail_imap_command_t imap_commands[esp_mail_imap_command_maxType] PROGMEM = {
+    "STARTTLS",
+    "APPEND",
+    "CAPABILITY",
+    "AUTHENTICATE",
+    "PLAIN",
+    "UID",
+    "FETCH",
+    "FLAGS",
+    "LOGIN",
+    "LIST",
+    "EXAMINE",
+    "SEARCH",
+    "LOGOUT",
+    "BODY",
+    "MIME",
+    "CLOSE",
+    "EXISTS",
+    "PEEK",
+    "TEXT",
+    "FIELDS",
+    "HEADER",
+    "NEW",
+    "ALL",
+    "SELECT",
+    "EXPUNGE",
+    "CREATE",
+    "DELETE",
+    "IDLE",
+    "DONE",
+    "RECENT",
+    "UNSEEN",
+    "RENAME",
+    "LSUB",
+    "SUBSCRIBE",
+    "UNSUBSCRIBE",
+    "SILENT",
+    "MOVE",
+    "GETQUOTA",
+    "SETQUOTA",
+    "ROOT",
+    "GETACL",
+    "SETACL",
+    "DELETEACL",
+    "MYRIGHTS",
+    "NAMESPACE",
+    "ENABLE",
+    "XOAUTH2",
+    "STORE",
+    "+FLAGS",
+    "-FLAGS",
+    "COPY",
+    "ID",
+    "UNSELECT",
+    "CONDSTORE",
+    "NOOP",
+    "UNCHANGEDSINCE",
+    "CHANGEDSINCE",
+    "MODSEC"};
+
+struct esp_mail_imap_commands_tokens
+{
+public:
+    esp_mail_imap_commands_tokens(bool pre)
+    {
+        preToken = pre;
+    }
+    MB_String operator[](size_t index)
+    {
+        MB_String s = preToken ? " " : imap_commands[index].text;
+        s += !preToken ? " " : imap_commands[index].text;
+        return s;
+    }
+
+private:
+    bool preToken = false;
+};
+
+// The imap commands with leading space.
+static esp_mail_imap_commands_tokens imap_cmd_pre_tokens(true);
+
+// The imap commands with trailing space.
+static esp_mail_imap_commands_tokens imap_cmd_post_tokens(false);
+
+struct esp_mail_imap_response_t
+{
+    char text[18];
+};
+
+/** The IMAP response.
+ *  The arrangement is related to esp_mail_imap_response_types enum.
+ *  Do not modify or remove.
+ */
+const struct esp_mail_imap_response_t imap_responses[esp_mail_imap_response_maxType] PROGMEM = {
+    // Tagged
+    "OK ",
+    "NO ",
+    "BAD ",
+    // Untagged
+    "* LIST ",
+    "* FLAGS ",
+    "* SEARCH ",
+    " FETCH ",
+    " NIL ",
+    " UID ",
+    "* CAPABILITY ",
+    "CAPABILITY ",
+    "* LSUB ",
+    "* QUOTA ",
+    "* QUOTAROOT ",
+    "* ACL ",
+    "* MYRIGHTS ",
+    "* NAMESPACE ",
+    "* ",
+    " EXISTS",
+    " EXPUNGE",
+    " RECENT",
+    " [UIDNEXT ",
+    " [UNSEEN ",
+    "* ID ",
+    " [HIGHESTMODSEQ ",
+    " [NOMODSEQ]",
+    " [PERMANENTFLAGS ",
+    " [UIDVALIDITY "};
+
+#endif
+
+struct esp_mail_char_decoding_t
+{
+    char text[12];
+};
+
+/** Supported charactor encodings.
+ *  The arrangement is related to esp_mail_char_decoding_types enum.
+ *  Do not modify or remove.
+ */
+const struct esp_mail_char_decoding_t char_decodings[esp_mail_char_decoding_maxType] PROGMEM = {
+    "utf-8",
+    "iso-8859-1",
+    "iso-8859-11",
+    "tis-620",
+    "windows-874"};
+
+struct esp_mail_multipart_t
+{
+    char text[22];
+};
+
+/** MultiPart MIME.
+ *  The arrangement is related to esp_mail_multipart_types enum.
+ *  Do not modify or remove.
+ */
+const struct esp_mail_multipart_t multipart_types[esp_mail_multipart_maxType] PROGMEM = {
+    "multipart/mixed",
+    "multipart/related",
+    "multipart/parallel",
+    "multipart/alternative"};
+
+struct esp_mail_rfc822_header_field_t
+{
+    char text[20];
+    bool isNum;
+    bool trim;
+};
+
+/** The rfc822 message header fields.
+ *  The arrangement is related to esp_mail_rfc822_header_field_types enum.
+ *  Do not modify or remove.
+ */
+const struct esp_mail_rfc822_header_field_t rfc822_headers[esp_mail_rfc822_header_field_maxType] PROGMEM = {
+    {"From", false, true},
+    {"Sender", false, true},
+    {"To", false, true},
+    {"Cc", false, true},
+    {"Subject", false, false},
+    {"Date", false, false},
+    {"Message-ID", false, false},
+    {"Return-Path", false, true},
+    {"Reply-To", false, true},
+    {"In-Reply-To", false, true},
+    {"References", false, true},
+    {"Comments", false, false},
+    {"Keywords", false, false},
+    {"Bcc", false, true},
+    {"Flags", false, false}};
+
+struct esp_mail_message_header_field_t
+{
+    char text[26];
+};
+
+/** Additional fields and props.
+ *  The arrangement is related to esp_mail_message_header_field_types enum.
+ *  Do not modify or remove.
+ */
+const struct esp_mail_message_header_field_t message_headers[esp_mail_message_header_field_maxType] PROGMEM = {
+    "Number",
+    "UID",
+    "Accept-Language",
+    "Content-Language",
+    "Filename",
+    "Name",
+    "Size",
+    "MIME",
+    "Type",
+    "Description",
+    "Creation-Date",
+    "X-Priority",
+    "X-MSMail-Priority",
+    "Importance",
+    "Content-Type",
+    "Content-transfer-encoding",
+    "Content-Disposition",
+    "Content-Location",
+    "Content-ID",
+    "Content-Description",
+    "Mime-Version",
+    "Charset",
+    "format",
+    "delsp",
+    "Modification-Date"};
+
+struct esp_mail_auth_capability_t
+{
+    char text[20];
+};
+
+#if defined(ENABLE_SMTP)
+
+/** The server capability keywords per standard.
+ *  The arrangement is related to esp_mail_auth_capability_types enum.
+ *  Do not modify or remove.
+ */
+const struct esp_mail_auth_capability_t smtp_auth_capabilities[esp_mail_auth_capability_maxType] PROGMEM = {
+    "PLAIN",
+    "XOAUTH2",
+    "CRAM-MD5",
+    "DIGEST-MD5",
+    "LOGIN",
+    "STARTTLS",
+    "DUMMY_AUTH" /* SASL-IR */};
+
+struct esp_mail_smtp_auth_tokens
+{
+public:
+    esp_mail_smtp_auth_tokens(bool pre)
+    {
+        preToken = pre;
+    }
+    MB_String operator[](size_t index)
+    {
+        MB_String s = preToken ? " " : smtp_auth_capabilities[index].text;
+        s += !preToken ? " " : smtp_auth_capabilities[index].text;
+        return s;
+    }
+
+private:
+    bool preToken = false;
+};
+
+// The smtp auth capability with leading space.
+static esp_mail_smtp_auth_tokens smtp_auth_cap_pre_tokens(true);
+
+struct esp_mail_smtp_send_capability_t
+{
+    char text[15];
+};
+
+/** The server capability keywords per standard.
+ *  The arrangement is related esp_mail_smtp_send_capability_types enum.
+ *  Do not modify or remove.
+ */
+const struct esp_mail_smtp_send_capability_t smtp_send_capabilities[esp_mail_smtp_send_capability_maxType] PROGMEM = {
+    "BINARYMIME",
+    "8BITMIME",
+    "CHUNKING",
+    "SMTPUTF8",
+    "PIPELINING",
+    "DSN",
+    "" /* ESMTP */};
+
+struct esp_mail_smtp_send_tokens
+{
+public:
+    esp_mail_smtp_send_tokens(bool pre)
+    {
+        preToken = pre;
+    }
+    MB_String operator[](size_t index)
+    {
+        MB_String s = preToken ? " " : smtp_send_capabilities[index].text;
+        s += !preToken ? " " : smtp_send_capabilities[index].text;
+        return s;
+    }
+
+private:
+    bool preToken = false;
+};
+
+static esp_mail_smtp_send_tokens smtp_send_cap_pre_tokens(true);
+
+#endif
+
+#if defined(ENABLE_IMAP)
+
+/** The server capability keywords per standard.
+ *  The arrangement is related esp_mail_auth_capability_types enum.
+ *  Do not modify or remove.
+ */
+const struct esp_mail_auth_capability_t imap_auth_capabilities[esp_mail_auth_capability_maxType] PROGMEM = {
+    "AUTH=PLAIN",
+    "AUTH=XOAUTH2",
+    "CRAM-MD5",
+    "DIGEST-MD5",
+    "DUMMY_AUTH", /* Log in */
+    "STARTTLS",
+    "SASL-IR"};
+
+struct esp_mail_imap_auth_tokens
+{
+public:
+    esp_mail_imap_auth_tokens(bool pre)
+    {
+        preToken = pre;
+    }
+    MB_String operator[](size_t index)
+    {
+        MB_String s = preToken ? " " : imap_auth_capabilities[index].text;
+        s += !preToken ? " " : imap_auth_capabilities[index].text;
+        return s;
+    }
+
+private:
+    bool preToken = false;
+};
+
+// The imap auth capability with leading space.
+static esp_mail_imap_auth_tokens imap_auth_cap_pre_tokens(true);
+
+struct esp_mail_imap_read_capability_t
+{
+    char text[15];
+};
+
+/** The server capability keywords per standard.
+ *  The arrangement is related esp_mail_imap_read_capability_types enum.
+ *  Do not modify or remove.
+ */
+const struct esp_mail_imap_read_capability_t imap_read_capabilities[esp_mail_imap_read_capability_maxType] PROGMEM = {
+    "IMAP4",
+    "IMAP4rev1",
+    "IDLE",
+    "LITERAL+",
+    "LITERAL-",
+    "MULTIAPPEND",
+    "UIDPLUS",
+    "ACL",
+    "BINARY",
+    "LOGINDISABLED",
+    "MOVE",
+    "QUOTA",
+    "NAMESPACE",
+    "ENABLE",
+    "ID",
+    "UNSELECT",
+    "CHILDREN",
+    "CONDSTORE"
+    "" /* Auto cap */};
+
+struct esp_mail_imap_read_tokens
+{
+public:
+    esp_mail_imap_read_tokens(bool pre)
+    {
+        preToken = pre;
+    }
+    MB_String operator[](size_t index)
+    {
+        MB_String s = preToken ? " " : imap_read_capabilities[index].text;
+        s += !preToken ? " " : imap_read_capabilities[index].text;
+        return s;
+    }
+
+private:
+    bool preToken = false;
+};
+
+// The imap auth capability with leading space.
+static esp_mail_imap_read_tokens imap_read_cap_pre_tokens(true);
+
+struct esp_mail_imap_identification_key_t
+{
+    char text[15];
+};
+
+/** The identification keys per standard.
+ *  The arrangement is related esp_mail_imap_identification_key_types enum.
+ *  Do not modify or remove.
+ */
+const struct esp_mail_imap_identification_key_t imap_identification_keys[esp_mail_imap_identification_key_maxType] PROGMEM = {
+    "name",
+    "version",
+    "os",
+    "os-version",
+    "vendor",
+    "support-url",
+    "address",
+    "date",
+    "command",
+    "arguments",
+    "environment"};
+
+/* The IMAP ID data struct */
+typedef struct esp_mail_imap_identity_t
+{
+    MB_String name;
+    MB_String version;
+    MB_String os;
+    MB_String os_version;
+    MB_String vendor;
+    MB_String support_url;
+    MB_String address;
+    MB_String date;
+    MB_String command;
+    MB_String arguments;
+    MB_String environment;
+
+} IMAP_Identification;
+
+#endif
+
 #endif
 
 #if defined(ENABLE_SMTP)
 
+/* The SMTP message notification types enum */
 enum esp_mail_smtp_notify
 {
     esp_mail_smtp_notify_never = 0,
@@ -326,6 +1291,7 @@ enum esp_mail_smtp_notify
     esp_mail_smtp_notify_delay = 4
 };
 
+/* The SMTP status codes enum */
 enum esp_mail_smtp_status_code
 {
     esp_mail_smtp_status_code_0, // default
@@ -394,13 +1360,20 @@ enum esp_mail_smtp_status_code
     esp_mail_smtp_status_code_556 = 556, // Domain does not accept mail[RFC 7504]
 };
 
+/* The SMTP ports enum */
 enum esp_mail_smtp_port
 {
     esp_mail_smtp_port_25 = 25,   // PLAIN/TLS with STARTTLS
     esp_mail_smtp_port_465 = 465, // SSL
-    esp_mail_smtp_port_587 = 587  // TLS with STARTTLS
+    esp_mail_smtp_port_587 = 587, // TLS with STARTTLS
 };
 
+const struct port_function smtp_ports[3] = {
+    {esp_mail_smtp_port_25, esp_mail_protocol_plain_text},
+    {esp_mail_smtp_port_465, esp_mail_protocol_ssl},
+    {esp_mail_smtp_port_587, esp_mail_protocol_tls}};
+
+/* The SMTP message response [SMTP_Message] */
 struct esp_mail_smtp_msg_response_t
 {
     /* The author Email address to reply */
@@ -417,12 +1390,14 @@ struct esp_mail_smtp_msg_response_t
     int notify = esp_mail_smtp_notify::esp_mail_smtp_notify_never;
 };
 
+/* The SMTP enable option [SMTP_Message] */
 struct esp_mail_smtp_enable_option_t
 {
     /* Enable chunk data sending for large message */
     bool chunking = false;
 };
 
+/* The SMTP blob data attachment data [Session_Config] */
 struct esp_mail_attach_blob_t
 {
     /* BLOB data (flash or ram) */
@@ -432,6 +1407,7 @@ struct esp_mail_attach_blob_t
     size_t size = 0;
 };
 
+/* The SMTP file attachment data [Session_Config] */
 struct esp_mail_attach_file_t
 {
     MB_String path;
@@ -442,6 +1418,7 @@ struct esp_mail_attach_file_t
     esp_mail_file_storage_type storage_type = esp_mail_file_storage_type_none;
 };
 
+/* The SMTP attachment decription [Session_Config] */
 struct esp_mail_attach_descr_t
 {
     /* The name of attachment */
@@ -466,6 +1443,7 @@ struct esp_mail_attach_descr_t
     MB_String description;
 };
 
+/* Used internally in esp_mail_attachment_t */
 struct esp_mail_attach_internal_t
 {
     esp_mail_attach_type att_type = esp_mail_att_type_attachment;
@@ -477,6 +1455,7 @@ struct esp_mail_attach_internal_t
     MB_String cid;
 };
 
+/* The struct used as SMTP_Attachment for SMTP and ESP_Mail_Attachment for IMAP */
 struct esp_mail_attachment_t
 {
     /* The attachment description */
@@ -492,6 +1471,7 @@ struct esp_mail_attachment_t
     struct esp_mail_attach_internal_t _int;
 };
 
+/* Used internally in SMTP to keep the recipient data */
 struct esp_mail_smtp_recipient_t
 {
     /* The recipient's name */
@@ -501,12 +1481,14 @@ struct esp_mail_smtp_recipient_t
     MB_String email;
 };
 
+/* Used internally in SMTP to keep the cc recipient data */
 struct esp_mail_smtp_recipient_address_t
 {
     /* The recipient's Email address */
     MB_String email;
 };
 
+/* The struct used as SMTP_Result */
 struct esp_mail_smtp_send_status_t
 {
     /* The status of the message */
@@ -522,23 +1504,14 @@ struct esp_mail_smtp_send_status_t
     uint32_t timestamp = 0;
 };
 
-struct esp_mail_smtp_capability_t
-{
-    bool esmtp = false;
-    bool binaryMIME = false;
-    bool _8bitMIME = false;
-    bool chunking = false;
-    bool utf8 = false;
-    bool pipelining = false;
-    bool dsn = false;
-};
-
+/* Used internally for SMTPSession */
 struct esp_mail_smtp_msg_type_t
 {
     bool rfc822 = false;
     int rfc822Idx = 0;
 };
 
+/* Used internally for holding base64 data sources */
 struct esp_mail_smtp_send_base64_data_info_t
 {
     esp_mail_file_storage_type storageType = esp_mail_file_storage_type_none;
@@ -549,6 +1522,7 @@ struct esp_mail_smtp_send_base64_data_info_t
     size_t dataIndex = 0;
 };
 
+/* SMTP commands types enum */
 enum esp_mail_smtp_command
 {
     esp_mail_smtp_cmd_undefined,
@@ -557,7 +1531,8 @@ enum esp_mail_smtp_command
     esp_mail_smtp_cmd_start_tls,
     esp_mail_smtp_cmd_login_user,
     esp_mail_smtp_cmd_auth_plain,
-    esp_mail_smtp_cmd_auth,
+    esp_mail_smtp_cmd_auth_login,
+    esp_mail_smtp_cmd_auth_xoauth2,
     esp_mail_smtp_cmd_login_psw,
     esp_mail_smtp_cmd_send_header_sender,
     esp_mail_smtp_cmd_send_header_recipient,
@@ -567,6 +1542,7 @@ enum esp_mail_smtp_command
     esp_mail_smtp_cmd_custom
 };
 
+/* SMTP message priority level enum */
 enum esp_mail_smtp_priority
 {
     esp_mail_smtp_priority_high = 1,
@@ -574,14 +1550,19 @@ enum esp_mail_smtp_priority
     esp_mail_smtp_priority_low = 5,
 };
 
+/* SMTP response data */
 typedef struct esp_mail_smtp_response_status_t
 {
-    int respCode = 0;
+    /* The SMTP server response status code */
     int statusCode = 0;
+
+    /* error code */
+    int errorCode = 0;
     int id = -1;
     MB_String text;
 } SMTP_Response;
 
+/* The sender/recipient info [SMTP_Message]*/
 struct esp_mail_email_info_t
 {
     /* The name of Email author*/
@@ -611,11 +1592,12 @@ enum esp_mail_imap_store_flag_type
 
 enum esp_mail_char_decoding_scheme
 {
-    esp_mail_char_decoding_scheme_default,
-    esp_mail_char_decoding_scheme_iso8859_1,
-    esp_mail_char_decoding_scheme_tis620,
+    esp_mail_char_decoding_scheme_default = -1,
     esp_mail_char_decoding_scheme_utf_8,
-    esp_mail_char_decoding_scheme_custom
+    esp_mail_char_decoding_scheme_iso8859_1,
+    esp_mail_char_decoding_scheme_iso8859_11,
+    esp_mail_char_decoding_scheme_tis_620,
+    esp_mail_char_decoding_scheme_windows_874
 };
 
 enum esp_mail_imap_port
@@ -623,6 +1605,10 @@ enum esp_mail_imap_port
     esp_mail_imap_port_143 = 143, // PLAIN/TLS with STARTTLS
     esp_mail_imap_port_993 = 993, // SSL
 };
+
+const struct port_function imap_ports[2] = {
+    {esp_mail_imap_port_143, esp_mail_protocol_plain_text},
+    {esp_mail_imap_port_993, esp_mail_protocol_ssl}};
 
 enum esp_mail_imap_auth_mode
 {
@@ -648,23 +1634,10 @@ enum esp_mail_imap_polling_status_type
 
 enum esp_mail_imap_header_state
 {
-    esp_mail_imap_state_from = 1,
-    esp_mail_imap_state_sender,
-    esp_mail_imap_state_to,
-    esp_mail_imap_state_cc,
-    esp_mail_imap_state_subject,
-    esp_mail_imap_state_content_type,
+    esp_mail_imap_state_content_type = esp_mail_rfc822_header_field_maxType,
     esp_mail_imap_state_content_transfer_encoding,
     esp_mail_imap_state_accept_language,
     esp_mail_imap_state_content_language,
-    esp_mail_imap_state_date,
-    esp_mail_imap_state_msg_id,
-    esp_mail_imap_state_return_path,
-    esp_mail_imap_state_reply_to,
-    esp_mail_imap_state_in_reply_to,
-    esp_mail_imap_state_references,
-    esp_mail_imap_state_comments,
-    esp_mail_imap_state_keywords,
     esp_mail_imap_state_char_set,
     esp_mail_imap_state_boundary
 };
@@ -713,6 +1686,10 @@ enum esp_mail_imap_command
     esp_mail_imap_cmd_append,
     esp_mail_imap_cmd_append_last,
     esp_mail_imap_cmd_enable,
+    esp_mail_imap_cmd_id,
+    esp_mail_imap_cmd_unselect,
+    esp_mail_imap_cmd_noop,
+    esp_mail_imap_cmd_copy,
     esp_mail_imap_cmd_custom
 };
 
@@ -757,7 +1734,10 @@ enum esp_mail_imap_message_sub_type
 
 typedef struct esp_mail_imap_response_status_t
 {
-    int statusCode = 0;
+    // No IMAP server response status code (statusCode), server returns OK, NO and BAD response instead
+
+    /*  error code */
+    int errorCode = 0;
     MB_String tag;
     MB_String text;
     MB_String status;
@@ -784,31 +1764,6 @@ __attribute__((used)) struct
 {
     bool operator()(struct esp_mail_imap_msg_num_t a, struct esp_mail_imap_msg_num_t b) const { return a.value > b.value; }
 } compareMore;
-
-struct esp_mail_imap_capability_t
-{
-    bool auto_caps = false;
-    bool imap4 = false;
-    bool imap4rev1 = false;
-    // rfc2177
-    bool idle = false;
-    bool literal_plus = false;
-    bool literal_minus = false;
-    bool multiappend = false;
-    bool uidplus = false;
-    // rfc4314
-    bool acl = false;
-    bool binary = false;
-    bool logindisable = false;
-    // rfc6851
-    bool move = false;
-    // rfc2087
-    bool quota = false;
-    // rfc2342
-    bool name_space = false;
-    // rfc5161
-    bool enable = false;
-};
 
 struct esp_mail_imap_rfc822_msg_header_item_t
 {
@@ -1136,26 +2091,6 @@ struct esp_mail_imap_message_sub_type_t
     static constexpr const char *delivery_status = "delivery-status";
 };
 
-/** content disposition rfc 2183
- *
- * Parameters:
- * "filename", "creation-date","modification-date",
- * "read-date", * "size"
- */
-struct esp_mail_imap_content_disposition_type_t
-{
-    /** if it is intended to be displayed automatically
-     * upon display of the message.
-     */
-    static constexpr const char *inline_ = "inline";
-
-    /** to indicate that they are separate from the main body
-     * of the mail message, and that their display should not
-     * be automatic, but contingent upon some further action of the user.
-     */
-    static constexpr const char *attachment = "attachment";
-};
-
 /* IMAP polling status */
 typedef struct esp_mail_imap_polling_status_t
 {
@@ -1221,6 +2156,9 @@ struct esp_mail_message_part_info_t
     esp_mail_message_type msg_type = esp_mail_msg_type_none;
     bool file_open_write = false;
     bool multipart = false;
+    bool is_firmware_file = false;
+    bool save_to_file = true;
+    size_t firmware_downloaded_byte = 0;
     esp_mail_imap_multipart_sub_type multipart_sub_type = esp_mail_imap_multipart_sub_type_none;
     esp_mail_imap_message_sub_type message_sub_type = esp_mail_imap_message_sub_type_none;
     bool rfc822_part = false;
@@ -1346,8 +2284,8 @@ struct esp_mail_imap_limit_config_t
     /* The maximum size of each attachment to download */
     size_t attachment_size = 1024 * 1024 * 5;
 
-    /* The IMAP idle timeout in ms (1 min to 29 min). Default is 10 min */
-    size_t imap_idle_timeout = 10 * 60 * 1000;
+    /* The IMAP idle timeout in ms (1 min to 29 min). Default is 8 min */
+    size_t imap_idle_timeout = 8 * 60 * 1000;
 
     /** The IMAP idle host check interval in ms (30 sec to imap_idle_timeout)
      * for internet availability checking to ensure the connection is active.
@@ -1403,9 +2341,21 @@ struct esp_mail_imap_fetch_config_t
 
     /* Set the message flag as seen */
     bool set_seen = false;
+
+    /* The uint32_t option for CHANGESINCE conditional test. */
+    uint32_t modsequence = 0;
 };
 
-struct esp_mail_imap_read_config_t
+struct esp_mail_imap_firmware_config_t
+{
+    /* Update firmware using message attachments if one of its filename matches. */
+    MB_String attach_filename;
+
+    /* Save firmware file */
+    bool save_to_file = false;
+};
+
+struct esp_mail_imap_data_config_t
 {
     /* The config for fetching */
     struct esp_mail_imap_fetch_config_t fetch;
@@ -1424,11 +2374,25 @@ struct esp_mail_imap_read_config_t
 
     /* The config about the storage and path to save the downloaded file */
     struct esp_mail_imap_storage_config_t storage;
+
+    /* The config about firmware updates and downloads for ESP32, ESP8266 and Raspberry Pi Pico */
+    struct esp_mail_imap_firmware_config_t firmware_update;
+
+    IMAP_Identification identification;
 };
 
 /* Mail and MIME Header Fields */
 struct esp_mail_imap_msg_item_t
 {
+    friend class IMAPSession;
+
+public:
+    esp_mail_imap_msg_item_t()
+    {
+        text.content_type = mimeinfo[esp_mail_file_extension_txt].mimeType;
+        html.content_type = mimeinfo[esp_mail_file_extension_html].mimeType;
+    };
+
     /* The message number */
     int msgNo = 0;
 
@@ -1479,10 +2443,10 @@ struct esp_mail_imap_msg_item_t
     const char *flags = "";
 
     /* The PLAIN text content of the message */
-    struct esp_mail_imap_plain_body_t text;
+    esp_mail_imap_plain_body_t text;
 
     /* The HTML content of the message */
-    struct esp_mail_imap_html_body_t html;
+    esp_mail_imap_html_body_t html;
 
     /* rfc822 related */
 
@@ -1526,6 +2490,31 @@ struct esp_mail_imap_msg_item_t
 
     /* The status for message that contains attachment */
     bool hasAttachment = false;
+
+private:
+    void setRFC822Headers(struct esp_mail_imap_rfc822_msg_header_item_t *rfc822_header)
+    {
+        from = rfc822_header->from.c_str();
+        sender = rfc822_header->sender.c_str();
+        to = rfc822_header->to.c_str();
+        cc = rfc822_header->cc.c_str();
+        return_path = rfc822_header->return_path.c_str();
+        reply_to = rfc822_header->reply_to.c_str();
+        subject = rfc822_header->subject.c_str();
+        comments = rfc822_header->comments.c_str();
+        keywords = rfc822_header->keywords.c_str();
+        in_reply_to = rfc822_header->in_reply_to.c_str();
+        references = rfc822_header->references.c_str();
+        date = rfc822_header->date.c_str();
+        ID = rfc822_header->messageID.c_str();
+        flags = rfc822_header->flags.c_str();
+        text.charSet = "";
+        text.content_type = "";
+        text.transfer_encoding = "";
+        html.charSet = "";
+        html.content_type = "";
+        html.transfer_encoding = "";
+    }
 };
 
 struct esp_mail_imap_msg_list_t
@@ -1541,6 +2530,29 @@ struct esp_mail_imap_multipart_level_t
     bool append_body_text = false;
 };
 
+struct esp_mail_imap_response_data
+{
+    esp_mail_imap_response_status imapResp = esp_mail_imap_resp_unknown;
+    char *response = nullptr;
+    int readLen = 0;
+    long dataTime = millis();
+    int chunkBufSize = 512;
+    int chunkIdx = 0;
+    bool completedResponse = false;
+    bool endSearch = false;
+    struct esp_mail_message_header_t header;
+    struct esp_mail_message_part_info_t part;
+    MB_String filePath;
+    bool downloadRequest = false;
+    int octetCount = 0;
+    int octetLength = 0;
+    bool tmo = false;
+    int headerState = 0;
+    int searchCount = 0;
+    char *lastBuf = nullptr;
+    char *buf = nullptr;
+};
+
 #endif
 
 #if defined(ENABLE_SMTP) || defined(ENABLE_IMAP)
@@ -1550,32 +2562,29 @@ struct esp_mail_link_internal_t
     MB_String cid;
 };
 
-struct esp_mail_auth_capability_t
-{
-    bool plain = false;
-    bool xoauth2 = false;
-    bool cram_md5 = false;
-    bool digest_md5 = false;
-    bool login = false;
-    bool start_tls = false;
-
-    // imap rfc4959
-    bool sasl_ir = false;
-};
-
 struct esp_mail_sesson_cert_config_t
 {
     /* The certificate data (base64 data) */
-    const char *cert_data = "";
+    const char *cert_data = NULL;
 
     /* The certificate file (DER format) */
-    const char *cert_file = "";
+    MB_String cert_file;
 
     /* The storage type */
     esp_mail_file_storage_type cert_file_storage_type;
 
     /* The cerificate verification option */
     bool verify = false;
+};
+
+struct esp_mail_smtp_logs_config_t
+{
+
+    /* The log file path */
+    MB_String filename;
+
+    /* The storage type */
+    esp_mail_file_storage_type storage_type;
 };
 
 struct esp_mail_sesson_sever_config_t
@@ -1598,7 +2607,7 @@ struct esp_mail_sesson_login_config_t
     /* The OAuth2.0 access token to log in */
     MB_String accessToken;
 
-    /* The user domain or ip of client */
+    /* The host name or public IP of client system */
     MB_String user_domain;
 };
 
@@ -1633,14 +2642,16 @@ struct esp_mail_spi_ethernet_module_t
 {
 #if defined(ESP8266) && defined(ESP8266_CORE_SDK_V3_X_X)
 #ifdef INC_ENC28J60_LWIP
-    ENC28J60lwIP *enc28j60;
+    ENC28J60lwIP *enc28j60 = nullptr;
 #endif
 #ifdef INC_W5100_LWIP
-    Wiznet5100lwIP *w5100;
+    Wiznet5100lwIP *w5100 = nullptr;
 #endif
 #ifdef INC_W5500_LWIP
-    Wiznet5500lwIP *w5500;
+    Wiznet5500lwIP *w5500 = nullptr;
 #endif
+#elif defined(MB_ARDUINO_PICO)
+
 #endif
 };
 
@@ -1648,6 +2659,7 @@ struct esp_mail_session_config_t
 {
     friend class IMAPSession;
     friend class SMTPSession;
+    friend class ESP_Mail_Client;
 
     /* The server config */
     struct esp_mail_sesson_sever_config_t server;
@@ -1673,11 +2685,50 @@ struct esp_mail_session_config_t
     /* specific ports and its protocols */
     struct esp_mail_ports_functions ports_functions;
 
+    /* The mail sending logs config */
+    struct esp_mail_smtp_logs_config_t sentLogs;
+
 public:
     esp_mail_session_config_t(){};
+
     ~esp_mail_session_config_t()
     {
         clear();
+        aremovePtr();
+    }
+
+    void addPtr(MB_List<int> *listPtr, int ptr)
+    {
+        if (listPtr)
+        {
+            this->listPtr = listPtr;
+            bool existed = false;
+
+            for (size_t i = 0; i < this->listPtr->size(); i++)
+            {
+                if ((*this->listPtr)[i] == ptr)
+                    existed = true;
+            }
+
+            if (!existed)
+                this->listPtr->push_back(ptr);
+        }
+    }
+
+    void aremovePtr()
+    {
+        if (listPtr)
+        {
+            int ptr = toAddr(*this);
+            for (size_t i = 0; i < listPtr->size(); i++)
+            {
+                if ((*listPtr)[i] == ptr)
+                {
+                    listPtr->erase(listPtr->begin() + i, listPtr->begin() + i + 1);
+                    break;
+                }
+            }
+        }
     }
 
     void clear()
@@ -1706,6 +2757,9 @@ public:
     }
 
 private:
+    int cert_ptr = 0;
+    bool cert_updated = false;
+    MB_List<int> *listPtr = nullptr;
     void clearPorts()
     {
         if (ports_functions.list)
@@ -1728,10 +2782,11 @@ private:
  * enc_binary or "binary"
  * enc_8bit or "8bit"
  */
-typedef struct esp_mail_content_transfer_encoding_t Content_Transfer_Encoding;
+typedef struct esp_mail_transfer_encoding_t Content_Transfer_Encoding;
 
 /* The session configuations */
-typedef struct esp_mail_session_config_t ESP_Mail_Session;
+typedef struct esp_mail_session_config_t ESP_Mail_Session; // obsoleted
+typedef struct esp_mail_session_config_t Session_Config;
 
 #endif
 
@@ -1758,7 +2813,9 @@ typedef struct esp_mail_folder_info_item_t FolderInfo;
 typedef struct esp_mail_attachment_info_t IMAP_Attach_Item;
 
 /** The IMAP operation configuations */
-typedef struct esp_mail_imap_read_config_t IMAP_Config;
+typedef struct esp_mail_imap_data_config_t IMAP_Config; // obsoleted
+
+typedef struct esp_mail_imap_data_config_t IMAP_Data;
 
 /* The message item data of the IMAP_MSG_List which contains header, body and
  * attachments info for eacch message*/
@@ -1770,509 +2827,536 @@ typedef struct esp_mail_imap_msg_list_t IMAP_MSG_List;
 
 #endif
 
+struct esp_mail_wifi_credential_t
+{
+    MB_String ssid;
+    MB_String password;
+};
+
+struct esp_mail_wifi_credentials_t
+{
+    friend class ESP_Mail_Client;
+
+public:
+    esp_mail_wifi_credentials_t(){};
+    ~esp_mail_wifi_credentials_t() { clearAP(); };
+    void addAP(const String &ssid, const String &password)
+    {
+        esp_mail_wifi_credential_t cred;
+        cred.ssid = ssid;
+        cred.password = password;
+        credentials.push_back(cred);
+    }
+    void clearAP()
+    {
+        credentials.clear();
+    }
+
+private:
+    MB_List<esp_mail_wifi_credential_t> credentials;
+};
+
+static const char esp_mail_imap_tag_str[] PROGMEM = "xmail";
+
+#if !defined(SILENT_MODE)
+static const char esp_mail_version_str[] PROGMEM = "ESP Mail Client v";
+
+/////////////////////////
+// SMTP debug string
+
+static const char esp_mail_dbg_str_1[] PROGMEM = "send command, STARTTLS";
+static const char esp_mail_dbg_str_2[] PROGMEM = "connecting to SMTP server";
+
 #if defined(ENABLE_SMTP)
-static const char esp_mail_str_1[] PROGMEM = "Content-Type: multipart/mixed; boundary=\"";
-static const char esp_mail_str_3[] PROGMEM = "Mime-Version: 1.0\r\n";
-static const char esp_mail_str_4[] PROGMEM = "AUTH LOGIN";
-static const char esp_mail_str_5[] PROGMEM = "HELO ";
-static const char esp_mail_str_6[] PROGMEM = "EHLO ";
-static const char esp_mail_str_7[] PROGMEM = "QUIT";
-static const char esp_mail_str_8[] PROGMEM = "MAIL FROM:";
-static const char esp_mail_str_9[] PROGMEM = "RCPT TO:";
-static const char esp_mail_str_13[] PROGMEM = ",<";
-static const char esp_mail_str_14[] PROGMEM = "<";
-static const char esp_mail_str_15[] PROGMEM = ">";
-static const char esp_mail_str_16[] PROGMEM = "DATA";
-static const char esp_mail_str_17[] PROGMEM = "X-Priority: ";
-static const char esp_mail_str_18[] PROGMEM = "X-MSMail-Priority: High\r\n";
-static const char esp_mail_str_19[] PROGMEM = "X-MSMail-Priority: Normal\r\n";
-static const char esp_mail_str_20[] PROGMEM = "X-MSMail-Priority: Low\r\n";
-static const char esp_mail_str_21[] PROGMEM = "Importance: High\r\n";
-static const char esp_mail_str_22[] PROGMEM = "Importance: Normal\r\n";
-static const char esp_mail_str_23[] PROGMEM = "Importance: Low\r\n";
-static const char esp_mail_str_26[] PROGMEM = "; Name=\"";
-static const char esp_mail_str_28[] PROGMEM = "Content-Type: multipart/parallel; boundary=\"";
-static const char esp_mail_str_30[] PROGMEM = "Content-Disposition: attachment; filename=\"";
-static const char esp_mail_str_32[] PROGMEM = "application/octet-stream";
-static const char esp_mail_str_33[] PROGMEM = "--";
-static const char esp_mail_str_35[] PROGMEM = "\"\r\n\r\n";
-static const char esp_mail_str_36[] PROGMEM = "\"\r\n";
-static const char esp_mail_str_37[] PROGMEM = "\r\n.\r\n";
-static const char esp_mail_str_39[] PROGMEM = "SMTP server greeting failed";
-static const char esp_mail_str_43[] PROGMEM = "authentication failed";
-static const char esp_mail_str_44[] PROGMEM = "mydomain.com";
-static const char esp_mail_str_45[] PROGMEM = "AUTH PLAIN";
-static const char esp_mail_str_47[] PROGMEM = "login password is not valid";
-static const char esp_mail_str_48[] PROGMEM = "send header failed";
-static const char esp_mail_str_49[] PROGMEM = "send body failed";
-static const char esp_mail_str_98[] PROGMEM = "Content-Disposition: attachment\r\n";
-static const char esp_mail_str_104[] PROGMEM = " BODY=BINARYMIME";
-static const char esp_mail_str_106[] PROGMEM = "BDAT ";
-static const char esp_mail_str_110[] PROGMEM = "delsp=\"no\"";
-static const char esp_mail_str_120[] PROGMEM = "Connecting to SMTP server...";
-static const char esp_mail_str_121[] PROGMEM = "SMTP server connected, wait for greeting...";
-static const char esp_mail_str_122[] PROGMEM = "Sending greeting response...";
-static const char esp_mail_str_123[] PROGMEM = "message/rfc822";
-static const char esp_mail_str_125[] PROGMEM = "Sending message header...";
-static const char esp_mail_str_126[] PROGMEM = "Sending message body...";
-static const char esp_mail_str_127[] PROGMEM = "Sending attachments...";
-static const char esp_mail_str_128[] PROGMEM = "Closing the session...";
-static const char esp_mail_str_129[] PROGMEM = "Message sent successfully";
-static const char esp_mail_str_149[] PROGMEM = "Bcc: ";
-static const char esp_mail_str_158[] PROGMEM = "file does not exist or can't access";
-static const char esp_mail_str_159[] PROGMEM = "msg.html";
-static const char esp_mail_str_160[] PROGMEM = "upload ";
-static const char esp_mail_str_164[] PROGMEM = "msg.txt";
-static const char esp_mail_str_166[] PROGMEM = "binary";
-static const char esp_mail_str_167[] PROGMEM = "Sending inline data...";
-static const char esp_mail_str_173[] PROGMEM = " LAST";
-
-static const char esp_mail_str_205[] PROGMEM = "sender Email address is not valid";
-static const char esp_mail_str_206[] PROGMEM = "some of the recipient Email address is not valid";
-static const char esp_mail_str_207[] PROGMEM = "> C: Send Email";
-static const char esp_mail_str_208[] PROGMEM = "Sending Email...";
-static const char esp_mail_str_222[] PROGMEM = "set recipient failed";
-static const char esp_mail_str_236[] PROGMEM = "> C: Connect to SMTP server";
-static const char esp_mail_str_238[] PROGMEM = "> C: SMTP server connected";
-static const char esp_mail_str_239[] PROGMEM = "> C: Send SMTP command, HELO";
-static const char esp_mail_str_240[] PROGMEM = "> C: Send SMTP command, AUTH LOGIN";
-static const char esp_mail_str_241[] PROGMEM = "> C: Send SMTP command, AUTH PLAIN";
-static const char esp_mail_str_242[] PROGMEM = "> C: Send message header";
-static const char esp_mail_str_243[] PROGMEM = "> C: Send message body";
-static const char esp_mail_str_244[] PROGMEM = "> C: Send attachments";
-static const char esp_mail_str_245[] PROGMEM = "> C: Terminate the SMTP session";
-static const char esp_mail_str_246[] PROGMEM = "> C: Message sent successfully";
-static const char esp_mail_str_260[] PROGMEM = "< S: ";
-static const char esp_mail_str_262[] PROGMEM = " NOTIFY=";
-static const char esp_mail_str_264[] PROGMEM = "SUCCESS";
-static const char esp_mail_str_265[] PROGMEM = "FAILURE";
-static const char esp_mail_str_266[] PROGMEM = "DELAY";
-static const char esp_mail_str_267[] PROGMEM = "Sending next Email...";
-static const char esp_mail_str_268[] PROGMEM = "> C: Send next Email";
-static const char esp_mail_str_271[] PROGMEM = "> C: Send inline data";
-static const char esp_mail_str_272[] PROGMEM = "Content-transfer-encoding: ";
-static const char esp_mail_str_288[] PROGMEM = "> C: Send smtp command, AUTH XOAUTH2";
-static const char esp_mail_str_289[] PROGMEM = "AUTH XOAUTH2 ";
-static const char esp_mail_str_293[] PROGMEM = "OAuth2.0 log in was disabled for this server";
-static const char esp_mail_str_297[] PROGMEM = "Content-Type: multipart/alternative; boundary=\"";
-static const char esp_mail_str_298[] PROGMEM = "Content-Type: multipart/related; boundary=\"";
-static const char esp_mail_str_299[] PROGMEM = "Content-Disposition: inline; filename=\"";
-static const char esp_mail_str_300[] PROGMEM = "Content-Location: ";
-static const char esp_mail_str_301[] PROGMEM = "Content-ID: <";
-static const char esp_mail_str_302[] PROGMEM = "cid:";
-static const char esp_mail_str_303[] PROGMEM = "Finishing the message sending...";
-static const char esp_mail_str_304[] PROGMEM = "> C: Finish the message sending";
-static const char esp_mail_str_312[] PROGMEM = "code: ";
-static const char esp_mail_str_313[] PROGMEM = ", text: ";
-static const char esp_mail_str_325[] PROGMEM = "flash content message";
-static const char esp_mail_str_326[] PROGMEM = "file content message";
-static const char esp_mail_str_327[] PROGMEM = "\"; size=";
-static const char esp_mail_str_359[] PROGMEM = " BODY=8BITMIME";
-
-static const char esp_mail_smtp_response_1[] PROGMEM = "AUTH ";
-static const char esp_mail_smtp_response_2[] PROGMEM = " LOGIN";
-static const char esp_mail_smtp_response_3[] PROGMEM = " PLAIN";
-static const char esp_mail_smtp_response_4[] PROGMEM = " XOAUTH2";
-static const char esp_mail_smtp_response_5[] PROGMEM = "STARTTLS";
-static const char esp_mail_smtp_response_6[] PROGMEM = "8BITMIME";
-static const char esp_mail_smtp_response_7[] PROGMEM = "BINARYMIME";
-static const char esp_mail_smtp_response_8[] PROGMEM = "CHUNKING";
-static const char esp_mail_smtp_response_9[] PROGMEM = "SMTPUTF8";
-static const char esp_mail_smtp_response_10[] PROGMEM = "PIPELINING";
-static const char esp_mail_smtp_response_11[] PROGMEM = " CRAM-MD5";
-static const char esp_mail_smtp_response_12[] PROGMEM = " DIGEST-MD5";
-static const char esp_mail_smtp_response_13[] PROGMEM = "DSN";
-
-static const char boundary_table[] PROGMEM = "=_abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
+static const char esp_mail_dbg_str_3[] PROGMEM = "send Email";
+static const char esp_mail_dbg_str_4[] PROGMEM = "SMTP server connected";
+static const char esp_mail_dbg_str_5[] PROGMEM = "send SMTP command, EHLO";
+static const char esp_mail_dbg_str_6[] PROGMEM = "send SMTP command, AUTH LOGIN";
+static const char esp_mail_dbg_str_7[] PROGMEM = "send SMTP command, AUTH PLAIN";
+static const char esp_mail_dbg_str_8[] PROGMEM = "send message header";
+static const char esp_mail_dbg_str_9[] PROGMEM = "send message body";
+static const char esp_mail_dbg_str_10[] PROGMEM = "send attachments";
+static const char esp_mail_dbg_str_11[] PROGMEM = "terminate the SMTP session";
+static const char esp_mail_dbg_str_12[] PROGMEM = "message sent successfully";
+static const char esp_mail_dbg_str_13[] PROGMEM = "send next Email";
+static const char esp_mail_dbg_str_14[] PROGMEM = "send inline data";
+static const char esp_mail_dbg_str_15[] PROGMEM = "send smtp command, AUTH XOAUTH2";
+static const char esp_mail_dbg_str_16[] PROGMEM = "finishing the message sending";
+static const char esp_mail_dbg_str_17[] PROGMEM = "No ESMTP supported, send SMTP command, HELO";
 #endif
+
+/////////////////////////
+// IMAP debug string
+static const char esp_mail_dbg_str_18[] PROGMEM = "connecting to IMAP server";
+static const char esp_mail_dbg_str_19[] PROGMEM = "Host > ";
+static const char esp_mail_dbg_str_20[] PROGMEM = "Port > ";
+static const char esp_mail_dbg_str_21[] PROGMEM = "wait for NTP server time synching";
+static const char esp_mail_dbg_str_22[] PROGMEM = "perform SSL/TLS handshake";
+
+#if defined(ENABLE_IMAP)
+static const char esp_mail_dbg_str_23[] PROGMEM = "get my ACL";
+static const char esp_mail_dbg_str_24[] PROGMEM = "checking the capability";
+static const char esp_mail_dbg_str_25[] PROGMEM = "fetching message ";
+static const char esp_mail_dbg_str_26[] PROGMEM = "fetch message header";
+static const char esp_mail_dbg_str_27[] PROGMEM = "fetch body part header, ";
+static const char esp_mail_dbg_str_28[] PROGMEM = "fetch body sub part header, ";
+static const char esp_mail_dbg_str_29[] PROGMEM = "finished reading Email";
+static const char esp_mail_dbg_str_30[] PROGMEM = "UID is ";
+static const char esp_mail_dbg_str_31[] PROGMEM = "log out completed";
+static const char esp_mail_dbg_str_32[] PROGMEM = "closing the ";
+static const char esp_mail_dbg_str_33[] PROGMEM = "IMAP server connected";
+static const char esp_mail_dbg_str_34[] PROGMEM = "send IMAP command, LOGIN";
+static const char esp_mail_dbg_str_35[] PROGMEM = "send IMAP command, LIST";
+static const char esp_mail_dbg_str_36[] PROGMEM = "searching messages";
+static const char esp_mail_dbg_str_37[] PROGMEM = "send IMAP command, FETCH";
+static const char esp_mail_dbg_str_38[] PROGMEM = "send IMAP command, LOGOUT";
+static const char esp_mail_dbg_str_39[] PROGMEM = "message fetching completed";
+static const char esp_mail_dbg_str_40[] PROGMEM = "opening the mailbox folder";
+static const char esp_mail_dbg_str_41[] PROGMEM = "setting FLAG";
+static const char esp_mail_dbg_str_42[] PROGMEM = "adding FLAG";
+static const char esp_mail_dbg_str_43[] PROGMEM = "removing FLAG";
+static const char esp_mail_dbg_str_44[] PROGMEM = "send IMAP command, AUTHENTICATE PLAIN";
+static const char esp_mail_dbg_str_45[] PROGMEM = "send IMAP command, AUTH XOAUTH2";
+static const char esp_mail_dbg_str_46[] PROGMEM = "reading plain TEXT message";
+static const char esp_mail_dbg_str_47[] PROGMEM = "reading HTML message";
+static const char esp_mail_dbg_str_48[] PROGMEM = "copying message(s) to ";
+static const char esp_mail_dbg_str_49[] PROGMEM = "creating folder";
+static const char esp_mail_dbg_str_50[] PROGMEM = "deleting folder";
+static const char esp_mail_dbg_str_51[] PROGMEM = "listening to ";
+static const char esp_mail_dbg_str_52[] PROGMEM = " folder changes";
+static const char esp_mail_dbg_str_53[] PROGMEM = "polling established";
+static const char esp_mail_dbg_str_54[] PROGMEM = "Mailbox listening stopped";
+static const char esp_mail_dbg_str_55[] PROGMEM = "renaming folder";
+static const char esp_mail_dbg_str_56[] PROGMEM = "send IMAP command, LSUB";
+static const char esp_mail_dbg_str_57[] PROGMEM = "send IMAP command, SUBSCRIBE";
+static const char esp_mail_dbg_str_58[] PROGMEM = "send IMAP command, UNSUBSCRIBE";
+static const char esp_mail_dbg_str_59[] PROGMEM = "moving message(s) to ";
+static const char esp_mail_dbg_str_60[] PROGMEM = "send IMAP command, GETQUOTA";
+static const char esp_mail_dbg_str_61[] PROGMEM = "send IMAP command, SETQUOTA";
+static const char esp_mail_dbg_str_62[] PROGMEM = "send IMAP command, GETQUOTAROOT";
+static const char esp_mail_dbg_str_63[] PROGMEM = "send IMAP command, GETACL";
+static const char esp_mail_dbg_str_64[] PROGMEM = "send IMAP command, SETACL";
+static const char esp_mail_dbg_str_65[] PROGMEM = "send IMAP command, DELETEACL";
+static const char esp_mail_dbg_str_66[] PROGMEM = "send IMAP command, MYRIGHTS";
+static const char esp_mail_dbg_str_67[] PROGMEM = "send IMAP command, NAMESPACE";
+static const char esp_mail_dbg_str_68[] PROGMEM = "selecting the ";
+static const char esp_mail_dbg_str_69[] PROGMEM = "appending message";
+static const char esp_mail_dbg_str_70[] PROGMEM = "download attachment %d of %d";
+static const char esp_mail_dbg_str_71[] PROGMEM = "download HTML message";
+static const char esp_mail_dbg_str_72[] PROGMEM = "deleting the ACL";
+static const char esp_mail_dbg_str_73[] PROGMEM = "message append successfully";
+static const char esp_mail_dbg_str_74[] PROGMEM = "download plain TEXT message";
+static const char esp_mail_dbg_str_75[] PROGMEM = "deleting message(s)";
+static const char esp_mail_dbg_str_76[] PROGMEM = "check the capability";
+static const char esp_mail_dbg_str_77[] PROGMEM = "get the ACL";
+static const char esp_mail_dbg_str_78[] PROGMEM = "set the ACL";
+static const char esp_mail_dbg_str_79[] PROGMEM = "get UID";
+static const char esp_mail_dbg_str_80[] PROGMEM = "get Flags";
+static const char esp_mail_dbg_str_81[] PROGMEM = "delete folder";
+static const char esp_mail_dbg_str_82[] PROGMEM = "send IMAP command, ID";
+static const char esp_mail_dbg_str_83[] PROGMEM = "send IMAP command, NOOP";
+#endif
+
+/////////////////////////
+// SMTP callback string
+
+static const char esp_mail_cb_str_1[] PROGMEM = "Connecting to SMTP server...";
+static const char esp_mail_cb_str_2[] PROGMEM = "Sending STARTTLS command...";
+
+#if defined(ENABLE_SMTP)
+static const char esp_mail_cb_str_3[] PROGMEM = "Sending greeting response...";
+static const char esp_mail_cb_str_4[] PROGMEM = "Sending message header...";
+static const char esp_mail_cb_str_5[] PROGMEM = "Sending message body...";
+static const char esp_mail_cb_str_6[] PROGMEM = "Sending attachments...";
+static const char esp_mail_cb_str_7[] PROGMEM = "Closing the session...";
+static const char esp_mail_cb_str_8[] PROGMEM = "Sending inline data...";
+static const char esp_mail_cb_str_9[] PROGMEM = "Sending Email...";
+static const char esp_mail_cb_str_10[] PROGMEM = "Sending next Email...";
+static const char esp_mail_cb_str_11[] PROGMEM = "Finishing the message sending...";
+static const char esp_mail_cb_str_12[] PROGMEM = "SMTP server connected, wait for greeting...";
+static const char esp_mail_cb_str_13[] PROGMEM = "Message sent successfully";
+#endif
+
+/////////////////////////
+// IMAP callback string
+
+static const char esp_mail_cb_str_14[] PROGMEM = "Logging in..."; // shared with SMTP
+static const char esp_mail_cb_str_15[] PROGMEM = "Connecting to IMAP server...";
 
 #if defined(ENABLE_IMAP)
 
-static const char esp_mail_str_2[] PROGMEM = "CAPABILITY";
-static const char esp_mail_str_27[] PROGMEM = "Xmail";
-static const char esp_mail_str_31[] PROGMEM = "base64";
-
-static const char esp_mail_str_41[] PROGMEM = "AUTHENTICATE PLAIN";
-static const char esp_mail_str_50[] PROGMEM = "Connecting to IMAP server...";
-static const char esp_mail_str_51[] PROGMEM = "* ";
-static const char esp_mail_str_54[] PROGMEM = "IMAP server connected";
-static const char esp_mail_str_55[] PROGMEM = "> C: Download attachment ";
-static const char esp_mail_str_57[] PROGMEM = "Downloading messages...";
-static const char esp_mail_str_58[] PROGMEM = "Reading the list of mailboxes...";
-static const char esp_mail_str_59[] PROGMEM = "> C: Download plain TEXT message";
-static const char esp_mail_str_60[] PROGMEM = "> C: Download HTML message";
-static const char esp_mail_str_61[] PROGMEM = "Selecting the ";
-static const char esp_mail_str_62[] PROGMEM = "fail to list the mailboxes";
-static const char esp_mail_str_63[] PROGMEM = "fail to check the capabilities";
-static const char esp_mail_str_64[] PROGMEM = "Check the capability...";
-static const char esp_mail_str_65[] PROGMEM = "> C: Check the capability";
-static const char esp_mail_str_66[] PROGMEM = "Searching messages...";
-static const char esp_mail_str_67[] PROGMEM = "message";
-static const char esp_mail_str_68[] PROGMEM = "Search limit: ";
-static const char esp_mail_str_69[] PROGMEM = "Found ";
-static const char esp_mail_str_70[] PROGMEM = " messages";
-static const char esp_mail_str_71[] PROGMEM = "Show ";
-static const char esp_mail_str_72[] PROGMEM = "No message found for search criteria";
-static const char esp_mail_str_73[] PROGMEM = "\nNo search criteria provided, then fetching the latest message";
-static const char esp_mail_str_74[] PROGMEM = "Fetching message ";
-static const char esp_mail_str_75[] PROGMEM = ", UID: ";
-static const char esp_mail_str_76[] PROGMEM = ", Number: ";
-static const char esp_mail_str_77[] PROGMEM = "> C: Fetch message header";
-static const char esp_mail_str_78[] PROGMEM = "Attachments (";
-static const char esp_mail_str_79[] PROGMEM = ")";
-static const char esp_mail_str_80[] PROGMEM = "Downloading attachments...";
-static const char esp_mail_str_81[] PROGMEM = "> C: Fetch body part header, ";
-static const char esp_mail_str_82[] PROGMEM = "rfc822";
-static const char esp_mail_str_83[] PROGMEM = "reading";
-static const char esp_mail_str_84[] PROGMEM = "Free Heap: ";
-static const char esp_mail_str_85[] PROGMEM = "Logging out...";
-static const char esp_mail_str_86[] PROGMEM = "> C: Fetch body sub part header, ";
-static const char esp_mail_str_87[] PROGMEM = "Finished reading Email";
-static const char esp_mail_str_88[] PROGMEM = "> C: Finished reading Email";
-static const char esp_mail_str_90[] PROGMEM = "download";
-static const char esp_mail_str_93[] PROGMEM = "connection timeout";
-static const char esp_mail_str_94[] PROGMEM = ".html";
-static const char esp_mail_str_95[] PROGMEM = ".txt";
-static const char esp_mail_str_96[] PROGMEM = " folder...";
-static const char esp_mail_str_100[] PROGMEM = "UID:";
-static const char esp_mail_str_102[] PROGMEM = "Accept-Language: ";
-static const char esp_mail_str_103[] PROGMEM = "Content-Language: ";
-static const char esp_mail_str_105[] PROGMEM = "> C: Get flags...";
-static const char esp_mail_str_108[] PROGMEM = "CC: ";
-static const char esp_mail_str_111[] PROGMEM = "> C: UID is ";
-static const char esp_mail_str_112[] PROGMEM = " FETCH (FLAGS (";
-static const char esp_mail_str_113[] PROGMEM = "Attachment: ";
-static const char esp_mail_str_114[] PROGMEM = "File Index: ";
-static const char esp_mail_str_115[] PROGMEM = "Filename: ";
-static const char esp_mail_str_116[] PROGMEM = "Name: ";
-static const char esp_mail_str_117[] PROGMEM = "Size: ";
-static const char esp_mail_str_118[] PROGMEM = "Type: ";
-static const char esp_mail_str_119[] PROGMEM = "Creation Date: ";
-static const char esp_mail_str_124[] PROGMEM = "Saving message header to file...";
-static const char esp_mail_str_130[] PROGMEM = "LOGIN ";
-static const char esp_mail_str_133[] PROGMEM = "LIST \"\" *";
-static const char esp_mail_str_135[] PROGMEM = "EXAMINE \"";
-static const char esp_mail_str_137[] PROGMEM = "UID ";
-static const char esp_mail_str_138[] PROGMEM = " UID";
-static const char esp_mail_str_139[] PROGMEM = " SEARCH";
-static const char esp_mail_str_140[] PROGMEM = "UID";
-static const char esp_mail_str_141[] PROGMEM = "SEARCH";
-static const char esp_mail_str_142[] PROGMEM = "UID FETCH ";
-static const char esp_mail_str_143[] PROGMEM = "FETCH ";
-static const char esp_mail_str_144[] PROGMEM = "HEADER.FIELDS (SUBJECT FROM SENDER RETURN-PATH TO REPLY-TO IN-REPLY-TO REFERENCES DATE CC Message-ID COMMENTS KEYWORDS content-type Content-transfer-encoding Content-Language Accept-Language)";
-static const char esp_mail_str_146[] PROGMEM = "LOGOUT";
-static const char esp_mail_str_147[] PROGMEM = " BODY";
-static const char esp_mail_str_148[] PROGMEM = ".MIME]";
-static const char esp_mail_str_151[] PROGMEM = "no mailbox opened";
-static const char esp_mail_str_152[] PROGMEM = ".";
-static const char esp_mail_str_153[] PROGMEM = "No mailbox opened";
-static const char esp_mail_str_154[] PROGMEM = "Remove FLAG";
-static const char esp_mail_str_155[] PROGMEM = "Add FLAG";
-static const char esp_mail_str_156[] PROGMEM = "Get UID...";
-static const char esp_mail_str_157[] PROGMEM = "Set FLAG";
-static const char esp_mail_str_161[] PROGMEM = "/msg";
-static const char esp_mail_str_163[] PROGMEM = "/rfc822_msg";
-static const char esp_mail_str_169[] PROGMEM = "charset=";
-static const char esp_mail_str_170[] PROGMEM = "name";
-static const char esp_mail_str_171[] PROGMEM = "content-id:";
-static const char esp_mail_str_172[] PROGMEM = "content-transfer-encoding:";
-static const char esp_mail_str_174[] PROGMEM = "content-description:";
-static const char esp_mail_str_175[] PROGMEM = "content-disposition:";
-static const char esp_mail_str_176[] PROGMEM = "filename";
-
-static const char esp_mail_str_178[] PROGMEM = "size";
-static const char esp_mail_str_179[] PROGMEM = "creation-date";
-static const char esp_mail_str_180[] PROGMEM = "content-";
-static const char esp_mail_str_181[] PROGMEM = "modification-date";
-
-static const char esp_mail_str_187[] PROGMEM = "Message fetch cmpleted";
-static const char esp_mail_str_188[] PROGMEM = "fail to close the mailbox";
-static const char esp_mail_str_189[] PROGMEM = "> C: Get UID...";
-static const char esp_mail_str_190[] PROGMEM = "accept-language:";
-static const char esp_mail_str_191[] PROGMEM = "content-language:";
-static const char esp_mail_str_192[] PROGMEM = ")";
-static const char esp_mail_str_193[] PROGMEM = "{";
-static const char esp_mail_str_194[] PROGMEM = "}";
-static const char esp_mail_str_195[] PROGMEM = "CLOSE\r\n";
-static const char esp_mail_str_197[] PROGMEM = "> C: Close the mailbox folder";
-static const char esp_mail_str_198[] PROGMEM = "(";
-static const char esp_mail_str_199[] PROGMEM = " EXISTS";
-static const char esp_mail_str_200[] PROGMEM = " [UIDNEXT ";
-static const char esp_mail_str_203[] PROGMEM = "/header.txt";
-static const char esp_mail_str_210[] PROGMEM = "Closing the ";
-static const char esp_mail_str_212[] PROGMEM = "FLAGS";
-static const char esp_mail_str_213[] PROGMEM = "BODY";
-static const char esp_mail_str_214[] PROGMEM = "PEEK";
-static const char esp_mail_str_215[] PROGMEM = "TEXT";
-static const char esp_mail_str_216[] PROGMEM = "HEADER";
-static const char esp_mail_str_217[] PROGMEM = "FIELDS";
-static const char esp_mail_str_218[] PROGMEM = "[";
-static const char esp_mail_str_219[] PROGMEM = "]";
-static const char esp_mail_str_220[] PROGMEM = "MIME";
-static const char esp_mail_str_223[] PROGMEM = " NEW";
-static const char esp_mail_str_224[] PROGMEM = "ALL";
-static const char esp_mail_str_225[] PROGMEM = "> C: Connect to IMAP server";
-static const char esp_mail_str_226[] PROGMEM = "windows-874";
-static const char esp_mail_str_227[] PROGMEM = "iso-8859-1";
-static const char esp_mail_str_228[] PROGMEM = "> C: Server connected";
-static const char esp_mail_str_229[] PROGMEM = "> C: Send IMAP command, LOGIN";
-static const char esp_mail_str_230[] PROGMEM = "> C: Send IMAP command, LIST";
-static const char esp_mail_str_231[] PROGMEM = "iso-8859-11";
-static const char esp_mail_str_232[] PROGMEM = "> C: Search messages";
-static const char esp_mail_str_233[] PROGMEM = "> C: Send IMAP command, FETCH";
-static const char esp_mail_str_234[] PROGMEM = "> C: Send IMAP command, LOGOUT";
-static const char esp_mail_str_235[] PROGMEM = "> C: Message fetch completed";
-static const char esp_mail_str_237[] PROGMEM = "tis-620";
-static const char esp_mail_str_247[] PROGMEM = "SELECT \"";
-static const char esp_mail_str_248[] PROGMEM = "> C: Open the mailbox folder";
-static const char esp_mail_str_249[] PROGMEM = "STORE ";
-static const char esp_mail_str_250[] PROGMEM = " FLAGS";
-static const char esp_mail_str_251[] PROGMEM = " +FLAGS";
-static const char esp_mail_str_252[] PROGMEM = " -FLAGS";
-static const char esp_mail_str_253[] PROGMEM = "> C: Set FLAG";
-static const char esp_mail_str_254[] PROGMEM = "> C: Add FLAG";
-static const char esp_mail_str_255[] PROGMEM = "> C: Remove FLAG";
-static const char esp_mail_str_256[] PROGMEM = "could not parse flag";
-static const char esp_mail_str_257[] PROGMEM = "delsp=\"yes\"";
-static const char esp_mail_str_259[] PROGMEM = "delsp=yes";
-static const char esp_mail_str_269[] PROGMEM = "header.fields (content-type Content-transfer-encoding)]";
-static const char esp_mail_str_273[] PROGMEM = " (FLAGS)";
-static const char esp_mail_str_274[] PROGMEM = "UID is ";
-static const char esp_mail_str_275[] PROGMEM = "format=flowed";
-static const char esp_mail_str_276[] PROGMEM = "Number:";
-static const char esp_mail_str_277[] PROGMEM = "boundary=\"";
-static const char esp_mail_str_278[] PROGMEM = "quoted-printable";
-static const char esp_mail_str_279[] PROGMEM = "Get Flags...";
-static const char esp_mail_str_280[] PROGMEM = "> C: No content";
-static const char esp_mail_str_281[] PROGMEM = "fail to open the mailbox";
-static const char esp_mail_str_290[] PROGMEM = "> C: Send IMAP command, AUTHENTICATE PLAIN";
-static const char esp_mail_str_291[] PROGMEM = "> C: Send IMAP command, AUTH XOAUTH2";
-static const char esp_mail_str_292[] PROGMEM = "AUTHENTICATE XOAUTH2";
-static const char esp_mail_str_295[] PROGMEM = "0123456789ABCDEF";
-static const char esp_mail_str_306[] PROGMEM = "some of the requested messages no longer exist";
-static const char esp_mail_str_307[] PROGMEM = "Reading messages...";
-static const char esp_mail_str_308[] PROGMEM = "> C: Reading plain TEXT message";
-static const char esp_mail_str_309[] PROGMEM = "> C: Reading HTML message";
-static const char esp_mail_str_315[] PROGMEM = " +FLAGS.SILENT (\\Deleted)";
-static const char esp_mail_str_316[] PROGMEM = "> C: Delete message(s)";
-static const char esp_mail_str_317[] PROGMEM = "EXPUNGE";
-static const char esp_mail_str_318[] PROGMEM = "> C: copy message(s) to ";
-static const char esp_mail_str_319[] PROGMEM = "COPY ";
-static const char esp_mail_str_320[] PROGMEM = "> C: Create folder";
-static const char esp_mail_str_321[] PROGMEM = "> C: Delete folder";
-static const char esp_mail_str_322[] PROGMEM = "CREATE ";
-static const char esp_mail_str_323[] PROGMEM = "DELETE ";
-static const char esp_mail_str_324[] PROGMEM = "HEADER.FIELDS";
-static const char esp_mail_str_331[] PROGMEM = "IDLE";
-static const char esp_mail_str_332[] PROGMEM = "DONE";
-static const char esp_mail_str_333[] PROGMEM = " EXPUNGE";
-static const char esp_mail_str_334[] PROGMEM = " RECENT";
-static const char esp_mail_str_335[] PROGMEM = "> C: Listening to mailbox changes...";
-static const char esp_mail_str_336[] PROGMEM = "Listening to ";
-static const char esp_mail_str_337[] PROGMEM = " folder changes...";
-static const char esp_mail_str_338[] PROGMEM = "Polling established";
-static const char esp_mail_str_339[] PROGMEM = "> C: Polling established";
-static const char esp_mail_str_340[] PROGMEM = "Mailbox listening stopped";
-static const char esp_mail_str_341[] PROGMEM = "> C: Mailbox listening stopped";
-static const char esp_mail_str_342[] PROGMEM = " FETCH (UID ";
-static const char esp_mail_str_354[] PROGMEM = " [UNSEEN ";
-static const char esp_mail_str_373[] PROGMEM = "RENAME ";
-static const char esp_mail_str_374[] PROGMEM = "> C: Rename folder";
-static const char esp_mail_str_375[] PROGMEM = "> C: Send IMAP command, LSUB";
-static const char esp_mail_str_376[] PROGMEM = "Listing the subscribed mailboxes...";
-static const char esp_mail_str_377[] PROGMEM = "LSUB ";
-static const char esp_mail_str_378[] PROGMEM = "> C: Send IMAP command, SUBSCRIBE";
-static const char esp_mail_str_379[] PROGMEM = "Subscribe mailbox...";
-static const char esp_mail_str_380[] PROGMEM = "SUBSCRIBE ";
-static const char esp_mail_str_381[] PROGMEM = "> C: Send IMAP command, UNSUBSCRIBE";
-static const char esp_mail_str_382[] PROGMEM = "Unsubscribe mailbox...";
-static const char esp_mail_str_383[] PROGMEM = "UNSUBSCRIBE ";
-static const char esp_mail_str_384[] PROGMEM = ".SILENT";
-static const char esp_mail_str_385[] PROGMEM = "+ ";
-static const char esp_mail_str_386[] PROGMEM = "> C: move message(s) to ";
-static const char esp_mail_str_387[] PROGMEM = "MOVE ";
-static const char esp_mail_str_388[] PROGMEM = "Get quota root resource usage and limit...";
-static const char esp_mail_str_389[] PROGMEM = "Set quota root resource usage and limit...";
-static const char esp_mail_str_390[] PROGMEM = "> C: Send IMAP command, GETQUOTA";
-static const char esp_mail_str_391[] PROGMEM = "> C: Send IMAP command, SETQUOTA";
-static const char esp_mail_str_392[] PROGMEM = "GETQUOTA";
-static const char esp_mail_str_393[] PROGMEM = "SETQUOTA";
-static const char esp_mail_str_394[] PROGMEM = "ROOT";
-static const char esp_mail_str_395[] PROGMEM = "Get the list of quota roots...";
-static const char esp_mail_str_396[] PROGMEM = "> C: Send IMAP command, GETQUOTAROOT";
-static const char esp_mail_str_397[] PROGMEM = "Get the ACL...";
-static const char esp_mail_str_398[] PROGMEM = "> C: Send IMAP command, GETACL";
-static const char esp_mail_str_399[] PROGMEM = "Set the ACL...";
-static const char esp_mail_str_400[] PROGMEM = "> C: Send IMAP command, SETACL";
-static const char esp_mail_str_401[] PROGMEM = "Delete the ACL...";
-static const char esp_mail_str_402[] PROGMEM = "> C: Send IMAP command, DELETEACL";
-static const char esp_mail_str_403[] PROGMEM = "Get my ACL...";
-static const char esp_mail_str_404[] PROGMEM = "> C: Send IMAP command, MYRIGHTS";
-static const char esp_mail_str_405[] PROGMEM = "GETACL";
-static const char esp_mail_str_406[] PROGMEM = "SETACL";
-static const char esp_mail_str_407[] PROGMEM = "DELETEACL";
-static const char esp_mail_str_408[] PROGMEM = "MYRIGHTS";
-static const char esp_mail_str_409[] PROGMEM = "Get namespace...";
-static const char esp_mail_str_410[] PROGMEM = "> C: Send IMAP command, NAMESPACE";
-static const char esp_mail_str_411[] PROGMEM = "NAMESPACE";
-static const char esp_mail_str_412[] PROGMEM = "Enable capability...";
-static const char esp_mail_str_413[] PROGMEM = "> C: Send IMAP command, ENABLE";
-static const char esp_mail_str_414[] PROGMEM = "ENABLE";
-
-// Tagged
-static const char esp_mail_imap_response_1[] PROGMEM = "OK ";
-static const char esp_mail_imap_response_2[] PROGMEM = "NO ";
-static const char esp_mail_imap_response_3[] PROGMEM = "BAD ";
-// Untagged
-static const char esp_mail_imap_response_4[] PROGMEM = "* LIST ";
-static const char esp_mail_imap_response_5[] PROGMEM = "* FLAGS ";
-static const char esp_mail_imap_response_6[] PROGMEM = "* SEARCH ";
-static const char esp_mail_imap_response_7[] PROGMEM = " FETCH ";
-static const char esp_mail_imap_response_8[] PROGMEM = " NIL ";
-static const char esp_mail_imap_response_9[] PROGMEM = " UID ";
-static const char esp_mail_imap_response_10[] PROGMEM = "* CAPABILITY ";
-static const char esp_mail_imap_response_11[] PROGMEM = "LOGINDISABLED";
-static const char esp_mail_imap_response_12[] PROGMEM = "AUTH=PLAIN";
-static const char esp_mail_imap_response_13[] PROGMEM = "AUTH=XOAUTH2";
-static const char esp_mail_imap_response_14[] PROGMEM = "STARTTLS";
-static const char esp_mail_imap_response_15[] PROGMEM = "CRAM-MD5";
-static const char esp_mail_imap_response_16[] PROGMEM = "DIGEST-MD5";
-static const char esp_mail_imap_response_17[] PROGMEM = "IDLE"; // rfc2177
-static const char esp_mail_imap_response_18[] PROGMEM = "IMAP4";
-static const char esp_mail_imap_response_19[] PROGMEM = "IMAP4rev1";
-static const char esp_mail_imap_response_20[] PROGMEM = "CAPABILITY ";
-static const char esp_mail_imap_response_21[] PROGMEM = "ACL";
-static const char esp_mail_imap_response_22[] PROGMEM = "BINARY";
-static const char esp_mail_imap_response_23[] PROGMEM = "MULTIAPPEND";
-static const char esp_mail_imap_response_24[] PROGMEM = "UIDPLUS";
-static const char esp_mail_imap_response_25[] PROGMEM = "LITERAL+";
-static const char esp_mail_imap_response_26[] PROGMEM = "LITERAL-";
-static const char esp_mail_imap_response_27[] PROGMEM = "* LSUB ";
-static const char esp_mail_imap_response_28[] PROGMEM = "SASL-IR";
-static const char esp_mail_imap_response_29[] PROGMEM = "MOVE";
-static const char esp_mail_imap_response_30[] PROGMEM = "* QUOTA ";
-static const char esp_mail_imap_response_31[] PROGMEM = "* QUOTAROOT ";
-static const char esp_mail_imap_response_32[] PROGMEM = "QUOTA";
-static const char esp_mail_imap_response_33[] PROGMEM = "* ACL ";
-static const char esp_mail_imap_response_34[] PROGMEM = "* MYRIGHTS ";
-static const char esp_mail_imap_response_35[] PROGMEM = "NAMESPACE";
-static const char esp_mail_imap_response_36[] PROGMEM = "* NAMESPACE ";
-static const char esp_mail_imap_response_37[] PROGMEM = "ENABLE";
+static const char esp_mail_cb_str_16[] PROGMEM = "Reading the list of mailboxes...";
+static const char esp_mail_cb_str_17[] PROGMEM = "Checking the capability...";
+static const char esp_mail_cb_str_18[] PROGMEM = "Searching messages...";
+static const char esp_mail_cb_str_19[] PROGMEM = "Downloading attachments...";
+static const char esp_mail_cb_str_20[] PROGMEM = "Logging out...";
+static const char esp_mail_cb_str_21[] PROGMEM = "Saving message header to file...";
+static const char esp_mail_cb_str_22[] PROGMEM = "Get FLAG...";
+static const char esp_mail_cb_str_23[] PROGMEM = "Removing FLAG...";
+static const char esp_mail_cb_str_24[] PROGMEM = "Adding FLAG...";
+static const char esp_mail_cb_str_25[] PROGMEM = "Get UID...";
+static const char esp_mail_cb_str_26[] PROGMEM = "Setting FLAG...";
+static const char esp_mail_cb_str_27[] PROGMEM = "Closing the mailbox folder...";
+static const char esp_mail_cb_str_28[] PROGMEM = "Reading messages...";
+static const char esp_mail_cb_str_29[] PROGMEM = "Listening to mailbox changes...";
+static const char esp_mail_cb_str_30[] PROGMEM = "Listing the subscribed mailboxes...";
+static const char esp_mail_cb_str_31[] PROGMEM = "Subscribe mailbox...";
+static const char esp_mail_cb_str_32[] PROGMEM = "Unsubscribe mailbox...";
+static const char esp_mail_cb_str_33[] PROGMEM = "Get quota root resource usage and limit...";
+static const char esp_mail_cb_str_34[] PROGMEM = "Set quota root resource usage and limit...";
+static const char esp_mail_cb_str_35[] PROGMEM = "Get the list of quota roots...";
+static const char esp_mail_cb_str_36[] PROGMEM = "Get the ACL...";
+static const char esp_mail_cb_str_37[] PROGMEM = "Setting the ACL...";
+static const char esp_mail_cb_str_38[] PROGMEM = "Deleting the ACL...";
+static const char esp_mail_cb_str_39[] PROGMEM = "Get my ACL...";
+static const char esp_mail_cb_str_40[] PROGMEM = "Get namespace...";
+static const char esp_mail_cb_str_41[] PROGMEM = "Enable capability...";
+static const char esp_mail_cb_str_42[] PROGMEM = "Updating firmware...";
+static const char esp_mail_cb_str_43[] PROGMEM = "Downloading messages...";
+static const char esp_mail_cb_str_44[] PROGMEM = "Appending message...";
+static const char esp_mail_cb_str_45[] PROGMEM = "Message append successfully";
+static const char esp_mail_cb_str_46[] PROGMEM = "Finished reading Email";
+static const char esp_mail_cb_str_47[] PROGMEM = "Log out completed";
+static const char esp_mail_cb_str_48[] PROGMEM = "IMAP server connected";
+static const char esp_mail_cb_str_49[] PROGMEM = "Polling established";
+static const char esp_mail_cb_str_50[] PROGMEM = "Mailbox listening stopped";
+static const char esp_mail_cb_str_51[] PROGMEM = "Open the mailbox folder...";
+static const char esp_mail_cb_str_52[] PROGMEM = "Checking the capability...";
+static const char esp_mail_cb_str_53[] PROGMEM = "Renaming folder...";
+static const char esp_mail_cb_str_54[] PROGMEM = "UID is ";
+static const char esp_mail_cb_str_55[] PROGMEM = "Get Flags...";
+static const char esp_mail_cb_str_56[] PROGMEM = "Deleting folder...";
+static const char esp_mail_cb_str_57[] PROGMEM = "Deleting message(s)...";
+static const char esp_mail_cb_str_58[] PROGMEM = "Copying message(s)...";
+static const char esp_mail_cb_str_59[] PROGMEM = "Creating folder...";
+static const char esp_mail_cb_str_60[] PROGMEM = "Moving message(s)...";
+static const char esp_mail_cb_str_61[] PROGMEM = "Send client identification...";
+static const char esp_mail_cb_str_62[] PROGMEM = "Send noop...";
+#endif
 
 #endif
 
-#if defined(ENABLE_SMTP) || defined(ENABLE_IMAP)
+/////////////////////////
+// Mem error string
 
-static const char esp_mail_str_10[] PROGMEM = "From:";
-static const char esp_mail_str_11[] PROGMEM = "To:";
-static const char esp_mail_str_12[] PROGMEM = "Cc:";
-static const char esp_mail_str_24[] PROGMEM = "Subject:";
-static const char esp_mail_str_25[] PROGMEM = "Content-Type:";
-static const char esp_mail_str_29[] PROGMEM = "7bit";
-static const char esp_mail_str_34[] PROGMEM = "\r\n";
-static const char esp_mail_str_40[] PROGMEM = ".dat";
-static const char esp_mail_str_38[] PROGMEM = "unable to connect to server";
-static const char esp_mail_str_42[] PROGMEM = "the provided SASL authentication mechanism is not support";
-static const char esp_mail_str_46[] PROGMEM = "Return-Path:";
-static const char esp_mail_str_53[] PROGMEM = "Error, ";
-static const char esp_mail_str_56[] PROGMEM = "Logging in...";
-static const char esp_mail_str_91[] PROGMEM = ", ";
-static const char esp_mail_str_92[] PROGMEM = "%";
-static const char esp_mail_str_97[] PROGMEM = ";";
-static const char esp_mail_str_99[] PROGMEM = "Date:";
-static const char esp_mail_str_101[] PROGMEM = "Message-ID:";
-static const char esp_mail_str_107[] PROGMEM = "References:";
-static const char esp_mail_str_109[] PROGMEM = "In-Reply-To:";
-static const char esp_mail_str_131[] PROGMEM = " ";
-static const char esp_mail_str_132[] PROGMEM = "fail to set up the SSL/TLS structure";
-static const char esp_mail_str_134[] PROGMEM = "Comments:";
-static const char esp_mail_str_136[] PROGMEM = "\"";
-static const char esp_mail_str_145[] PROGMEM = "Keywords:";
-static const char esp_mail_str_150[] PROGMEM = "Sender:";
-static const char esp_mail_str_168[] PROGMEM = "charset";
-static const char esp_mail_str_177[] PROGMEM = "=";
-static const char esp_mail_str_182[] PROGMEM = "Content-Description: ";
-static const char esp_mail_str_183[] PROGMEM = "*";
-static const char esp_mail_str_184[] PROGMEM = "Reply-To:";
-static const char esp_mail_str_185[] PROGMEM = "> E: ";
-static const char esp_mail_str_186[] PROGMEM = "out of memory";
-static const char esp_mail_str_196[] PROGMEM = "> C: Send STARTTLS command";
-static const char esp_mail_str_201[] PROGMEM = "Port > ";
-static const char esp_mail_str_204[] PROGMEM = "> E: The alert SSL record received\n> E: Make sure the SSL/TLS handshake was done before sending the data";
-static const char esp_mail_str_221[] PROGMEM = "connection closed";
-static const char esp_mail_str_202[] PROGMEM = "/";
-static const char esp_mail_str_209[] PROGMEM = "Send command, STARTTLS";
-static const char esp_mail_str_211[] PROGMEM = "Host > ";
-static const char esp_mail_str_258[] PROGMEM = "session timed out";
-static const char esp_mail_str_261[] PROGMEM = "> C: ";
-static const char esp_mail_str_263[] PROGMEM = ",";
-static const char esp_mail_str_270[] PROGMEM = "format=\"flowed\"";
-static const char esp_mail_str_282[] PROGMEM = "file I/O error";
-static const char esp_mail_str_285[] PROGMEM = "user=";
-static const char esp_mail_str_286[] PROGMEM = "\1auth=Bearer ";
-static const char esp_mail_str_287[] PROGMEM = "\1\1";
-static const char esp_mail_str_294[] PROGMEM = "{\"status\":";
-static const char esp_mail_str_305[] PROGMEM = "connection failed";
-static const char esp_mail_str_310[] PROGMEM = "> C: Perform the SSL/TLS handshake";
-static const char esp_mail_str_311[] PROGMEM = "STARTTLS\r\n";
-static const char esp_mail_str_314[] PROGMEM = "> C: ESP Mail Client v";
-static const char esp_mail_str_328[] PROGMEM = "0.0.0.0";
-static const char esp_mail_str_329[] PROGMEM = ", Fw v";
-static const char esp_mail_str_330[] PROGMEM = "+";
-static const char esp_mail_str_343[] PROGMEM = " on ";
-static const char esp_mail_str_344[] PROGMEM = "data sending failed";
-static const char esp_mail_str_345[] PROGMEM = "connection refused";
-static const char esp_mail_str_346[] PROGMEM = "Client and/or necessary callback functions are not yet assigned";
-static const char esp_mail_str_347[] PROGMEM = "/header.json";
-static const char esp_mail_str_352[] PROGMEM = "Custom Client is not yet enabled";
-static const char esp_mail_str_353[] PROGMEM = "! W: PSRAM was enabled but not detected.";
-static const char esp_mail_str_355[] PROGMEM = "> C: Wait for NTP server time synching";
-static const char esp_mail_str_356[] PROGMEM = "NTP server time synching timed out";
-static const char esp_mail_str_357[] PROGMEM = "not connected";
-static const char esp_mail_str_358[] PROGMEM = "8bit";
-static const char esp_mail_str_360[] PROGMEM = "APPEND";
-static const char esp_mail_str_361[] PROGMEM = "Appending message...";
-static const char esp_mail_str_362[] PROGMEM = "> C: append message";
-static const char esp_mail_str_363[] PROGMEM = "Message append successfully";
-static const char esp_mail_str_364[] PROGMEM = "> C: Message append successfully";
-static const char esp_mail_str_365[] PROGMEM = "binary";
-static const char esp_mail_str_366[] PROGMEM = "> E: Simple Client is required";
-static const char esp_mail_str_367[] PROGMEM = "> E: Client connection callback is required";
-static const char esp_mail_str_368[] PROGMEM = "> E: Client connection upgrade callback (for TLS handshake) is required";
-static const char esp_mail_str_369[] PROGMEM = "> E: Network connection callback is required";
-static const char esp_mail_str_370[] PROGMEM = "> E: Network connection status callback is required";
-static const char esp_mail_str_371[] PROGMEM = "> E: Response read timed out";
-static const char esp_mail_str_372[] PROGMEM = "> E: The Client type must be provided, see example";
+#if defined(ENABLE_ERROR_STRING) || !defined(SILENT_MODE)
+#if defined(MBFS_FLASH_FS) || defined(MBFS_SD_FS)
+static const char esp_mail_error_mem_str_1[] PROGMEM = "flash Storage is not ready.";
+static const char esp_mail_error_mem_str_2[] PROGMEM = "SD Storage is not ready.";
+static const char esp_mail_error_mem_str_3[] PROGMEM = "file does not exist or can't access";
 #endif
+static const char esp_mail_error_mem_str_4[] PROGMEM = "PSRAM was enabled but not detected.";
+#endif
+
+#if defined(ENABLE_ERROR_STRING)
 
 #if defined(MBFS_FLASH_FS) || defined(MBFS_SD_FS)
-static const char esp_mail_str_348[] PROGMEM = "Flash Storage is not ready.";
-static const char esp_mail_str_349[] PROGMEM = "SD Storage is not ready.";
-static const char esp_mail_str_350[] PROGMEM = "File is still opened.";
-static const char esp_mail_str_351[] PROGMEM = "File not found.";
+static const char esp_mail_error_mem_str_5[] PROGMEM = "file is still opened.";
+static const char esp_mail_error_mem_str_6[] PROGMEM = "file not found.";
+static const char esp_mail_error_mem_str_7[] PROGMEM = "file I/O error";
+#endif
+
+static const char esp_mail_error_mem_str_8[] PROGMEM = "out of memory";
+
+#if defined(MB_ARDUINO_PICO)
+static const char esp_mail_error_mem_str_9[] PROGMEM = "please make sure that the size of flash filesystem is not 0 in Pico.";
+#endif
+
+#endif
+
+/////////////////////////
+// Client error string
+
+#if defined(ENABLE_ERROR_STRING)
+static const char esp_mail_error_client_str_1[] PROGMEM = "client and/or necessary callback functions are not yet assigned";
+static const char esp_mail_error_client_str_2[] PROGMEM = "custom Client is not yet enabled";
+static const char esp_mail_error_client_str_3[] PROGMEM = "simple Client is required";
+static const char esp_mail_error_client_str_4[] PROGMEM = "the client type must be provided, see example";
+static const char esp_mail_error_client_str_5[] PROGMEM = "client connection upgrade callback (for TLS handshake) is required";
+static const char esp_mail_error_client_str_6[] PROGMEM = "network connection callback is required";
+static const char esp_mail_error_client_str_7[] PROGMEM = "network connection status callback is required";
+static const char esp_mail_error_client_str_8[] PROGMEM = "client is not yet initialized";
+static const char esp_mail_error_client_str_9[] PROGMEM = "UDP client is required for NTP server time synching based on your network type";
+static const char esp_mail_error_client_str_10[] PROGMEM = "e.g. WiFiUDP or EthernetUDP. Please call MailClient.setUDPClient(&udpClient, gmtOffset); to assign the UDP client";
+static const char esp_mail_error_client_str_11[] PROGMEM = "the Connection Request Callback is now optional";
+#endif
+
+/////////////////////////
+// Network error string
+
+#if defined(ENABLE_ERROR_STRING)
+static const char esp_mail_error_network_str_1[] PROGMEM = "NTP server time synching timed out";
+static const char esp_mail_error_network_str_2[] PROGMEM = "unable to connect to server";
+static const char esp_mail_error_network_str_3[] PROGMEM = "session timed out";
+static const char esp_mail_error_network_str_4[] PROGMEM = "not connected";
+static const char esp_mail_error_network_str_5[] PROGMEM = "connection timeout";
+static const char esp_mail_error_network_str_6[] PROGMEM = "connection closed";
+static const char esp_mail_error_network_str_7[] PROGMEM = "connection refused";
+static const char esp_mail_error_network_str_8[] PROGMEM = "data sending failed";
+#endif
+
+#if defined(ENABLE_ERROR_STRING) || !defined(SILENT_MODE)
+static const char esp_mail_error_network_str_9[] PROGMEM = "response read timed out";
+#endif
+
+/////////////////////////
+// SSL error string
+
+#if defined(ENABLE_ERROR_STRING)
+static const char esp_mail_error_ssl_str_1[] PROGMEM = "fail to set up the SSL/TLS structure";
+#endif
+#if defined(ENABLE_ERROR_STRING) || !defined(SILENT_MODE)
+static const char esp_mail_error_ssl_str_2[] PROGMEM = "the alert SSL record received";
+static const char esp_mail_error_ssl_str_3[] PROGMEM = "make sure the SSL/TLS handshake was done before sending the data";
+#endif
+
+/////////////////////////
+// Auth error string
+
+#if defined(ENABLE_ERROR_STRING)
+static const char esp_mail_error_auth_str_1[] PROGMEM = "the provided SASL authentication mechanism is not support";
+static const char esp_mail_error_auth_str_2[] PROGMEM = "OAuth2.0 log in was disabled for this server";
+static const char esp_mail_error_auth_str_3[] PROGMEM = "not yet log in";
+#endif
+
+/////////////////////////
+// Session error string
+
+#if defined(ENABLE_ERROR_STRING)
+static const char esp_mail_error_session_str_1[] PROGMEM = "the Session_Config object was not assigned";
+static const char esp_mail_error_session_str_2[] PROGMEM = "the SMTPSession object was not assigned";
+static const char esp_mail_error_session_str_3[] PROGMEM = "the IMAPSession object was not assigned";
+#endif
+
+/////////////////////////
+// Time error string
+#if defined(ENABLE_ERROR_STRING)
+static const char esp_mail_error_time_str_1[] PROGMEM = "library or device time was not set, see examples/SMTP/Set_Time.ino for manually time setting";
+#endif
+
+/////////////////////////
+// SMTP error string
+#if defined(ENABLE_SMTP)
+#if defined(ENABLE_ERROR_STRING)
+static const char esp_mail_error_smtp_str_1[] PROGMEM = "SMTP server greeting failed";
+static const char esp_mail_error_smtp_str_2[] PROGMEM = "authentication failed";
+static const char esp_mail_error_smtp_str_3[] PROGMEM = "login password is not valid";
+static const char esp_mail_error_smtp_str_4[] PROGMEM = "send header failed";
+static const char esp_mail_error_smtp_str_5[] PROGMEM = "send body failed";
+static const char esp_mail_error_smtp_str_7[] PROGMEM = "sender Email address is not valid";
+static const char esp_mail_error_smtp_str_8[] PROGMEM = "some of the recipient Email address is not valid";
+static const char esp_mail_error_smtp_str_9[] PROGMEM = "set recipient failed";
+#endif
+#endif
+
+/////////////////////////
+// IMAP error string
+#if defined(ENABLE_IMAP)
+#if defined(ENABLE_ERROR_STRING)
+static const char esp_mail_error_imap_str_1[] PROGMEM = "fail to list the mailboxes";
+static const char esp_mail_error_imap_str_2[] PROGMEM = "fail to check the capabilities";
+
+static const char esp_mail_error_imap_str_3[] PROGMEM = "fail to close the mailbox";
+
+static const char esp_mail_error_imap_str_4[] PROGMEM = "fail to open the mailbox";
+static const char esp_mail_error_imap_str_5[] PROGMEM = "some of the requested messages no longer exist";
+static const char esp_mail_error_imap_str_6[] PROGMEM = "firmware update initialization failed";
+static const char esp_mail_error_imap_str_7[] PROGMEM = "firmware update write failed";
+static const char esp_mail_error_imap_str_8[] PROGMEM = "firmware update finalize failed";
+
+#endif
+#if defined(ENABLE_ERROR_STRING) || !defined(SILENT_MODE)
+static const char esp_mail_error_imap_str_9[] PROGMEM = "no messages found for the specified search criteria";
+static const char esp_mail_error_imap_str_10[] PROGMEM = "no search criteria provided, then fetching the latest message";
+static const char esp_mail_error_imap_str_11[] PROGMEM = "no mailbox opened";
+static const char esp_mail_error_imap_str_12[] PROGMEM = "no content";
+static const char esp_mail_error_imap_str_13[] PROGMEM = "this feature was not supported";
+static const char esp_mail_error_imap_str_14[] PROGMEM = "no message changed since (assigned) modsec";
+static const char esp_mail_error_imap_str_15[] PROGMEM = "CONDSTORE was not supported or modsec was not supported for selected mailbox";
+static const char esp_mail_error_imap_str_17[] PROGMEM = "could not parse command";
+#endif
+#endif
+
+/////////////////////////
+// General use string
+static const char esp_mail_str_1[] PROGMEM = "mydomain.com";
+static const char esp_mail_str_2[] PROGMEM = " ";
+static const char esp_mail_str_3[] PROGMEM = "*";
+static const char esp_mail_str_4[] PROGMEM = "High";
+static const char esp_mail_str_5[] PROGMEM = "Normal";
+static const char esp_mail_str_6[] PROGMEM = "Low";
+static const char esp_mail_str_7[] PROGMEM = "=";
+static const char esp_mail_str_8[] PROGMEM = ",";
+static const char esp_mail_str_9[] PROGMEM = "--";
+static const char esp_mail_str_10[] PROGMEM = "/";
+static const char esp_mail_str_11[] PROGMEM = "\"";
+static const char esp_mail_str_12[] PROGMEM = "Error, ";
+static const char esp_mail_str_13[] PROGMEM = "msg.txt";
+static const char esp_mail_str_14[] PROGMEM = "msg.html";
+static const char esp_mail_str_15[] PROGMEM = "flash content message";
+static const char esp_mail_str_16[] PROGMEM = "file content message";
+static const char esp_mail_str_17[] PROGMEM = "cid:";
+static const char esp_mail_str_18[] PROGMEM = "\r\n";
+static const char esp_mail_str_19[] PROGMEM = "<";
+static const char esp_mail_str_20[] PROGMEM = ">";
+// static const char esp_mail_str_21[] PROGMEM = "";
+static const char esp_mail_str_22[] PROGMEM = "message/rfc822";
+static const char esp_mail_str_23[] PROGMEM = "upload";
+static const char esp_mail_str_24[] PROGMEM = "%";
+static const char esp_mail_str_25[] PROGMEM = "status code: ";
+static const char esp_mail_str_26[] PROGMEM = ", text: ";
+static const char esp_mail_str_27[] PROGMEM = ".";
+static const char esp_mail_str_28[] PROGMEM = "> C: ";
+static const char esp_mail_str_29[] PROGMEM = "< S: ";
+static const char esp_mail_str_30[] PROGMEM = "! E: ";
+static const char esp_mail_str_31[] PROGMEM = "! I: ";
+static const char esp_mail_str_32[] PROGMEM = "! W: ";
+static const char esp_mail_str_33[] PROGMEM = "#### ";
+static const char esp_mail_str_34[] PROGMEM = ":";
+static const char esp_mail_str_35[] PROGMEM = ";";
+static const char esp_mail_str_36[] PROGMEM = "{";
+static const char esp_mail_str_37[] PROGMEM = "}";
+static const char esp_mail_str_38[] PROGMEM = "(";
+static const char esp_mail_str_39[] PROGMEM = ")";
+static const char esp_mail_str_40[] PROGMEM = "[";
+static const char esp_mail_str_41[] PROGMEM = "]";
+static const char esp_mail_str_42[] PROGMEM = "\r\n";
+static const char esp_mail_str_43[] PROGMEM = "\1\1";
+static const char esp_mail_str_44[] PROGMEM = "{\"status\":";
+static const char esp_mail_str_45[] PROGMEM = "user=";
+static const char esp_mail_str_46[] PROGMEM = "\1auth=Bearer ";
+static const char esp_mail_str_47[] PROGMEM = "0123456789ABCDEF";
+static const char esp_mail_str_48[] PROGMEM = "<0.0>";
+static const char esp_mail_str_49[] PROGMEM = "<0.";
+static const char esp_mail_str_50[] PROGMEM = "Search limit: %d\nFound %d messages\nShow %d messages";
+static const char esp_mail_str_51[] PROGMEM = "1.0";
+static const char esp_mail_str_52[] PROGMEM = "Fetch message %d, UID: %d";
+static const char esp_mail_str_53[] PROGMEM = "Fetch message %d, Number: %d";
+static const char esp_mail_str_54[] PROGMEM = "Attachments (%d)";
+static const char esp_mail_str_55[] PROGMEM = "Free Heap: ";
+static const char esp_mail_str_56[] PROGMEM = "content-";
+static const char esp_mail_str_58[] PROGMEM = "format=\"flowed\"";
+static const char esp_mail_str_59[] PROGMEM = "format=flowed";
+static const char esp_mail_str_60[] PROGMEM = "delsp=\"yes\"";
+static const char esp_mail_str_61[] PROGMEM = "delsp=yes";
+static const char esp_mail_str_62[] PROGMEM = "name";
+static const char esp_mail_str_63[] PROGMEM = "+ ";
+static const char esp_mail_str_64[] PROGMEM = "boundary=\"";
+static const char esp_mail_str_65[] PROGMEM = "/header.json";
+static const char esp_mail_str_66[] PROGMEM = "/header.txt";
+static const char esp_mail_str_67[] PROGMEM = "{\"Filename\":\"";
+static const char esp_mail_str_68[] PROGMEM = "Index: ";
+static const char esp_mail_str_69[] PROGMEM = ",\"RFC822\":";
+static const char esp_mail_str_70[] PROGMEM = "\r\n\r\nRFC822:\r\n";
+static const char esp_mail_str_71[] PROGMEM = ",\"Attachments\":{\"Count\":";
+static const char esp_mail_str_72[] PROGMEM = ",\"Files\":[";
+static const char esp_mail_str_73[] PROGMEM = "\r\n\r\nAttachments (";
+static const char esp_mail_str_74[] PROGMEM = ")\r\n";
+static const char esp_mail_str_75[] PROGMEM = "]}";
+static const char esp_mail_str_76[] PROGMEM = "{\"Messages\":[";
+static const char esp_mail_str_77[] PROGMEM = ",\"";
+static const char esp_mail_str_78[] PROGMEM = "{\"";
+static const char esp_mail_str_79[] PROGMEM = "\":\"";
+static const char esp_mail_str_80[] PROGMEM = "{\"Renamed\":\"";
+static const char esp_mail_str_81[] PROGMEM = "\",\"Original\":\"";
+static const char esp_mail_str_82[] PROGMEM = "\"}]";
+static const char esp_mail_str_83[] PROGMEM = "_";
+static const char esp_mail_str_84[] PROGMEM = "message";
+static const char esp_mail_str_85[] PROGMEM = "rfc822";
+static const char esp_mail_str_86[] PROGMEM = "/msg";
+static const char esp_mail_str_87[] PROGMEM = "/rfc822_msg";
+static const char esp_mail_str_88[] PROGMEM = "polling established on ";
+static const char esp_mail_str_89[] PROGMEM = " folder...";
+static const char esp_mail_str_90[] PROGMEM = "boundary";
+static const char esp_mail_str_91[] PROGMEM = "\\Deleted";
+static const char esp_mail_str_92[] PROGMEM = "Subject: %s";
+static const char esp_mail_str_93[] PROGMEM = "Message sent success: %d";
+static const char esp_mail_str_94[] PROGMEM = "Message sent failed: %d";
+static const char esp_mail_str_95[] PROGMEM = "Status: %s";
+static const char esp_mail_str_96[] PROGMEM = "Date/Time: %s";
+static const char esp_mail_str_97[] PROGMEM = "Recipient: %s";
+static const char esp_mail_str_98[] PROGMEM = "success";
+static const char esp_mail_str_99[] PROGMEM = "failed";
+static const char esp_mail_str_100[] PROGMEM = "(\"name\" \"ESP Mail Client\" \"version\" \"%s\")";
+
+#if defined(ENABLE_SMTP)
+static const char boundary_table[] PROGMEM = "=_abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 #endif
 
 #if defined(ENABLE_SMTP) || defined(ENABLE_IMAP)
 
 static const unsigned char b64_index_table[65] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
+static void __attribute__((used))
+appendDebugTag(MB_String &buf, esp_mail_debug_tag_type type, bool clear, PGM_P text = NULL)
+{
+    if (clear)
+        buf.clear();
+
+    switch (type)
+    {
+    case esp_mail_debug_tag_type_client:
+        buf += esp_mail_str_28; /* "> C: "*/
+        break;
+    case esp_mail_debug_tag_type_server:
+        buf += esp_mail_str_29; /* "< S: " */
+        break;
+    case esp_mail_debug_tag_type_error:
+        buf += esp_mail_str_30; /* "! E: "*/
+        break;
+    case esp_mail_debug_tag_type_info:
+        buf += esp_mail_str_31; /* "! I: "*/
+        break;
+    case esp_mail_debug_tag_type_warning:
+        buf += esp_mail_str_32; /* "! W: "*/
+        break;
+    default:
+        break;
+    }
+
+    if (text != NULL)
+        buf += text;
+}
+
 // Print debug message w/wo new line to debug port
 static void __attribute__((used))
 esp_mail_debug_print(PGM_P msg = "", bool newLine = true)
 {
+#if defined(ARDUINO_ESP8266_MAJOR) && defined(ARDUINO_ESP8266_MINOR) && defined(ARDUINO_ESP8266_REVISION) && ((ARDUINO_ESP8266_MAJOR == 3 && ARDUINO_ESP8266_MINOR >= 1) || ARDUINO_ESP8266_MAJOR > 3)
+    esp_yield();
+#else
     delay(0);
+#endif
     if (newLine)
         ESP_MAIL_DEFAULT_DEBUG_PORT.println(msg);
     else
         ESP_MAIL_DEFAULT_DEBUG_PORT.print(msg);
 }
 
+static void __attribute__((used))
+esp_mail_debug_print_tag(PGM_P msg, esp_mail_debug_tag_type type, bool newLine = true)
+{
+#if defined(ARDUINO_ESP8266_MAJOR) && defined(ARDUINO_ESP8266_MINOR) && defined(ARDUINO_ESP8266_REVISION) && ((ARDUINO_ESP8266_MAJOR == 3 && ARDUINO_ESP8266_MINOR >= 1) || ARDUINO_ESP8266_MAJOR > 3)
+    esp_yield();
+#else
+    delay(0);
 #endif
 
-typedef void (*ConnectionRequestCallback)(const char *, int);
+    MB_String s;
+    appendDebugTag(s, type, false, msg);
+
+    if (newLine)
+        ESP_MAIL_DEFAULT_DEBUG_PORT.println(s.c_str());
+    else
+        ESP_MAIL_DEFAULT_DEBUG_PORT.print(s.c_str());
+}
+
+#endif
+
 typedef void (*ConnectionUpgradeRequestCallback)(void);
 typedef void (*NetworkConnectionRequestCallback)(void);
 typedef void (*NetworkDisconnectionRequestCallback)(void);
 typedef void (*NetworkStatusRequestCallback)(void);
+// Optional
+typedef void (*ConnectionRequestCallback)(const char *, int);
 #endif

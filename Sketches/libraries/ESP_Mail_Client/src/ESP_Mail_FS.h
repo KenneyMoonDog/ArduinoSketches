@@ -5,8 +5,22 @@
 #ifndef ESP_MAIL_CONFIG_H
 #define ESP_MAIL_CONFIG_H
 
+#include "ESP_Mail_Client_Version.h"
+#if !VALID_VERSION_CHECK(30110)
+#error "Mixed versions compilation."
+#endif
+
 #include <Arduino.h>
 #include "extras/MB_MCU.h"
+
+/* 📌 Enable silent mode (no debug printing and callback) */
+// #define SILENT_MODE
+
+/* 📌 Enable the NTP server time synching */
+#define ENABLE_NTP_TIME
+
+/* 📌 Enable the error string from error reason */
+#define ENABLE_ERROR_STRING
 
 /* 📌 Enable IMAP class compilation option */
 #define ENABLE_IMAP // comment this line to disable or exclude it
@@ -46,9 +60,9 @@
  * #define ESP_MAIL_DEFAULT_FLASH_FS FFat  //For ESP32 FAT
  *
  */
-#if defined(ESP32) || defined(ESP8266)
+#if defined(ESP32) || defined(ESP8266) || defined(MB_ARDUINO_PICO)
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(MB_ARDUINO_PICO)
 // Use LittleFS as default flash filesystem for ESP8266
 
 #include <LittleFS.h>
@@ -102,6 +116,11 @@
 #include <SD.h>
 #define ESP_MAIL_DEFAULT_SD_FS SD
 #define ESP_MAIL_CARD_TYPE_SD 1
+#elif defined(MB_ARDUINO_PICO)
+// Use SDFS (ESP8266SdFat) instead of SD
+#include <SDFS.h>
+#define ESP_MAIL_DEFAULT_SD_FS SDFS
+#define ESP_MAIL_CARD_TYPE_SD 1
 #endif
 
 /* 📌 Debug port compilation option */
@@ -120,15 +139,59 @@
  */
 // #define ENABLE_CUSTOM_CLIENT
 
-/* 📌 ESP8266 W5100 Ethernet module Enable compilation option */
+/* 📌 To use ESP8266 ENC28J60 Ethernet module */
+// #define ENABLE_ESP8266_ENC28J60_ETH
+
+/* 📌 To use ESP8266 W5500 Ethernet module */
+// #define ENABLE_ESP8266_W5500_ETH
+
+/* 📌 To use ESP8266 W5100 Ethernet module */
 // #define ENABLE_ESP8266_W5100_ETH
 
-/** 📌 ESP8266/ESP32 SSL engine for basic Client compilation option
+/** 📌 ESP8266/ESP32/RP2040 SSL engine for basic Client compilation option
  *
  * This macro allows library to use ESP8266 and ESP32 devices with
  * basic Clients (EthernetClient, WiFiClient and GSMClient)
  * directly without external SSL client required.
  */
 #define ESP_MAIL_USE_SDK_SSL_ENGINE
+
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
+// You can create your own header file "Custom_ESP_Mail_FS.h" in the same diectory of
+// "ESP_Mail_FS.h" and put your own custom config to overwrite or
+// change the default config in "ESP_Mail_FS.h".
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
+
+/** This is an example of "Custom_ESP_Mail_FS.h"
+
+#pragma once
+
+#ifndef Custom_ESP_Mail_FS_H
+#define Custom_ESP_Mail_FS_H
+
+// Use custom client instead of internal client
+#define ENABLE_CUSTOM_CLIENT // define to use custom client
+
+// Use LittleFS instead of SPIFFS
+#include "LittleFS.h"
+#undef DEFAULT_FLASH_FS // remove Flash FS defined macro
+#define DEFAULT_FLASH_FS LittleFS
+
+// Use SD_MMC instead of SD
+#if defined(ESP32)
+#include <SD_MMC.h>
+#undef ESP_MAIL_DEFAULT_SD_FS // remove SD defined macro
+#undef ESP_MAIL_CARD_TYPE_SD_MMC // remove SD defined macro
+#define ESP_MAIL_DEFAULT_SD_FS SD_MMC
+#define ESP_MAIL_CARD_TYPE_SD_MMC 1
+#endif
+
+
+#endif
+
+*/
+#if __has_include("Custom_ESP_Mail_FS.h")
+#include "Custom_ESP_Mail_FS.h"
+#endif
 
 #endif

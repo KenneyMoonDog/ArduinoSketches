@@ -1,7 +1,17 @@
+#ifndef MB_Time_H
+#define MB_Time_H
+
+#include "ESP_Mail_Client_Version.h"
+#if !VALID_VERSION_CHECK(30110)
+#error "Mixed versions compilation."
+#endif
+
 /*
- * Time helper class v1.0.1
+ * Time helper class v1.0.6
  *
- * Created November 24, 2022
+ * Created March 25, 2023
+ *
+ * Do not remove or modify this file as it required for AVR, ARM, SAMD devices and external client to work.
  *
  * The MIT License (MIT)
  * Copyright (c) 2022 K. Suwatchai (Mobizt)
@@ -25,16 +35,25 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef MB_Time_H
-#define MB_Time_H
+#include <Arduino.h>
+#include "ESP_Mail_FS.h"
 
 #if !defined(__AVR__)
 #include <vector>
 #include <string>
 #endif
 
+#if defined(ESP32)
+#include <ETH.h>
+#include <WiFiUdp.h>
+#endif
+
+#if defined(ESP32) && !defined(ESP_ARDUINO_VERSION) /* ESP32 core < v2.0.x */
+#include <sys/time.h>
+#else
 #include <time.h>
-#include <Arduino.h>
+#endif
+
 #include "./ESP_Mail_FS.h"
 
 #if defined(ESP_MAIL_USE_PSRAM)
@@ -43,21 +62,33 @@
 
 #include "MB_String.h"
 #include "MB_List.h"
+#if defined(ARDUINO_RASPBERRY_PI_PICO_W)
+#include <WiFi.h>
+#if defined(ENABLE_NTP_TIME)
+#include <WiFiNTP.h>
+#endif
+#endif
 
-#if defined(MB_MCU_ATMEL_ARM) || defined(MB_MCU_RP2040)
+#if defined(ENABLE_NTP_TIME)
+#include <Udp.h>
+#include "MB_NTP.h"
+#endif
+
+#if defined(MB_ARDUINO_ARCH_SAMD) || defined(MB_ARDUINO_NANO_RP2040_CONNECT)
 #include "../wcs/samd/lib/WiFiNINA.h"
 #endif
 
 #define ESP_TIME_DEFAULT_TS 1577836800
 
-#if defined(__AVR__) || MB_MCU_TEENSY_ARM
+#if defined(__AVR__) || defined(MB_ARDUINO_TEENSY)
 #define MB_TIME_PGM_ATTR
 #else
 #define MB_TIME_PGM_ATTR PROGMEM
 #endif
 
+#if !defined(MB_ARDUINO_ESP)
 static const char *mb_months[12] MB_TIME_PGM_ATTR = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
-static const char *mb_sdow[7] MB_TIME_PGM_ATTR = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+#endif
 
 class MB_Time
 {
@@ -68,9 +99,37 @@ public:
 
   ~MB_Time()
   {
+#if defined(ENABLE_NTP_TIME)
+
     _sv1.clear();
     _sv2.clear();
     _sv3.clear();
+
+    if (useInternalUDP)
+    {
+#if defined(ESP32)
+      delete udp;
+      udp = nullptr;
+#endif
+    }
+
+#endif
+  }
+
+#if defined(ENABLE_NTP_TIME)
+
+  void setUDPClient(UDP *client, float gmtOffset)
+  {
+    this->udp = client;
+    this->gmtOffset = gmtOffset;
+  }
+
+  bool initUDP()
+  {
+    if (!udp)
+      return false;
+
+    return true;
   }
 
   /** Set the system time from the NTP server
@@ -85,24 +144,26 @@ public:
   bool setClock(float gmtOffset, float daylightOffset, const char *servers = "pool.ntp.org,time.nist.gov")
   {
 
-#if defined(ESP32) || defined(ESP8266) || defined(ARDUINO_ARCH_SAMD) || defined(__AVR_ATmega4809__) || defined(ARDUINO_NANO_RP2040_CONNECT)
-
-    TZ = gmtOffset;
-    DST_MN = daylightOffset;
-    now = time(nullptr);
-#if (defined(ARDUINO_ARCH_SAMD) && !defined(ARDUINO_SAMD_MKR1000)) || defined(ARDUINO_NANO_RP2040_CONNECT)
-    bool newConfig = TZ != gmtOffset || DST_MN != daylightOffset;
-    unsigned long ts = WiFi.getTime();
-    if (ts > 0)
+#if defined(ENABLE_CUSTOM_CLIENT)
+    if (ts_offset == 0)
     {
-
-      now = ts;
-      if (newConfig)
-        now += TZ * 3600;
+      // Use local gmt offset set from setUDPClient function instead.
+      TZ = this->gmtOffset;
+      _sv1 = "pool.ntp.org";
+      ntpSetTime();
     }
-#elif defined(ESP32) || defined(ESP8266)
-    bool newConfig = TZ != gmtOffset || DST_MN != daylightOffset;
-    if ((millis() - lastSyncMillis > 5000 || lastSyncMillis == 0) && (now < ESP_TIME_DEFAULT_TS || newConfig))
+#else
+
+#if defined(MB_ARDUINO_ESP) || defined(MB_ARDUINO_PICO) || defined(ARDUINO_ARCH_SAMD) || defined(__AVR_ATmega4809__) || defined(MB_ARDUINO_NANO_RP2040_CONNECT)
+
+    if (TZ != gmtOffset || DST_MN != daylightOffset)
+      configUpdated = true;
+
+#if (defined(ARDUINO_ARCH_SAMD) && !defined(ARDUINO_SAMD_MKR1000)) || defined(MB_ARDUINO_NANO_RP2040_CONNECT)
+
+#elif defined(MB_ARDUINO_ESP) || defined(MB_ARDUINO_PICO)
+    sys_ts = time(nullptr);
+    if ((millis() - lastSyncMillis > 5000 || lastSyncMillis == 0) && (sys_ts < ESP_TIME_DEFAULT_TS || configUpdated))
     {
 
       lastSyncMillis = millis();
@@ -110,62 +171,76 @@ public:
       MB_VECTOR<MB_String> tk;
       MB_String sv = servers;
 
-      splitToken(sv, tk, ',');
-
-      switch (tk.size())
-      {
-      case 1:
-
-        _sv1 = tk[0];
-        configTime((TZ)*3600, (DST_MN)*60, _sv1.c_str());
-        break;
-      case 2:
-
-        _sv1 = tk[0];
-        _sv2 = tk[1];
-        configTime((TZ)*3600, (DST_MN)*60, _sv1.c_str(), _sv2.c_str());
-        break;
-      case 3:
-
-        _sv1 = tk[0];
-        _sv2 = tk[1];
-        _sv3 = tk[2];
-        configTime((TZ)*3600, (DST_MN)*60, _sv1.c_str(), _sv2.c_str(), _sv3.c_str());
-        break;
-      default:
-
-        configTime((TZ)*3600, (DST_MN)*60, "pool.ntp.org", "time.nist.gov");
-        break;
-      }
-
-      now = time(nullptr);
-      uint64_t tmp = now;
-      tmp = tmp * 1000;
-      msec_time_diff = tmp - millis();
-    }
-
-#if defined(ESP32)
-    getLocalTime(&timeinfo);
-#elif defined(ESP8266)
-    localtime_r(&now, &timeinfo);
-#endif
-
-#endif
-
-    _clockReady = now > ESP_TIME_DEFAULT_TS;
-
-    if (_clockReady)
-    {
       _sv1.clear();
       _sv2.clear();
       _sv3.clear();
+
+      splitToken(sv, tk, ',');
+
+      if (tk.size() > 0)
+        _sv1 = tk[0];
+      if (tk.size() > 1)
+        _sv2 = tk[1];
+      if (tk.size() > 2)
+        _sv3 = tk[2];
+
+      ntpSetTime();
     }
 
-#else
-    _clockReady = now > ESP_TIME_DEFAULT_TS;
 #endif
 
-    return _clockReady;
+#endif
+
+#endif
+
+    TZ = gmtOffset;
+    DST_MN = daylightOffset;
+
+    return clockReady(100);
+  }
+
+  void ntpSetTime()
+  {
+
+#if defined(ESP32)
+
+    // Ethernet connected
+    if (strcmp(ETH.localIP().toString().c_str(), (const char *)MBSTRING_FLASH_MCR("0.0.0.0")) != 0)
+    {
+      if (!udp && !useInternalUDP)
+      {
+        udp = new WiFiUDP();
+        useInternalUDP = true;
+      }
+    }
+    // WiFi connected
+    else if (WiFi.status() == WL_CONNECTED)
+      configTime(TZ * 3600, DST_MN * 60, _sv1.c_str(), _sv2.c_str(), _sv3.c_str());
+
+#elif defined(ESP8266)
+    configTime(TZ * 3600, DST_MN * 60, _sv1.c_str(), _sv2.c_str(), _sv3.c_str());
+#elif defined(MB_ARDUINO_PICO)
+    NTP.begin(_sv1.c_str(), _sv2.c_str());
+    NTP.waitSet();
+#endif
+
+    if (udp)
+      ntp.begin(udp, _sv1.c_str() /* NTP host */, 123 /* NTP port */, TZ * 3600 /* timezone offset in seconds */);
+  }
+
+#endif
+
+  int setTimestamp(time_t ts)
+  {
+#if defined(MB_ARDUINO_ESP)
+    struct timeval tm; // sec, us
+    tm.tv_sec = ts;
+    tm.tv_usec = 0;
+    return settimeofday((const struct timeval *)&tm, 0);
+#else
+    ts_offset = ts - millis() / 1000;
+    return 1;
+#endif
   }
 
   /** Get the timestamp from the year, month, date, hour, minute,
@@ -200,6 +275,19 @@ public:
    */
   time_t getTimestamp(const char *timeString, bool gmt = false)
   {
+#if defined(MB_ARDUINO_ESP)
+    struct tm _timeinfo;
+
+    if (strstr(timeString, ",") != NULL)
+      strptime(timeString, "%a, %d %b %Y %H:%M:%S %z", &_timeinfo);
+    else
+      strptime(timeString, "%d %b %Y %H:%M:%S %z", &_timeinfo);
+
+    time_t ts = mktime(&_timeinfo);
+    return ts;
+
+#else
+
     time_t ts = 0;
     MB_VECTOR<MB_String> tk;
     MB_String s1 = timeString;
@@ -255,6 +343,7 @@ public:
       }
     }
     return ts;
+#endif
   }
 
   /** Get the current timestamp.
@@ -264,86 +353,92 @@ public:
   uint64_t getCurrentTimestamp()
   {
     getTime();
-    return now;
+    return sys_ts;
   }
 
-  /** Get the current date time string that valid for Email.
-   *
+  /** Get the current rfc822 date time string that valid for Email.
    * @return String The current date time string.
    */
   String getDateTimeString()
   {
     getTime();
-    MB_String s;
 
-    s = mb_sdow[timeinfo.tm_wday];
+    char tbuf[40];
+    strftime(tbuf, 40, "%a, %d %b %Y %H:%M:%S %z", &timeinfo);
+    MB_String tStr = tbuf, tzStr;
 
-    s += ',';
-    s += ' ';
-    s += timeinfo.tm_mday;
-
-    s += ' ';
-    s += mb_months[timeinfo.tm_mon];
-
-    s += ' ';
-    s += timeinfo.tm_year + 1900;
-
-    s += ' ';
-    if (timeinfo.tm_hour < 10)
-      s += 0;
-    s += timeinfo.tm_hour;
-
-    s += ':';
-    if (timeinfo.tm_min < 10)
-      s += 0;
-    s += timeinfo.tm_min;
-
-    s += ':';
-    if (timeinfo.tm_sec < 10)
-      s += 0;
-    s += timeinfo.tm_sec;
-
-    int p = 1;
-    if (TZ < 0)
-      p = -1;
-
+    int p = TZ < 0 ? -1 : 1;
     float dif = (p * (TZ * 10 - (int)TZ * 10)) * 60.0 / 10;
-
-    s += ' ';
-
-    s += (TZ < 0) ? '-' : '+';
+    tzStr = (TZ < 0) ? '-' : '+';
 
     if ((int)TZ < 10)
-      s += 0;
-    s += (int)TZ;
+      tzStr += 0;
+
+    tzStr += (int)TZ;
 
     if (dif < 10)
-      s += 0;
+      tzStr += 0;
 
-    s += (int)dif;
+    tzStr += (int)dif;
 
-    return s.c_str();
+    // replace for valid timezone
+    tStr.replaceAll("+0000", tzStr);
+    return tStr.c_str();
   }
 
-  /** get the clock ready state */
-  bool clockReady()
+  String getDateTimeString(time_t ts, const char *format)
   {
+    char tbuf[50];
+    strftime(tbuf, 50, format, localtime(&ts));
+    return tbuf;
+  }
 
-#if !defined(__arm__)
-    now = time(nullptr);
+  /** get the clock ready state
+   *  Do not remove or modify this file as it required for AVR, ARM,
+   * SAMD devices and external client to work.
+   */
+  bool clockReady(uint32_t wait_ms = 0)
+  {
+    uint32_t ts = 0;
+
+#if defined(ENABLE_NTP_TIME)
+    ts = udp ? ntp.getTime(wait_ms /* wait 10000 ms */) : 0;
+    if (ts > 0)
+      ts_offset = ts - millis() / 1000;
 #endif
-    _clockReady = now > ESP_TIME_DEFAULT_TS;
+
+    getTime(ts);
+
+    _clockReady = sys_ts > ESP_TIME_DEFAULT_TS;
+
+    // Update system timestamp and its offset when time/timezone changed.
+    if (_clockReady && configUpdated)
+    {
+      sys_ts += TZ * 3600;
+      ts_offset = sys_ts - millis() / 1000;
+      configUpdated = false;
+    }
+
+#if defined(MB_ARDUINO_ESP)
+    // If system timestamp was set, update the device time
+    if (sys_ts > ESP_TIME_DEFAULT_TS && time(nullptr) < sys_ts)
+      setTimestamp(sys_ts);
+#endif
+
+#if defined(ENABLE_NTP_TIME)
     if (_clockReady)
     {
       _sv1.clear();
       _sv2.clear();
       _sv3.clear();
     }
+#endif
+
     return _clockReady;
   }
-
-  time_t now;
-  uint64_t msec_time_diff = 0;
+  // The library's internal timestamp which can be assigned via
+  // many methods e.g., device local time, NTP and manually set.
+  time_t sys_ts = 0;
   struct tm timeinfo;
   float TZ = 0.0;
   float DST_MN = 0.0;
@@ -376,26 +471,61 @@ private:
     s.clear();
   }
 
-  void getTime()
+  void getTime(uint32_t ctime = 0)
   {
-#if defined(ESP32)
-    now = time(nullptr);
-    getLocalTime(&timeinfo);
-#elif defined(ESP8266)
-    now = time(nullptr);
-    localtime_r(&now, &timeinfo);
-#elif (defined(ARDUINO_ARCH_SAMD) && defined(__AVR_ATmega4809__)) || defined(ARDUINO_NANO_RP2040_CONNECT)
+
+#if (defined(ARDUINO_ARCH_SAMD) && !defined(ARDUINO_SAMD_MKR1000)) || defined(MB_ARDUINO_NANO_RP2040_CONNECT)
+
     unsigned long ts = WiFi.getTime();
     if (ts > 0)
-      now = ts + TZ * 3600;
-    localtime_r(&now, &timeinfo);
+      sys_ts = ts;
+
+#else
+
+#if defined(ENABLE_CUSTOM_CLIENT) || defined(MB_ARDUINO_PICO) || (defined(ARDUINO_ARCH_SAMD) && defined(__AVR_ATmega4809__))
+    // set sys time using the offset since the time was manually set via setTimestamp function and current seconds count
+    sys_ts = ts_offset + millis() / 1000;
+#if defined(MB_ARDUINO_PICO)
+    // set sys time using device timestamp
+    if (sys_ts < time(nullptr))
+      sys_ts = time(nullptr);
+    localtime_r(&sys_ts, &timeinfo);
+#endif
+#else
+
+#if defined(MB_ARDUINO_ESP)
+    sys_ts = ctime == 0 ? time(nullptr) : ctime;
+#endif
+
+    if (ctime == 0 && time(nullptr) > ESP_TIME_DEFAULT_TS)
+    {
+#if defined(ESP32)
+      getLocalTime(&timeinfo);
+#elif defined(ESP8266)
+      localtime_r(&sys_ts, &timeinfo);
+#endif
+    }
+
+#endif
+
 #endif
   }
 
-  bool _clockReady = false;
-  unsigned long lastSyncMillis = 0;
+#if defined(ENABLE_NTP_TIME)
+
+  UDP *udp = nullptr;
+  bool useInternalUDP = false;
+  MB_NTP ntp;
+
   // in ESP8266 these NTP sever strings should be existed during configuring time.
   MB_String _sv1, _sv2, _sv3;
+#endif
+
+  uint32_t ts_offset = 0;
+  bool configUpdated = false;
+  float gmtOffset = 0;
+  bool _clockReady = false;
+  unsigned long lastSyncMillis = 0;
 };
 
 #endif // MB_Time_H

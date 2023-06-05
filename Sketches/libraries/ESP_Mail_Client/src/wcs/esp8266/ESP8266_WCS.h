@@ -1,11 +1,11 @@
 /**
  *
- * The Network Upgradable ESP8266 Secure WiFi Client Class, ESP8266_WCS.h v2.0.0
+ * The Network Upgradable ESP8266 Secure WiFi Client Class, ESP8266_WCS.h v2.0.2
  *
- * Created July 20, 2022
+ * Created March 12, 2023
  * 
  * The MIT License (MIT)
- * Copyright (c) 2022 K. Suwatchai (Mobizt)
+ * Copyright (c) 2023 K. Suwatchai (Mobizt)
  *
  *
  * Permission is hereby granted, free of charge, to any person returning a copy of
@@ -29,7 +29,10 @@
 #ifndef ESP8266_WCS_H
 #define ESP8266_WCS_H
 
-#ifdef ESP8266
+#include <Arduino.h>
+#include "ESP_Mail_FS.h"
+
+#if (defined(ESP8266) || defined(MB_ARDUINO_PICO)) && (defined(ENABLE_SMTP) || defined(ENABLE_IMAP))
 
 #include <vector>
 #include <WiFiClient.h>
@@ -48,7 +51,7 @@
 #define WCS_USE_BEARSSL
 #endif
 
-#if defined(ESP8266)
+#if defined(ESP8266)|| defined(MB_ARDUINO_PICO)
 #include <StackThunk.h>
 #endif
 
@@ -56,19 +59,19 @@
 
 #if defined(ESP_MAIL_USE_SDK_SSL_ENGINE)
 #include "ESP8266_SSL_Client.h"
-#define WCS_CLASS ESP8266_SSL_Client
-#define WC_CLASS WCS_CLASS
+#define ESP_Mail_WCS_CLASS ESP8266_SSL_Client
+#define ESP_Mail_WC_CLASS ESP_Mail_WCS_CLASS
 #else
 #include <WiFiClientSecure.h>
-#define WCS_CLASS WiFiClientSecureCtx
-#define WC_CLASS WiFiClient
+#define ESP_Mail_WCS_CLASS WiFiClientSecureCtx
+#define ESP_Mail_WC_CLASS WiFiClient
 #endif
 
 #else
 
 #include <WiFiClientSecure.h>
-#define WCS_CLASS WiFiClientSecure
-#define WC_CLASS WiFiClient
+#define ESP_Mail_WCS_CLASS WiFiClientSecure
+#define ESP_Mail_WC_CLASS WiFiClient
 #endif
 
 #include "./wcs/base/TCP_Client_Base.h"
@@ -80,9 +83,9 @@
 #endif
 
 #if defined(ESP_MAIL_USE_SDK_SSL_ENGINE)
-class ESP8266_WCS : public WCS_CLASS
+class ESP8266_WCS : public ESP_Mail_WCS_CLASS
 #else
-class ESP8266_WCS : public WCS_CLASS, public TCP_Client_Base
+class ESP8266_WCS : public ESP_Mail_WCS_CLASS, public TCP_Client_Base
 #endif
 {
   friend class ESP8266_TCP_Client;
@@ -194,7 +197,7 @@ public:
    */
   void connectionRequestCallback(_ConnectionRequestCallback connectCB)
   {
-    WCS_CLASS::connectionRequestCallback(connectCB);
+    ESP_Mail_WCS_CLASS::connectionRequestCallback(connectCB);
   }
 
 #endif

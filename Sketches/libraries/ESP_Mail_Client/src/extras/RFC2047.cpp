@@ -1,6 +1,11 @@
 #ifndef RFC2047_CPP
 #define RFC2047_CPP
 
+#include "ESP_Mail_Client_Version.h"
+#if !VALID_VERSION_CHECK(30110)
+#error "Mixed versions compilation."
+#endif
+
 #include "RFC2047.h"
 
 RFC2047_Decoder::RFC2047_Decoder() {}
@@ -65,12 +70,15 @@ void RFC2047_Decoder::rfc2047DecodeWord(char *d, const char *s, size_t dlen)
 
   char *p = safe_strdup(s);
   char *pp = p;
+  char *end = p;
   char *pd = d;
   size_t len = dlen;
   int enc = 0, filter = 0, count = 0, c1, c2, c3, c4;
 
-  while ((pp = strtok(pp, "?")) != NULL)
+  while (pp != NULL)
   {
+
+    strsep(&end, "?");
     count++;
     switch (count)
     {
@@ -145,12 +153,14 @@ void RFC2047_Decoder::rfc2047DecodeWord(char *d, const char *s, size_t dlen)
       }
       break;
     }
-    pp = 0;
+    
+    pp = end;
   }
+
   mbfs->delP(&p);
+
   if (filter)
   {
-
     pd = d;
     while (*pd)
     {
@@ -164,7 +174,7 @@ void RFC2047_Decoder::rfc2047DecodeWord(char *d, const char *s, size_t dlen)
 
 char *RFC2047_Decoder::safe_strdup(const char *s)
 {
-  
+
   if (!mbfs)
     return 0;
 

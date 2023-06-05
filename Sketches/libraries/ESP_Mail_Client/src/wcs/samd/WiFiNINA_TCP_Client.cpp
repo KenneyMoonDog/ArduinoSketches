@@ -1,10 +1,8 @@
 /*
- * WiFiNINA TCP Client for ESP Mail Client, version 1.0.10
+ * WiFiNINA TCP Client for ESP Mail Client, version 1.0.12
  *
- * To do:
- * - Add support board SSL engine for external basic client
- * 
- * July 21, 2022
+ *
+ * March 2, 2023
  *
  * Add support Arduino Nano RP2040 Connect
  *
@@ -69,9 +67,10 @@ void WiFiNINA_TCP_Client::setCACert(const char *caCert)
   // wcs->setNoDelay(true);
 }
 
-void WiFiNINA_TCP_Client::setCertFile(const char *certFile, mb_fs_mem_storage_type storageType)
+bool WiFiNINA_TCP_Client::setCertFile(const char *certFile, mb_fs_mem_storage_type storageType)
 {
   baseSetCertType(esp_mail_cert_type_file);
+  return getCertType() == esp_mail_cert_type_file;
 }
 
 void WiFiNINA_TCP_Client::setTimeout(uint32_t timeoutSec)
@@ -118,7 +117,11 @@ String WiFiNINA_TCP_Client::fwVersion()
 
 esp_mail_client_type WiFiNINA_TCP_Client::type()
 {
+#if defined(ENABLE_CUSTOM_CLIENT)
+  return esp_mail_client_type_custom;
+#else
   return esp_mail_client_type_internal;
+#endif
 }
 
 bool WiFiNINA_TCP_Client::isInitialized() { return true; }

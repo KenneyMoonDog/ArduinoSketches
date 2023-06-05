@@ -1,11 +1,11 @@
 /**
  *
- * The Network Upgradable ESP8266 Secure WiFi Client Class, ESP8266_WCS.cpp v2.0.0
+ * The Network Upgradable ESP8266 Secure WiFi Client Class, ESP8266_WCS.cpp v2.0.2
  *
- * Created July 20, 2022
- * 
+ * Created March 12, 2023
+ *
  * The MIT License (MIT)
- * Copyright (c) 2022 K. Suwatchai (Mobizt)
+ * Copyright (c) 2023 K. Suwatchai (Mobizt)
  *
  *
  * Permission is hereby granted, free of charge, to any person returning a copy of
@@ -29,7 +29,9 @@
 #ifndef ESP8266_WCS_CPP
 #define ESP8266_WCS_CPP
 
-#ifdef ESP8266
+#include <Arduino.h>
+#include "ESP_Mail_FS.h"
+#if (defined(ESP8266) || defined(MB_ARDUINO_PICO)) && (defined(ENABLE_SMTP) || defined(ENABLE_IMAP))
 
 #define LWIP_INTERNAL
 
@@ -46,12 +48,12 @@ ESP8266_WCS::ESP8266_WCS()
 ESP8266_WCS::~ESP8266_WCS()
 {
   stop();
-
 #if defined(ESP_MAIL_USE_SDK_SSL_ENGINE)
   if (_basic_client && _use_internal_basic_client)
   {
-    WC_CLASS::setClient(nullptr);
+    delete _basic_client;
     _basic_client = nullptr;
+    ESP_Mail_WC_CLASS::setClient(nullptr);
     _use_internal_basic_client = false;
   }
 #endif
@@ -61,22 +63,21 @@ void ESP8266_WCS::setClient(Client *client)
 {
   _basic_client = client;
 #if defined(ESP_MAIL_USE_SDK_SSL_ENGINE)
-  WCS_CLASS::setClient(client);
+  ESP_Mail_WCS_CLASS::setClient(client);
 #endif
 }
 
 int ESP8266_WCS::connect(const char *name, uint16_t port)
 {
-
   prepareBasicClient();
 
   _host = name;
 
 #if defined(ESP_MAIL_USE_SDK_SSL_ENGINE)
 
-  if (!WCS_CLASS::connect(name, port))
+  if (!ESP_Mail_WCS_CLASS::connect(name, port))
   {
-    WCS_CLASS::stop();
+    ESP_Mail_WCS_CLASS::stop();
     return 0;
   }
   // if external SSL Client successfully connected to ssl port
@@ -85,16 +86,9 @@ int ESP8266_WCS::connect(const char *name, uint16_t port)
 
 #else
 
-  IPAddress remote_addr;
-
-  if (!WiFi.hostByName(name, remote_addr))
+  if (!ESP_Mail_WC_CLASS::connect(name, port))
   {
-    return 0;
-  }
-
-  if (!WC_CLASS::connect(remote_addr, port))
-  {
-    WC_CLASS::stop();
+    ESP_Mail_WC_CLASS::stop();
     return 0;
   }
 
@@ -103,10 +97,10 @@ int ESP8266_WCS::connect(const char *name, uint16_t port)
   if (!_secured)
     return 1;
 
-  bool res = WCS_CLASS::_connectSSL(_host.c_str());
+  bool res = ESP_Mail_WCS_CLASS::_connectSSL(_host.c_str());
 
   if (!res)
-    WCS_CLASS::stop();
+    ESP_Mail_WCS_CLASS::stop();
 
   return res;
 }
@@ -115,12 +109,12 @@ bool ESP8266_WCS::connectSSL(bool verify)
 {
   setVerify(verify);
 
-  bool res = WCS_CLASS::_connectSSL(_host.c_str());
+  bool res = ESP_Mail_WCS_CLASS::_connectSSL(_host.c_str());
 
   if (res)
     _secured = true;
   else
-    WCS_CLASS::stop();
+    ESP_Mail_WCS_CLASS::stop();
 
   return res;
 }
@@ -133,18 +127,18 @@ uint8_t ESP8266_WCS::_connected()
     return ns_connected();
 #endif
 
-  return WCS_CLASS::connected();
+  return ESP_Mail_WCS_CLASS::connected();
 }
 
 void ESP8266_WCS::setTimeout(unsigned long timeout)
 {
-  WCS_CLASS::setTimeout(timeout);
+  ESP_Mail_WCS_CLASS::setTimeout(timeout);
 }
 
 void ESP8266_WCS::stop()
 {
   _host.clear();
-  WCS_CLASS::stop();
+  ESP_Mail_WCS_CLASS::stop();
 }
 
 int ESP8266_WCS::available()
@@ -155,7 +149,7 @@ int ESP8266_WCS::available()
     return ns_available();
 #endif
 
-  return WCS_CLASS::available();
+  return ESP_Mail_WCS_CLASS::available();
 }
 
 int ESP8266_WCS::read()
@@ -166,7 +160,7 @@ int ESP8266_WCS::read()
     return ns_read();
 #endif
 
-  return WCS_CLASS::read();
+  return ESP_Mail_WCS_CLASS::read();
 }
 
 int ESP8266_WCS::read(uint8_t *buf, size_t size)
@@ -177,7 +171,7 @@ int ESP8266_WCS::read(uint8_t *buf, size_t size)
     return ns_read(buf, size);
 #endif
 
-  return WCS_CLASS::read(buf, size);
+  return ESP_Mail_WCS_CLASS::read(buf, size);
 }
 
 size_t ESP8266_WCS::write(const uint8_t *buf, size_t size)
@@ -188,7 +182,7 @@ size_t ESP8266_WCS::write(const uint8_t *buf, size_t size)
     return ns_write(buf, size);
 #endif
 
-  return WCS_CLASS::write(buf, size);
+  return ESP_Mail_WCS_CLASS::write(buf, size);
 }
 
 void ESP8266_WCS::prepareBasicClient()
@@ -197,7 +191,7 @@ void ESP8266_WCS::prepareBasicClient()
   if (!_basic_client && !_use_internal_basic_client)
   {
     _basic_client = new WiFiClient();
-    WCS_CLASS::setClient(_basic_client);
+    ESP_Mail_WCS_CLASS::setClient(_basic_client);
     _use_internal_basic_client = true;
   }
 #endif
@@ -209,7 +203,7 @@ int ESP8266_WCS::peek()
   if (!_secured)
     return ns_peek();
 #endif
-  return WCS_CLASS::peek();
+  return ESP_Mail_WCS_CLASS::peek();
 }
 
 void ESP8266_WCS::setTA(bool hasTA)
@@ -228,7 +222,7 @@ void ESP8266_WCS::setVerify(bool verify)
     _base_use_insecure = !verify;
 
   if (_base_use_insecure)
-    WCS_CLASS::setInsecure();
+    ESP_Mail_WCS_CLASS::setInsecure();
 }
 
 bool ESP8266_WCS::isSecure()
@@ -244,7 +238,7 @@ bool ESP8266_WCS::isVerify()
 #if !defined(ESP_MAIL_USE_SDK_SSL_ENGINE)
 size_t ESP8266_WCS::ns_write(uint8_t b)
 {
-  return WCS_CLASS::write(&b, 1);
+  return ESP_Mail_WCS_CLASS::write(&b, 1);
 }
 
 size_t ESP8266_WCS::ns_write(const uint8_t *buf, size_t size)
@@ -264,7 +258,7 @@ size_t ESP8266_WCS::ns_write(const uint8_t *buf, size_t size)
 size_t ESP8266_WCS::ns_write(Stream &stream, size_t unused)
 {
   (void)unused;
-  return WC_CLASS::write(stream);
+  return ESP_Mail_WC_CLASS::write(stream);
 }
 
 size_t ESP8266_WCS::ns_write(Stream &stream)

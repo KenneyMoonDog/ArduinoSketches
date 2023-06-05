@@ -1,11 +1,11 @@
 /**
  *
- * The Network Upgradable ESP8266 Secure TCP Client Class, ESP8266_TCP_Client.h v2.0.1
+ * The Network Upgradable ESP8266 Secure TCP Client Class, ESP8266_TCP_Client.h v2.0.11
  *
- * Created July 24, 2022
+ * Created March 28, 2023
  *
  * The MIT License (MIT)
- * Copyright (c) 2022 K. Suwatchai (Mobizt)
+ * Copyright (c) 2023 K. Suwatchai (Mobizt)
  *
  *
  * Permission is hereby granted, free of charge, to any person returning a copy of
@@ -29,12 +29,17 @@
 #ifndef ESP8266_TCP_Client_H
 #define ESP8266_TCP_Client_H
 
-#ifdef ESP8266
-
 #include <Arduino.h>
-#include <core_version.h>
+#include "ESP_Mail_FS.h"
+
+#if (defined(ESP8266) || defined(MB_ARDUINO_PICO)) && (defined(ENABLE_SMTP) || defined(ENABLE_IMAP))
+
 #include <time.h>
 #include <string>
+#include <WiFiClient.h>
+
+#if defined(ESP8266)
+#include <core_version.h>
 #include "extras/SDK_Version_Common.h"
 
 #ifndef ARDUINO_ESP8266_GIT_VER
@@ -42,7 +47,12 @@
 #endif
 
 #include <ESP8266WiFi.h>
-#include <WiFiClient.h>
+#elif defined(MB_ARDUINO_PICO)
+#include <WiFi.h>
+#endif
+
+using namespace BearSSL;
+
 #include "ESP8266_WCS.h"
 
 #define ESP8266_TCP_CLIENT
@@ -70,8 +80,9 @@ public:
    * Set Root CA certificate to verify.
    * @param certFile The certificate file path.
    * @param storageType The storage type mb_fs_mem_storage_type_flash or mb_fs_mem_storage_type_sd.
+   * @return true when certificate loaded successfully.
    */
-  void setCertFile(const char *certFile, mb_fs_mem_storage_type storageType);
+  bool setCertFile(const char *certFile, mb_fs_mem_storage_type storageType);
 
   /**
    * Set TCP connection time out in seconds.
@@ -245,26 +256,17 @@ public:
 
   void setMBFS(MB_FS *mbfs) { wcs->mbfs = mbfs; }
 
-  void setSession(ESP_Mail_Session *session)
+#if defined(ENABLE_SMTP) || defined(ENABLE_IMAP)
+  void setSession(ESP_Mail_Session *session_config)
   {
-    wcs->session = session;
+    wcs->session_config = session_config;
   }
+#endif
 
   void setClockReady(bool rdy)
   {
     wcs->clockReady = rdy;
   }
-
-  bool setSystemTime(time_t ts)
-  {
-    return wcs->setSystemTime(ts);
-  }
-
-  time_t getTime()
-  {
-    return wcs->getTime();
-  }
-
   esp_mail_cert_type getCertType()
   {
     return wcs->certType;
@@ -398,7 +400,7 @@ private:
 
 #if defined(WCS_USE_BEARSSL)
 #if defined(ESP_MAIL_USE_SDK_SSL_ENGINE)
-  BearSSL_X509List *x509 = nullptr;
+  X509List *x509 = nullptr;
 #else
   X509List *x509 = nullptr;
 #endif

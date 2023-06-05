@@ -20,6 +20,7 @@ volatile bool bPowerOn = false;
 #define BUTTON_PIN_1 14
 #define BUTTON_PIN_2 15
 #define BUTTON_PIN_3 16
+//#define BUTTON_PIN_4 17
 #define INTERRUPT_PIN 17
 
 
@@ -27,57 +28,37 @@ volatile bool bPowerOn = false;
 class timedOutputPinHandler {
     
   private:
-  bool rising = true;
-  uint8_t executionCount = 1;
-  uint8_t executionCountLimit = 1;
+  float no_radians = 0;
   
   public: 
-  uint8_t maxLimit = 255;
-  uint8_t minLimit = 0;
- 
-  uint8_t currentOutputValue = 0;
   uint8_t PIN = 0;
      
-  timedOutputPinHandler(uint8_t pin, uint8_t initialValue, uint8_t minlimit, uint8_t maxlimit, uint8_t executioncountlimit){
+  timedOutputPinHandler(uint8_t pin, float startRadians){
      PIN=pin;
      pinMode(PIN, OUTPUT); 
      digitalWrite(PIN, LOW);
-     currentOutputValue = initialValue;
-     minLimit=minlimit;
-     maxLimit=maxlimit;
-     executionCountLimit = executioncountlimit;
-  }
-
-  uint8_t getValue(){
-    return currentOutputValue;
+     no_radians = startRadians;
   }
 
   uint8_t getPIN() {
     return PIN;
   }
-
-  void setMaxLimit(uint8_t maxlimit) {
-    maxLimit = maxlimit;
-  }
-
-  void setMinLimit(uint8_t minlimit){
-    minLimit=minlimit;
-  }
-  
-  void setExecutionCountLimit(uint8_t limit) {
-    executionCountLimit = limit;
-  }
   
   virtual void timedAction() {
-    if (executionCount < executionCountLimit) {
-      executionCount++;
-      return;
+
+    uint8_t pinValue=0;
+    
+    if (no_radians < (2 * 3.14)) {
+      no_radians+=0.01;
     }
     else {
-      executionCount=1;
+      no_radians=0;
     }
+
+    pinValue = round((1 + sin(no_radians)) * 125);
+    analogWrite(PIN, pinValue);
     
-    if ( rising ) {
+    /*if ( rising ) {
       if (currentOutputValue < maxLimit  ){
         currentOutputValue++;
         analogWrite(PIN, currentOutputValue);
@@ -94,7 +75,7 @@ class timedOutputPinHandler {
       else {
         rising=!rising;
       }      
-    }    
+    }  */  
   }
 };
 
@@ -103,7 +84,7 @@ class WarpEngine : timedOutputPinHandler{
      bool rising = true;
       
    public:
-     WarpEngine(uint8_t pin, uint8_t initialValue, uint8_t minlimit, uint8_t maxlimit, uint8_t maxcount) : timedOutputPinHandler(pin, initialValue, minlimit, maxlimit, maxcount) {
+     WarpEngine(uint8_t pin, float startRadian) : timedOutputPinHandler(pin, startRadian) {
      }
 
    void timedAction() {
@@ -116,7 +97,7 @@ class plasmaCannon : timedOutputPinHandler{
      bool rising = true;
       
    public:
-     plasmaCannon(uint8_t pin, uint8_t initialValue, uint8_t minlimit, uint8_t maxlimit, uint8_t maxcount) : timedOutputPinHandler(pin, initialValue, minlimit, maxlimit, maxcount) {
+     plasmaCannon(uint8_t pin, float startRadian) : timedOutputPinHandler(pin, startRadian) {
      }
 
    void timedAction() {
@@ -136,11 +117,11 @@ class pinInterrupt {
       pinMode(PIN, INPUT_PULLUP);
       //pHandler = handler;
 
-      *digitalPinToPCMSK(pin) |= bit (digitalPinToPCMSKbit(PIN));  // enable pin
-      PCIFR  |= bit (digitalPinToPCICRbit(PIN)); // clear any outstanding interrupt
-      PCICR  |= bit (digitalPinToPCICRbit(PIN)); // enable interrupt for the group
-
-      //PCintPort::attachInterrupt(PIN, pHandler, FALLING);
+      //*digitalPinToPCMSK(pin) |= bit (digitalPinToPCMSKbit(PIN));  // enable pin
+      //PCIFR  |= bit (digitalPinToPCICRbit(PIN)); // clear any outstanding interrupt
+      //PCICR  |= bit (digitalPinToPCICRbit(PIN)); // enable interrupt for the group
+      //include PinChangeInt.h to support
+      //intPort::attachInterrupt(PIN, pHandler, FALLING);
     }
 };
 
@@ -172,7 +153,7 @@ class jButton {
       resetOnRead = set;
     }
 
-    virtual volatile void onButtonChangeDown(){
+    virtual volatile bool onButtonChangeDown(){
       if ( digitalRead(PIN) == false ) {
         if ((millis() - debounceTarget) > buttonDebounceDelay) { //then this should be a state change
           debounceTarget = millis();
@@ -180,6 +161,8 @@ class jButton {
           pressed = true;
         }
       }
+
+      return readButtonState();
     }
 
     virtual volatile uint8_t getPIN() {
@@ -187,14 +170,14 @@ class jButton {
     }
 }; //class jButton
 
-plasmaCannon mCannon(PIN_PLASMA_CANNON,50,10,100,12);
-WarpEngine mOuterEngine(PIN_ENG_1,1,25,150,6);
-WarpEngine mInnerEngine(PIN_ENG_2,150,25,150,6);
+plasmaCannon mCannon(PIN_PLASMA_CANNON,0);
+WarpEngine mOuterEngine(PIN_ENG_1,0);
+WarpEngine mInnerEngine(PIN_ENG_2,3.14);
 
 jButton button_1(BUTTON_PIN_1);
 jButton button_2(BUTTON_PIN_2);
 jButton button_3(BUTTON_PIN_3);
-pinInterrupt button_trigger(INTERRUPT_PIN);
+//pinInterrupt button_trigger(INTERRUPT_PIN);
 
 void setup() {    
   Serial.begin(9600);
@@ -215,11 +198,10 @@ void setup() {
   OCR0A = 0xAF;
   TIMSK0 |= _BV(OCIE0A);
   
-  //pinMode(INTERRUPT_PIN, INPUT_PULLUP);
-  //  *digitalPinToPCMSK(INTERRUPT_PIN) |= bit (digitalPinToPCMSKbit(INTERRUPT_PIN));  // enable pin
-  //  PCIFR  |= bit (digitalPinToPCICRbit(INTERRUPT_PIN)); // clear any outstanding interrupt
-  //  PCICR  |= bit (digitalPinToPCICRbit(INTERRUPT_PIN)); // enable interrupt for the group
-  //PCintPort::attachInterrupt(INTERRUPT_PIN, buttonPress, FALLING);
+  *digitalPinToPCMSK(INTERRUPT_PIN) |= bit (digitalPinToPCMSKbit(INTERRUPT_PIN));  // enable pin
+  PCIFR  |= bit (digitalPinToPCICRbit(INTERRUPT_PIN)); // clear any outstanding interrupt
+  PCICR  |= bit (digitalPinToPCICRbit(INTERRUPT_PIN)); // enable interrupt for the group
+
 }//end setup
 
 SIGNAL(TIMER0_COMPA_vect) //handler for timed interrupts
@@ -236,6 +218,14 @@ ISR (PCINT0_vect) // handle pin change interrupt for D8 to D13 here
 
 ISR (PCINT1_vect) // handle pin change interrupt for A0 to A5 here // NAV0
 {
+  if(button_1.onButtonChangeDown()){
+  }
+
+  if(button_2.onButtonChangeDown()){
+  }
+
+  if(button_3.onButtonChangeDown()){
+  }
   // check it was NAV0 and nothing else
 }
 
@@ -245,11 +235,11 @@ ISR (PCINT2_vect) // handle pin change interrupt for D0 to D7 here // NAV1, NAV2
 }
 
 
-void buttonPress() {
+/*void buttonPress() {
   button_1.onButtonChangeDown();
   button_2.onButtonChangeDown();
   button_3.onButtonChangeDown();
-}
+}*/
 
 void startUp() {
  /* digitalWrite(PIN_BEACONS, HIGH);

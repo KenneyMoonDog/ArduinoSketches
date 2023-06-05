@@ -6,28 +6,24 @@
 ![arduino-library-badge](https://www.ardu-badge.com/badge/ESP%20Mail%20Client.svg) ![PlatformIO](https://badges.registry.platformio.org/packages/mobizt/library/ESP%20Mail%20Client.svg)
 
 
-Arduino E-Mail Client Library to send, read and get incoming email notification for ESP32, ESP8266 and SAMD21 devices. The library also supported other Arduino devices using Clients interfaces e.g. WiFiClient, EthernetClient, and GSMClient.
+The comprehensive Arduino Email Client Library to send, read and get Email notification for ESP32, ESP8266, SAMD21 and RP2040 Pico devices. 
 
-This library allows sending and reading Email with various attachments supported and provides more reliable and flexibilities of usages.
+This library was tested and works well with ESP32s, ESP8266s, SAMD21s and RP2040 Pico based modules.
 
-The library was tested and works well with ESP32s, ESP8266s, SAMD21s based modules.
+The library also supported other Arduino devices via client libraries e.g. WiFiClient, EthernetClient, and GSMClient.
 
-
-This library has built-in WiFi client and aim to be full functionality Email client that can send, read and get Email notification without other indirect Email proxy services needed. 
-
-
-External Arduino Client can be used which this allows other devices (with minimum 80k flash space) to work with this library.
-
+The Arduino device to use this libray should has at least 80k flash space and 20k memory.
 
 
 # Features
 
-* Support Espressif's ESP32 and ESP8266, Atmel's SAMD21 devices with u-blox NINA-W102 WiFi/Bluetooth module.
+* Support Espressif's ESP32 and ESP8266, Raspberry Pi's RP2040 Pico, Atmel's SAMD21 devices with u-blox NINA-W102 WiFi/Bluetooth module.
 * Support TCP session reusage.
 * Support PLAIN, LOGIN and XOAUTH2 authentication mechanisms.
-* Support secured (with SSL and TLS or upgrade via STARTTLS) and non-secure ports.
-* Support mailbox selection for Email reading and searching (IMAP).
-* Support mailbox changes notification (IMAP).
+* Support standard ports and user defined ports.
+* Support STARTTLS for both SMTP and IMAP.
+* Support mailbox selection for Email reading and searching.
+* Support mailbox changes notification.
 * Support the content encodings e.g. quoted-printable and base64.
 * Support the content decodings e.g. base64, UTF-8, UTF-7, quoted-printable, ISO-8859-1 (latin1) and ISO-8859-11 (Thai).
 * Support embedded contents e.g. inline images, attachments, parallel media attachments and RFC822 message.
@@ -51,6 +47,7 @@ This following devices are supported.
  * Arduino MKR WiFi 1010
  * Arduino Nano 33 IoT
  * Arduino MKR Vidor 4000
+ * Raspberry Pi Pico (RP2040)
  * LAN8720 Ethernet PHY
  * TLK110 Ethernet PHY
  * IP101 Ethernet PHY
@@ -83,8 +80,8 @@ For setting up the App Passwords, please read [here](https://support.google.com/
 After you created App Password, you can use Gmail Email address and App Password created to sign in as the following.
 
 ```cpp
-session.login.email = "<your email>";
-session.login.password = "<your app password>";
+config.login.email = "<your email>";
+config.login.password = "<your app password>";
 ```
  
 
@@ -123,6 +120,26 @@ The ESP8266 Core SDK version 2.5.x and earlier are not supported.
 For ESP32, the Core SDK version 2.0.4 or later is recommended.
 
 The ESP32 Core SDK version 1.0.4 and earlier are not supported.
+
+
+### RP2040 Arduino SDK
+
+For Arduino IDE, the Arduino-Pico SDK can be installed from Boards Manager by searching pico and choose Raspberry Pi Pico/RP2040 to install.
+
+For PlatformIO, the Arduino-Pico SDK can be installed via platformio.ini
+
+```ini
+[env:rpipicow]
+platform = https://github.com/maxgerhardt/platform-raspberrypi.git
+board = rpipicow
+framework = arduino
+board_build.core = earlephilhower
+monitor_speed = 115200
+board_build.filesystem_size = 1m
+```
+
+See this Arduino-Pico SDK [documentation](https://arduino-pico.readthedocs.io/en/latest/) for more information.
+
 
 ### SAMD21 custom build firmware
 
@@ -203,7 +220,6 @@ From Arduino IDE, goto menu **Sketch** -> **Include Library** -> **Add .ZIP Libr
 Rename **ESP-Mail-Client-master** folder to **ESP_Mail_Client**.
 
 Go to menu **Files** -> **Examples** -> **ESP Mail Client** and choose one from examples
-
 
 
 
@@ -356,9 +372,27 @@ In ESP8266 and ESP32, when no attachments require for uploading and downloading,
 #define ESP_Mail_DEFAULT_FLASH_FS SPIFFS
 ```
 
+In case you want to set your device/library time manually, you can exclude the internal NTP time synching by comment this macro that defined in [**ESP_Mail_FS.h**](src/ESP_Mail_FS.h).
+
+```cpp
+#define ENABLE_NTP_TIME
+```
+
+To set the time manually, please see [**examples/SMTP/Set_Time/Set_Time.ino**](examples/SMTP/Set_Time/Set_Time.ino)
 
 
+In case you don't want to print any debug and error in debug port and completely exclude all flash string that used for debug and error, please define SILENT_MODE macro in [**ESP_Mail_FS.h**](src/ESP_Mail_FS.h).
 
+```cpp
+#define SILENT_MODE
+```
+
+In case you only want to exclude the error flash string from library, please comment this macro that defined in [**ESP_Mail_FS.h**](src/ESP_Mail_FS.h).
+
+
+```cpp
+#define ENABLE_ERROR_STRING
+```
 
 ## Usage
 
@@ -383,6 +417,13 @@ The following code snippet showed the minimum usage of the library.
 The following code will send email with image attachment.
 
 ```C++
+// Include WiFi library
+#include <Arduino.h>
+#if defined(ESP32) || defined(PICO_RP2040)
+#include <WiFi.h>
+#elif defined(ESP8266)
+#include <ESP8266WiFi.h>
+#endif
 
 // Include ESP Mail Client library (this library)
 #include <ESP_Mail_Client.h>
@@ -391,8 +432,8 @@ The following code will send email with image attachment.
 // Declare the global used SMTPSession object for SMTP transport
 SMTPSession smtp;
 
-// Declare the global used ESP_Mail_Session for user defined session credentials
-ESP_Mail_Session session;
+// Declare the global used Session_Config for user defined session credentials
+Session_Config config;
 
 void setup()
 {
@@ -412,16 +453,18 @@ void setup()
   Serial.println();
 
   // Set the session config
-  session.server.host_name = "smtp.office365.com"; // for outlook.com
-  session.server.port = 587;
-  session.login.email = "your Email address"; // set to empty for no SMTP Authentication
-  session.login.password = "your Email password"; // set to empty for no SMTP Authentication
-  session.login.user_domain = "client domain or ip e.g. mydomain.com";
+  config.server.host_name = "smtp.office365.com"; // for outlook.com
+  config.server.port = 587; // for TLS with STARTTLS or 25 (Plain/TLS with STARTTLS) or 465 (SSL)
+  config.login.email = "your Email address"; // set to empty for no SMTP Authentication
+  config.login.password = "your Email password"; // set to empty for no SMTP Authentication
+  
+  // For client identity, assign invalid string can cause server rejection
+  config.login.user_domain = "client domain or public ip only e.g. mydomain.com";  
 
   // Set the NTP config time
-  session.time.ntp_server = "pool.ntp.org,time.nist.gov";
-  session.time.gmt_offset = 3;
-  session.time.day_light_offset = 0;
+  config.time.ntp_server = "pool.ntp.org,time.nist.gov";
+  config.time.gmt_offset = 3;
+  config.time.day_light_offset = 0;
 
   // Declare the SMTP_Message class variable to handle to message being transport
   SMTP_Message message;
@@ -463,7 +506,7 @@ void setup()
   message.addAttachment(att);
 
   // Connect to the server
-  smtp.connect(&session /* session credentials */);
+  smtp.connect(&config);
 
   // Start sending Email and close the session
   if (!MailClient.sendMail(&smtp, &message))
@@ -480,6 +523,13 @@ void setup()
 The following code will read the latest email.
 
 ```C++
+// Include WiFi library
+#include <Arduino.h>
+#if defined(ESP32) || defined(PICO_RP2040)
+#include <WiFi.h>
+#elif defined(ESP8266)
+#include <ESP8266WiFi.h>
+#endif
 
 // Include ESP Mail Client library (this library)
 #include <ESP_Mail_Client.h>
@@ -487,8 +537,8 @@ The following code will read the latest email.
 // Declare the global used IMAPSession object for IMAP transport
 IMAPSession imap;
 
-// Declare the global used ESP_Mail_Session for user defined session credentials
-ESP_Mail_Session session;
+// Declare the global used Session_Config for user defined session credentials
+Session_Config config;
 
 
 void setup()
@@ -509,23 +559,23 @@ void setup()
   Serial.println();
 
   // Set the session config
-  session.server.host_name = "outlook.office365.com"; //for outlook.com
-  session.server.port = 993;
-  session.login.email = "your Email address";
-  session.login.password = "your Email password";
+  config.server.host_name = "outlook.office365.com"; //for outlook.com
+  config.server.port = 993; // for SSL or 143 for Plain or TLS with STARTTLS
+  config.login.email = "your Email address";
+  config.login.password = "your Email password";
 
-  // Declare the IMAP_Config object used for user defined IMAP operating options 
+  // Declare the IMAP_Data object used for user defined IMAP operating options 
   // and contains the IMAP operating result
-  IMAP_Config config;
+  IMAP_Data imap_data;
 
   
-  // Set to enable the message content which will be stored in the IMAP_Config data
-  config.enable.html = true;
-  config.enable.text = true;
+  // Set to enable the message content which will be stored in the IMAP_Data data
+  imap_data.enable.html = true;
+  imap_data.enable.text = true;
 
 
   // Connect to the server
-  imap.connect(&session /* session credentials */, &config /* operating options and its result */);
+  imap.connect(&config, &imap_data);
 
   // Open or select the mailbox folder to read the message
   imap.selectFolder("INBOX");
@@ -535,10 +585,10 @@ void setup()
   // In this case we will get the UID from the max message number (lastest message)
   // then imap.getUID and imap.selectedFolder().msgCount() should be called after 
   // calling select or open the folder (mailbox).
-  config.fetch.uid = imap.getUID(imap.selectedFolder().msgCount());
+  imap_data.fetch.uid = imap.getUID(imap.selectedFolder().msgCount());
 
   // Empty search criteria to disable the messsage search
-  config.search.criteria.clear();
+  imap_data.search.criteria.clear();
 
 
   // Read the Email and close the session
@@ -601,7 +651,7 @@ Can't find what you want from exising IMAP functions, sending custom command was
 
 Please read the RFC 3501 and RFC 9051 documents for the details of IMAP protocol commands.
 
-See [Custom_Command.ino](/examples/IMAP/Custom_Command/Custom_Command.ino) for the example.
+See [Custom_Command examples](/examples/IMAP/Custom_Command) for how to use.
 
 
 ### Use external Arduino Clients interfaces
@@ -651,21 +701,14 @@ SMTPSession smtp(&ssl_client, esp_mail_external_client_type_basic);
 
 void connectionUpgradeRequestCallback()
 {
-
     //To make sure that upgradable SSLClient https://github.com/mobizt/SSLClient was installed instead of
     // the original version
 #if defined(SSLCLIENT_CONNECTION_UPGRADABLE)
-
     // Upgrade the connection
     // The host and port parameters will be ignored for this case and can be any
     ssl_client.connectSSL("smtp.gmail.com" /* host */, 587 /* port */);
     
 #endif
-}
-
-void connectionRequestCallback(const char *host, int port)
-{
-    client.connect(host, port)
 }
 
 // Define the callback function to handle server status acknowledgement
@@ -679,27 +722,31 @@ void networkStatusRequestCallback()
     smtp.setNetworkStatus(networkConnected);
 }
 
+void networkConnection()
+{
+    // Code for network reset, disconnect and re-connect here.
+}
+
 void serup()
 {
 
-    session.server.host_name = "smtp.gmail.com"; //for gmail.com
-    session.server.port = 587; // requires connection upgrade via STARTTLS
-    session.login.email = "your Email address"; //set to empty for no SMTP Authentication
-    session.login.password = "your Email password"; //set to empty for no SMTP Authentication
-    session.login.user_domain = "client domain or ip e.g. mydomain.com";
+    config.server.host_name = "smtp.gmail.com"; //for gmail.com
+    config.server.port = 587; // requires connection upgrade via STARTTLS
+    config.login.email = "your Email address"; //set to empty for no SMTP Authentication
+    config.login.password = "your Email password"; //set to empty for no SMTP Authentication
+    config.login.user_domain = "client domain or ip e.g. mydomain.com";
 
     /**
      * Other setup codes
      * 
      */
-
-    // Set the callback function for server connection.
-    smtp.connectionRequestCallback(connectionRequestCallback);
     
     // Set the callback function for connection upgrade
     smtp.connectionUpgradeRequestCallback(connectionUpgradeRequestCallback);
 
     smtp.networkStatusRequestCallback(networkStatusRequestCallback);
+
+    smtp.networkConnectionRequestCallback(networkConnection);
 
 }
 
@@ -726,7 +773,7 @@ SMTPSession smtp(&ssl_client, esp_mail_external_client_type_ssl);
 // only SMTP port 465 works in the following code.
 
 // Declare the global used session config data which used to store the TCP session configuration
-ESP_Mail_Session session;
+Session_Config config;
 
 void networkConnection()
 {
@@ -759,20 +806,9 @@ void networkStatusRequestCallback()
     smtp.setNetworkStatus(WiFi.status() == WL_CONNECTED);
 }
 
-// Define the callback function to handle server connection
-void connectionRequestCallback(const char *host, int port)
+void networkConnection()
 {
-    // You may need to set the system timestamp in case of custom client
-    // time is used to set the date header while sending email.
-    smtp.setSystemTime(WiFi.getTime());
-
-    Serial.print("> U: Connecting to server via custom Client... ");
-    if (!client.connect(host, port))
-    {
-        Serial.println("failed.");
-        return;
-    }
-    Serial.println("success.");
+    // Code for network reset, disconnect and re-connect here.
 }
 
 void setup()
@@ -783,11 +819,11 @@ void setup()
   networkConnection();
 
   // Set the session config
-  session.server.host_name = "smtp.gmail.com"; //for gmail.com
-  session.server.port = 465; // SSL 
-  session.login.email = "your Email address"; //set to empty for no SMTP Authentication
-  session.login.password = "your Email password"; //set to empty for no SMTP Authentication
-  session.login.user_domain = "client domain or ip e.g. mydomain.com";
+  config.server.host_name = "smtp.gmail.com"; //for gmail.com
+  config.server.port = 465; // SSL 
+  config.login.email = "your Email address"; //set to empty for no SMTP Authentication
+  config.login.password = "your Email password"; //set to empty for no SMTP Authentication
+  config.login.user_domain = "client domain or ip e.g. mydomain.com";
 
 
   // Declare the SMTP_Message class variable to handle to message being transport
@@ -807,15 +843,13 @@ void setup()
   message.text.content = "This is simple plain text message";
   
   // Set the callback functions to hadle the required tasks.
-  smtp.connectionRequestCallback(connectionRequestCallback);
+  smtp.networkStatusRequestCallback(networkStatusRequestCallback);
 
   smtp.networkConnectionRequestCallback(networkConnection);
 
-  smtp.networkStatusRequestCallback(networkStatusRequestCallback);
-
 
   // Connect to the server with the defined session and options
-  imap.connect(&session, &config);
+  smtp.connect(&config);
 
 
   // Start sending Email and close the session
@@ -841,11 +875,6 @@ SMTPSession smtp(&client, esp_mail_external_client_type_basic);
 // the connection upgrade (if needed in case of SMTP port 587) using Core SDK SSL engine.
 
 
-void connectionRequestCallback(const char *host, int port)
-{
-    client.connect(host, port)
-}
-
 // Define the callback function to handle server status acknowledgement
 void networkStatusRequestCallback()
 {
@@ -857,14 +886,19 @@ void networkStatusRequestCallback()
     smtp.setNetworkStatus(networkConnected);
 }
 
+void networkConnection()
+{
+    // Code for network reset, disconnect and re-connect here.
+}
+
 void serup()
 {
 
-    session.server.host_name = "smtp.gmail.com"; //for gmail.com
-    session.server.port = 587; // requires connection upgrade via STARTTLS
-    session.login.email = "your Email address"; //set to empty for no SMTP Authentication
-    session.login.password = "your Email password"; //set to empty for no SMTP Authentication
-    session.login.user_domain = "client domain or ip e.g. mydomain.com";
+    config.server.host_name = "smtp.gmail.com"; //for gmail.com
+    config.server.port = 587; // requires connection upgrade via STARTTLS
+    config.login.email = "your Email address"; //set to empty for no SMTP Authentication
+    config.login.password = "your Email password"; //set to empty for no SMTP Authentication
+    config.login.user_domain = "client domain or ip e.g. mydomain.com";
 
     /**
      * Other setup codes
@@ -872,11 +906,10 @@ void serup()
      */
 
     // Set the callback function for server connection.
-    smtp.connectionRequestCallback(connectionRequestCallback);
-
     smtp.networkStatusRequestCallback(networkStatusRequestCallback);
-  
 
+    smtp.networkConnectionRequestCallback(networkConnection);
+  
 }
 
 
@@ -886,7 +919,7 @@ void serup()
 
 The MIT License (MIT)
 
-Copyright (c) 2022 K. Suwatchai (Mobizt)
+Copyright (c) 2023 K. Suwatchai (Mobizt)
 
 
 Permission is hereby granted, free of charge, to any person returning a copy of

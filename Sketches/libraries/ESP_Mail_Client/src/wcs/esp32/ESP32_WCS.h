@@ -1,10 +1,10 @@
 /*
- * ESP32 WiFi Client Secure v2.0.0
+ * ESP32 WiFi Client Secure v2.0.3
  *
- * Created July 20, 2022
+ * Created March 20, 2023
  *
  * The MIT License (MIT)
- * Copyright (c) 2022 K. Suwatchai (Mobizt)
+ * Copyright (c) 2023 K. Suwatchai (Mobizt)
  *
  *
  *
@@ -49,19 +49,20 @@
 #ifndef ESP32_WCS_H
 #define ESP32_WCS_H
 
-#ifdef ESP32
+#include <Arduino.h>
+#include "ESP_Mail_FS.h"
+#if defined(ESP32) && (defined(ENABLE_SMTP) || defined(ENABLE_IMAP))
 
-#include "Arduino.h"
 #include "IPAddress.h"
 #include "ESP_Mail_FS.h"
 #include "ESP32_SSL_Client.h"
 #include <WiFiClient.h>
 #include "./wcs/base/TCP_Client_Base.h"
 
-typedef void (*DebugMsgCallback)(PGM_P msg, bool newLine);
+typedef void (*DebugMsgCallback)(PGM_P msg, esp_mail_debug_tag_type type, bool newLine);
 
-#define WCS_CLASS ESP32_SSL_Client
-#define WC_CLASS ESP32_SSL_Client
+#define ESP_Mail_WCS_CLASS ESP32_SSL_Client
+#define ESP_Mail_WC_CLASS ESP32_SSL_Client
 
 #include "./wcs/base/TCP_Client_Base.h"
 
@@ -71,7 +72,7 @@ typedef void (*DebugMsgCallback)(PGM_P msg, bool newLine);
 #define OVERRIDING
 #endif
 
-class ESP32_WCS : public WCS_CLASS, public TCP_Client_Base
+class ESP32_WCS : public ESP_Mail_WCS_CLASS, public TCP_Client_Base
 {
     friend class ESP32_TCP_Client;
 

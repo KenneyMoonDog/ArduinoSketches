@@ -1,10 +1,10 @@
 /**
- * The custom TCP Client Class v2.0.1
+ * The custom TCP Client Class v2.0.5
  *
- * Created July 24, 2022
+ * Created March 12, 2023
  *
  * The MIT License (MIT)
- * Copyright (c) 2022 K. Suwatchai (Mobizt)
+ * Copyright (c) 2023 K. Suwatchai (Mobizt)
  *
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -32,6 +32,9 @@
 // This file was included in wcs/clients.h
 
 #include <Arduino.h>
+#include "ESP_Mail_FS.h"
+#if defined(ENABLE_SMTP) || defined(ENABLE_IMAP)
+
 #include "./wcs/base/TCP_Client_Base.h"
 
 class Custom_TCP_Client : public TCP_Client_Base
@@ -93,7 +96,7 @@ public:
         else
         {
             if (debugLevel > 0)
-                esp_mail_debug_print(esp_mail_str_369, true);
+                esp_mail_debug_print_tag(esp_mail_error_client_str_6 /* "network connection callback is required" */, esp_mail_debug_tag_type_error, true);
         }
     }
 
@@ -132,25 +135,25 @@ public:
     {
         bool rdy = wcs != nullptr;
 
-        if (!network_connection_cb)
-        {
-            rdy = false;
-            if (debugLevel > 0)
-                esp_mail_debug_print(esp_mail_str_369, true);
-        }
-
-        if (!connection_cb)
-        {
-            rdy = false;
-            if (debugLevel > 0)
-                esp_mail_debug_print(esp_mail_str_367, true);
-        }
+        bool upgradeRequired = false;
 
         if (getProtocol(_port) == (int)esp_mail_protocol_tls && !connection_upgrade_cb)
+            upgradeRequired = true;
+
+        if (!network_connection_cb || !network_status_cb || upgradeRequired)
         {
             rdy = false;
             if (debugLevel > 0)
-                esp_mail_debug_print(esp_mail_str_368, true);
+            {
+                if (!network_connection_cb)
+                    esp_mail_debug_print_tag(esp_mail_error_client_str_6 /* "network connection callback is required" */, esp_mail_debug_tag_type_error, true);
+
+                if (!network_status_cb)
+                    esp_mail_debug_print_tag(esp_mail_error_client_str_7 /* "network connection status callback is required" */, esp_mail_debug_tag_type_error, true);
+
+                if (upgradeRequired)
+                    esp_mail_debug_print_tag(esp_mail_error_client_str_5 /* "client connection upgrade callback (for TLS handshake) is required" */, esp_mail_debug_tag_type_error, true);
+            }
         }
 
         return rdy;
@@ -186,11 +189,7 @@ public:
         if (!wcs)
         {
             if (debugLevel > 0)
-            {
-                MB_String s = esp_mail_str_185;
-                s += esp_mail_str_346;
-                esp_mail_debug_print(s.c_str(), true);
-            }
+                esp_mail_debug_print_tag(esp_mail_error_client_str_1 /* "client and/or necessary callback functions are not yet assigned" */, esp_mail_debug_tag_type_error, true);
             return false;
         }
 
@@ -198,7 +197,7 @@ public:
         if (ext_client_type == esp_mail_external_client_type_none)
         {
             if (debugLevel > 0)
-                esp_mail_debug_print(esp_mail_str_372, true);
+                esp_mail_debug_print_tag(esp_mail_error_client_str_4 /* "the client type must be provided, see example" */, esp_mail_debug_tag_type_error, true);
             return false;
         }
 
@@ -206,18 +205,14 @@ public:
         if (!secured && ext_client_type == esp_mail_external_client_type_ssl)
         {
             if (debugLevel > 0)
-                esp_mail_debug_print(esp_mail_str_366, true);
+                esp_mail_debug_print_tag(esp_mail_error_client_str_3 /* "simple Client is required" */, esp_mail_debug_tag_type_error, true);
             return false;
         }
 
         if (this->connection_cb)
             this->connection_cb(_host.c_str(), _port);
         else
-        {
-            if (debugLevel > 0)
-                esp_mail_debug_print(esp_mail_str_367, true);
-            return false;
-        }
+            wcs->connect(_host.c_str(), _port);
 
         bool res = connected();
 
@@ -245,13 +240,17 @@ public:
 
         tls_required = true;
 
-        if (connection_upgrade_cb)
-            connection_upgrade_cb();
-        else
+        if (getProtocol(_port) == (int)esp_mail_protocol_tls)
         {
-            if (debugLevel > 0)
-                esp_mail_debug_print(esp_mail_str_368, true);
-            return false;
+            if (connection_upgrade_cb)
+                connection_upgrade_cb();
+            else
+            {
+                if (debugLevel > 0)
+                    esp_mail_debug_print_tag(esp_mail_error_client_str_5 /* "client connection upgrade callback (for TLS handshake) is required" */, esp_mail_debug_tag_type_error, true);
+
+                return false;
+            }
         }
 
         bool res = connected();
@@ -577,5 +576,7 @@ private:
     NetworkStatusRequestCallback network_status_cb = NULL;
     volatile bool networkStatus = false;
 };
+
+#endif
 
 #endif

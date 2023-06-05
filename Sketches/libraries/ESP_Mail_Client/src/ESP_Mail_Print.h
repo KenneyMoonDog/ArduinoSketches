@@ -1,9 +1,13 @@
 #ifndef ESP_MAIL_PRINT_H_
 #define ESP_MAIL_PRINT_H_
 
-#if defined(ESP32) || defined(ESP8266)
+#include "ESP_Mail_Client_Version.h"
+#if !VALID_VERSION_CHECK(30110)
+#error "Mixed versions compilation."
+#endif
 
-#define UPLOAD_CHUNKS_NUM 12
+#if defined(MB_ARDUINO_ESP) || defined(MB_ARDUINO_PICO)
+
 #define ESP_MAIL_PRINTF ESP_MAIL_DEFAULT_DEBUG_PORT.printf
 
 #else

@@ -1,10 +1,10 @@
 /*
- * ESP32 TCP Client Library v2.0.2
+ * ESP32 TCP Client Library v2.0.11
  *
- * Created November 24, 2022
+ * Created April 15, 2023
  *
  * The MIT License (MIT)
- * Copyright (c) 2022 K. Suwatchai (Mobizt)
+ * Copyright (c) 2023 K. Suwatchai (Mobizt)
  *
  *
  * TCPClient Arduino library for ESP32
@@ -33,7 +33,9 @@
 #ifndef ESP32_TCP_Client_CPP
 #define ESP32_TCP_Client_CPP
 
-#ifdef ESP32
+#include <Arduino.h>
+#include "ESP_Mail_FS.h"
+#if defined(ESP32) && (defined(ENABLE_SMTP) || defined(ENABLE_IMAP))
 
 #include "ESP32_TCP_Client.h"
 
@@ -72,10 +74,10 @@ void ESP32_TCP_Client::setCACert(const char *caCert)
     }
 }
 
-void ESP32_TCP_Client::setCertFile(const char *certFile, mb_fs_mem_storage_type storageType)
+bool ESP32_TCP_Client::setCertFile(const char *certFile, mb_fs_mem_storage_type storageType)
 {
     if (!wcs->mbfs)
-        return;
+        return false;
 
     if (strlen(certFile) > 0)
     {
@@ -126,6 +128,8 @@ void ESP32_TCP_Client::setCertFile(const char *certFile, mb_fs_mem_storage_type 
             }
         }
     }
+
+    return getCertType() == esp_mail_cert_type_file;
 }
 
 void ESP32_TCP_Client::setDebugCallback(DebugMsgCallback cb)
@@ -148,7 +152,7 @@ void ESP32_TCP_Client::setInsecure()
 
 bool ESP32_TCP_Client::ethLinkUp()
 {
-    if (strcmp(ETH.localIP().toString().c_str(), (const char *)MBSTRING_FLASH_MCR("0.0.0.0")) != 0)
+    if (strcmp(ETH.localIP().toString().c_str(), "0.0.0.0") != 0)
     {
         ETH.linkUp();
         return true;
@@ -200,7 +204,11 @@ String ESP32_TCP_Client::fwVersion()
 
 esp_mail_client_type ESP32_TCP_Client::type()
 {
+#if defined(ENABLE_CUSTOM_CLIENT)
+    return esp_mail_client_type_custom;
+#else
     return esp_mail_client_type_internal;
+#endif
 }
 
 bool ESP32_TCP_Client::isInitialized()
@@ -209,30 +217,30 @@ bool ESP32_TCP_Client::isInitialized()
 
     bool rdy = wcs != nullptr;
 
-    if (!network_connection_cb)
-    {
-        rdy = false;
-        if (wcs->debugLevel > 0)
-            esp_mail_debug_print(esp_mail_str_369, true);
-    }
-
-    if (!connection_cb)
-    {
-        rdy = false;
-        if (wcs->debugLevel > 0)
-            esp_mail_debug_print(esp_mail_str_367, true);
-    }
+    bool upgradeRequired = false;
 
 #if !defined(ESP_MAIL_USE_SDK_SSL_ENGINE)
-
     if (wcs->getProtocol(_port) == (int)esp_mail_protocol_tls && !connection_upgrade_cb)
+        upgradeRequired = true;
+#endif
+
+    if (!network_connection_cb || !network_status_cb || upgradeRequired)
     {
         rdy = false;
+#if !defined(SILENT_MODE)
         if (wcs->debugLevel > 0)
-            esp_mail_debug_print(esp_mail_str_368, true);
-    }
+        {
+            if (!network_connection_cb)
+                esp_mail_debug_print_tag(esp_mail_error_client_str_6 /* "network connection callback is required" */, esp_mail_debug_tag_type_error, true);
 
+            if (!network_status_cb)
+                esp_mail_debug_print_tag(esp_mail_error_client_str_7 /* "network connection status callback is required" */, esp_mail_debug_tag_type_error, true);
+
+            if (upgradeRequired)
+                esp_mail_debug_print_tag(esp_mail_error_client_str_5 /* "client connection upgrade callback (for TLS handshake) is required" */, esp_mail_debug_tag_type_error, true);
+        }
 #endif
+    }
 
     return rdy;
 #else
@@ -242,7 +250,11 @@ bool ESP32_TCP_Client::isInitialized()
 
 int ESP32_TCP_Client::hostByName(const char *name, IPAddress &ip)
 {
+#if !defined(ENABLE_CUSTOM_CLIENT)
     return WiFi.hostByName(name, ip);
+#else
+    return 1;
+#endif
 }
 
 bool ESP32_TCP_Client::begin(const char *host, uint16_t port)
@@ -255,6 +267,7 @@ bool ESP32_TCP_Client::begin(const char *host, uint16_t port)
 
 bool ESP32_TCP_Client::connect(bool secured, bool verify)
 {
+
     wcs->setSecure(secured);
     wcs->setVerify(verify);
 
@@ -272,28 +285,30 @@ bool ESP32_TCP_Client::connect(bool secured, bool verify)
     // no client assigned?
     if (!wcs->_ssl->client)
     {
+#if !defined(SILENT_MODE)
         if (wcs->debugLevel > 0)
-        {
-            MB_String s = esp_mail_str_185;
-            s += esp_mail_str_346;
-            esp_mail_debug_print(s.c_str(), true);
-        }
+            esp_mail_debug_print_tag(esp_mail_error_client_str_1 /* "client and/or necessary callback functions are not yet assigned" */, esp_mail_debug_tag_type_error, true);
+#endif
         return false;
     }
 
     // no client type assigned?
     if (wcs->ext_client_type == esp_mail_external_client_type_none)
     {
+#if !defined(SILENT_MODE)
         if (wcs->debugLevel > 0)
-            esp_mail_debug_print(esp_mail_str_372, true);
+            esp_mail_debug_print_tag(esp_mail_error_client_str_4 /* "the client type must be provided, see example" */, esp_mail_debug_tag_type_error, true);
+#endif
         return false;
     }
 
     // plain text via ssl client?
     if (!secured && wcs->ext_client_type == esp_mail_external_client_type_ssl)
     {
+#if !defined(SILENT_MODE)
         if (wcs->debugLevel > 0)
-            esp_mail_debug_print(esp_mail_str_366, true);
+            esp_mail_debug_print_tag(esp_mail_error_client_str_3 /* "simple Client is required" */, esp_mail_debug_tag_type_error, true);
+#endif
         return false;
     }
 
@@ -349,7 +364,7 @@ bool ESP32_TCP_Client::connectSSL(bool verify)
 void ESP32_TCP_Client::stop()
 {
     _host.clear();
-    return wcs->stop();
+    wcs->stop();
 }
 
 bool ESP32_TCP_Client::connected()

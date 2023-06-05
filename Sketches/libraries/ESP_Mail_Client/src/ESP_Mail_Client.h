@@ -1,15 +1,20 @@
 #ifndef ESP_MAIL_CLIENT_H
 #define ESP_MAIL_CLIENT_H
 
+#include "ESP_Mail_Client_Version.h"
+#if !VALID_VERSION_CHECK(30110)
+#error "Mixed versions compilation."
+#endif
+
 /**
- * Mail Client Arduino Library for Espressif's ESP32 and ESP8266 and SAMD21 with u-blox NINA-W102 WiFi/Bluetooth module
+ * Mail Client Arduino Library for Espressif's ESP32 and ESP8266, Raspberry Pi RP2040 Pico, and SAMD21 with u-blox NINA-W102 WiFi/Bluetooth module
  *
- * Created November 26, 2022
+ * Created April 15, 2023
  *
- * This library allows Espressif's ESP32, ESP8266 and SAMD devices to send and read Email through the SMTP and IMAP servers.
+ * This library allows Espressif's ESP32, ESP8266, SAMD and RP2040 Pico devices to send and read Email through the SMTP and IMAP servers.
  *
  * The MIT License (MIT)
- * Copyright (c) 2022 K. Suwatchai (Mobizt)
+ * Copyright (c) 2023 K. Suwatchai (Mobizt)
  *
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -40,12 +45,22 @@
 #include <vector>
 #endif
 
+#if __has_include(<WiFiNINA.h>)
+#include <WiFiNINA.h>
+#elif __has_include(<WiFi101.h>)
+#include <WiFi101.h>
+#endif
+
 #include "extras/MB_Time.h"
-#include "extras/MIMEInfo.h"
-
 #include "ESP_Mail_Print.h"
+#include "ESP_Mail_FS.h"
+#include "ESP_Mail_Const.h"
 
-#if defined(ESP32) || defined(ESP8266)
+#if __has_include(<WiFi101.h>)
+#include <WiFi101.h>
+#endif
+
+#if defined(ESP32) || defined(ESP8266) || defined(MB_ARDUINO_PICO)
 
 #define UPLOAD_CHUNKS_NUM 12
 
@@ -60,6 +75,12 @@
 #include <ESP8266WiFi.h>
 #define SD_CS_PIN 15
 #define ESP_MAIL_MIN_MEM 4000
+
+#elif defined(MB_ARDUINO_PICO)
+
+#include <WiFi.h>
+#define ESP_MAIL_MIN_MEM 70000
+#define SD_CS_PIN PIN_SPI1_SS
 
 #endif
 
@@ -119,7 +140,7 @@ public:
   ~SelectedFolderInfo() { clear(); };
 
   /* Get the flags count for this mailbox */
-  size_t flagCount() { return _flags.size(); };
+  size_t flagCount(bool permanent = false) { return permanent ? _permanent_flags.size() : _flags.size(); };
 
   /* Get the numbers of messages in this mailbox */
   size_t msgCount() { return _msgCount; };
@@ -140,11 +161,20 @@ public:
    */
   IMAP_Polling_Status pollingStatus() { return _polling_status; };
 
+  /* Get the The unique identifier (UID) validity value */
+  size_t uidValidity() { return _uidValidity; };
+
   /* Get the predict next message UID */
   size_t nextUID() { return _nextUID; };
 
   /* Get the index of first unseen message */
   size_t unseenIndex() { return _unseenMsgIndex; };
+
+  /* Get the highest modification sequence */
+  int32_t highestModSeq() { return _highestModSeq; };
+
+  /* Get the highest modification sequence */
+  int32_t modSeqSupported() { return _highestModSeq > -1 && !_nomodsec; };
 
   /* Get the numbers of messages from search result based on the search criteria
    */
@@ -154,36 +184,49 @@ public:
   size_t availableMessages() { return _availableItems; };
 
   /* Get the flag argument at the specified index */
-  String flag(size_t index)
+  String flag(size_t index, bool permanent = false)
   {
-    if (index < _flags.size())
-      return _flags[index].c_str();
+    size_t size = permanent ? _permanent_flags.size() : _flags.size();
+    if (index < size)
+      return permanent ? _permanent_flags[index].c_str() : _flags[index].c_str();
     return "";
   }
 
 private:
-  void addFlag(const char *flag)
+  void addFlag(const char *flag, bool permanent)
   {
     MB_String s = flag;
-    _flags.push_back(s);
+    if (permanent)
+      _permanent_flags.push_back(s);
+    else
+      _flags.push_back(s);
   };
   void clear()
   {
     for (size_t i = 0; i < _flags.size(); i++)
       _flags[i].clear();
     _flags.clear();
+
+    for (size_t i = 0; i < _permanent_flags.size(); i++)
+      _permanent_flags[i].clear();
+    _permanent_flags.clear();
   }
+
   size_t _msgCount = 0;
   size_t _recentCount = 0;
+  size_t _uidValidity = 0;
   size_t _nextUID = 0;
   size_t _unseenMsgIndex = 0;
+  int32_t _highestModSeq = -1;
   size_t _searchCount = 0;
   size_t _availableItems = 0;
   unsigned long _idleTimeMs = 0;
   bool _folderChanged = false;
   bool _floderChangedState = false;
+  bool _nomodsec = false;
   IMAP_Polling_Status _polling_status;
   MB_VECTOR<MB_String> _flags;
+  MB_VECTOR<MB_String> _permanent_flags;
 };
 
 /* The class that provides the list of FolderInfo e.g. name, attributes and
@@ -363,7 +406,12 @@ typedef void (*imapCharacterDecodingCallback)(IMAP_Decoding_Info *);
 class SMTP_Message
 {
 public:
-  SMTP_Message(){};
+  SMTP_Message()
+  {
+    text.content_type = "text/plain";
+    html.content_type = "text/html";
+  };
+
   ~SMTP_Message() { clear(); };
 
   void resetAttachItem(SMTP_Attachment &att)
@@ -442,6 +490,7 @@ public:
       _parallel[i].file.path.clear();
       _parallel[i].file.storage_type = esp_mail_file_storage_type_none;
     }
+
     _rcp.clear();
     _cc.clear();
     _bcc.clear();
@@ -602,10 +651,10 @@ public:
   byte type = esp_mail_msg_type_none;
 
   /* The PLAIN text message */
-  struct esp_mail_plain_body_t text;
+  esp_mail_plain_body_t text;
 
   /* The HTML text message */
-  struct esp_mail_html_body_t html;
+  esp_mail_html_body_t html;
 
   /* The response config */
   struct esp_mail_smtp_msg_response_t response;
@@ -682,10 +731,19 @@ public:
   {
     mbfs = new MB_FS();
   };
+
   ~ESP_Mail_Client()
   {
     if (mbfs)
       delete mbfs;
+    mbfs = nullptr;
+
+    wifi.clearAP();
+#if defined(HAS_WIFIMULTI)
+    if (multi)
+      delete multi;
+    multi = nullptr;
+#endif
   };
 
 #if defined(ENABLE_SMTP)
@@ -738,10 +796,14 @@ public:
    * @param flags The flag list to set.
    * @param closeSession The option to close the IMAP session after set flag.
    * @param silent The option to ignore the response.
+   * @param modsequence The int32_t option for UNCHANGESINCE conditional test.
    * @return The boolean value indicates the success of operation.
+   *
+   * The modsequence value can be used only if IMAP server supports Conditional STORE extension
+   * and the selected mailbox supports modsequences.
    */
   template <typename T = const char *>
-  bool setFlag(IMAPSession *imap, int msgUID, T flags, bool closeSession, bool silent = false) { return mSetFlag(imap, toStringPtr(msgUID), toStringPtr(flags), esp_mail_imap_store_flag_type_set, closeSession, silent); }
+  bool setFlag(IMAPSession *imap, int msgUID, T flags, bool closeSession, bool silent = false, int32_t modsequence = -1) { return mSetFlag(imap, toStringPtr(msgUID), toStringPtr(flags), esp_mail_imap_store_flag_type_set, closeSession, silent, true, modsequence); }
 
   /** Set the argument to the Flags for the specified message.
    *
@@ -752,10 +814,14 @@ public:
    * @param flags The flag list to set.
    * @param closeSession The option to close the IMAP session after set flag.
    * @param silent The option to ignore the response.
+   * @param modsequence The int32_t option for UNCHANGESINCE conditional test.
    * @return The boolean value indicates the success of operation.
+   *
+   * The modsequence value can be used only if IMAP server supports Conditional STORE extension
+   * and the selected mailbox supports modsequences.
    */
   template <typename T1 = const char *, typename T2 = const char *>
-  bool setFlag(IMAPSession *imap, T1 sequenceSet, bool UID, T2 flags, bool closeSession, bool silent = false) { return mSetFlag(imap, toStringPtr(sequenceSet), toStringPtr(flags), esp_mail_imap_store_flag_type_set, closeSession, silent, UID); }
+  bool setFlag(IMAPSession *imap, T1 sequenceSet, bool UID, T2 flags, bool closeSession, bool silent = false, int32_t modsequence = -1) { return mSetFlag(imap, toStringPtr(sequenceSet), toStringPtr(flags), esp_mail_imap_store_flag_type_set, closeSession, silent, UID, modsequence); }
 
   /** Add the argument to the Flags for the specified message.
    *
@@ -765,10 +831,14 @@ public:
    * @param flags The flag list to add.
    * @param closeSession The option to close the IMAP session after add flag.
    * @param silent The option to ignore the response.
+   * @param modsequence The int32_t option for UNCHANGESINCE conditional test.
    * @return The boolean value indicates the success of operation.
+   *
+   * The modsequence value can be used only if IMAP server supports Conditional STORE extension
+   * and the selected mailbox supports modsequences.
    */
   template <typename T = const char *>
-  bool addFlag(IMAPSession *imap, int msgUID, T flags, bool closeSession, bool silent = false) { return mSetFlag(imap, toStringPtr(msgUID), toStringPtr(flags), esp_mail_imap_store_flag_type_add, closeSession, silent); }
+  bool addFlag(IMAPSession *imap, int msgUID, T flags, bool closeSession, bool silent = false, int32_t modsequence = -1) { return mSetFlag(imap, toStringPtr(msgUID), toStringPtr(flags), esp_mail_imap_store_flag_type_add, closeSession, silent, true, modsequence); }
 
   /** Add the argument to the Flags for the specified message.
    *
@@ -779,10 +849,14 @@ public:
    * @param flags The flag list to add.
    * @param closeSession The option to close the IMAP session after set flag.
    * @param silent The option to ignore the response.
+   * @param modsequence The int32_t option for UNCHANGESINCE conditional test.
    * @return The boolean value indicates the success of operation.
+   *
+   * The modsequence value can be used only if IMAP server supports Conditional STORE extension
+   * and the selected mailbox supports modsequences.
    */
   template <typename T1 = const char *, typename T2 = const char *>
-  bool addFlag(IMAPSession *imap, T1 sequenceSet, bool UID, T2 flags, bool closeSession, bool silent = false) { return mSetFlag(imap, toStringPtr(sequenceSet), toStringPtr(flags), esp_mail_imap_store_flag_type_add, closeSession, silent, UID); }
+  bool addFlag(IMAPSession *imap, T1 sequenceSet, bool UID, T2 flags, bool closeSession, bool silent = false, int32_t modsequence = -1) { return mSetFlag(imap, toStringPtr(sequenceSet), toStringPtr(flags), esp_mail_imap_store_flag_type_add, closeSession, silent, UID, modsequence); }
 
   /** Remove the argument from the Flags for the specified message.
    *
@@ -792,10 +866,14 @@ public:
    * @param flags The flag list to remove.
    * @param closeSession The option to close the IMAP session after remove flag.
    * @param silent The option to ignore the response.
+   * @param modsequence The int32_t option for UNCHANGESINCE conditional test.
    * @return The boolean value indicates the success of operation.
+   *
+   * The modsequence value can be used only if IMAP server supports Conditional STORE extension
+   * and the selected mailbox supports modsequences.
    */
   template <typename T = const char *>
-  bool removeFlag(IMAPSession *imap, int msgUID, T flags, bool closeSession, bool silent = false) { return mSetFlag(imap, toStringPtr(msgUID), toStringPtr(flags), esp_mail_imap_store_flag_type_remove, closeSession, silent); }
+  bool removeFlag(IMAPSession *imap, int msgUID, T flags, bool closeSession, bool silent = false, int32_t modsequence = -1) { return mSetFlag(imap, toStringPtr(msgUID), toStringPtr(flags), esp_mail_imap_store_flag_type_remove, closeSession, silent, true, modsequence); }
 
   /** Remove the argument from the Flags for the specified message.
    *
@@ -806,10 +884,14 @@ public:
    * @param flags The flag list to remove.
    * @param closeSession The option to close the IMAP session after set flag.
    * @param silent The option to ignore the response.
+   * @param modsequence The int32_t option for UNCHANGESINCE conditional test.
    * @return The boolean value indicates the success of operation.
+   *
+   * The modsequence value can be used only if IMAP server supports Conditional STORE extension
+   * and the selected mailbox supports modsequences.
    */
   template <typename T1 = const char *, typename T2 = const char *>
-  bool removeFlag(IMAPSession *imap, T1 sequenceSet, bool UID, T2 flags, bool closeSession, bool silent = false) { return mSetFlag(imap, toStringPtr(sequenceSet), toStringPtr(flags), esp_mail_imap_store_flag_type_remove, closeSession, silent, UID); }
+  bool removeFlag(IMAPSession *imap, T1 sequenceSet, bool UID, T2 flags, bool closeSession, bool silent = false, int32_t modsequence = -1) { return mSetFlag(imap, toStringPtr(sequenceSet), toStringPtr(flags), esp_mail_imap_store_flag_type_remove, closeSession, silent, UID, modsequence); }
 
 #endif
 
@@ -818,6 +900,28 @@ public:
    * @param reconnect The boolean to set/unset WiFi AP reconnection.
    */
   void networkReconnect(bool reconnect);
+
+#if defined(ENABLE_NTP_TIME)
+
+  /** Assign UDP client and gmt offset for NTP time synching when using external SSL client
+   * @param client The pointer to UDP client based on the network type.
+   * @param gmtOffset The GMT time offset.
+   */
+  void setUDPClient(UDP *client, float gmtOffset);
+
+#endif
+
+  /** Clear all WiFi access points assigned.
+   *
+   */
+  void clearAP();
+
+  /** Add WiFi access point for non-ESP device to resume WiFi connection.
+   *
+   * @param ssid The WiFi SSID.
+   * @param password The WiFi password.
+   */
+  void addAP(const String &ssid, const String &password);
 
 #if defined(MBFS_SD_FS) && defined(MBFS_CARD_TYPE_SD)
 
@@ -832,7 +936,7 @@ public:
    */
   bool sdBegin(int8_t ss = -1, int8_t sck = -1, int8_t miso = -1, int8_t mosi = -1, uint32_t frequency = 4000000);
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(MB_ARDUINO_PICO)
 
   /** Initiate SD card with SD FS configurations (ESP8266 only).
    *
@@ -912,6 +1016,12 @@ private:
   bool _clockReady = false;
   time_t ts = 0;
   bool networkAutoReconnect = true;
+  volatile bool networkStatus = false;
+  esp_mail_wifi_credentials_t wifi;
+
+#if defined(HAS_WIFIMULTI)
+  WiFiMulti *multi = nullptr;
+#endif
 
 #if defined(ENABLE_IMAP)
 #define IMAP_SESSION IMAPSession
@@ -929,22 +1039,52 @@ private:
   unsigned long _lastReconnectMillis = 0;
   uint16_t _reconnectTimeout = ESP_MAIL_NETWORK_RECONNECT_TIMEOUT;
 
+  // Resume network connection
+  void resumeNetwork(ESP_MAIL_TCP_CLIENT *client);
+
   // Get the CRLF ending string w/wo CRLF included. Return the size of string read and the current octet read.
   int readLine(ESP_MAIL_TCP_CLIENT *client, char *buf, int bufLen, bool crlf, int &count);
 
   // PGM string replacement
   void strReplaceP(MB_String &buf, PGM_P key, PGM_P value);
 
-  // Check for XOAUTH2 log in error response
-  bool authFailed(char *buf, int bufLen, int &chunkIdx, int ofs);
+  // Check for OAUTH log in error response
+  bool oauthFailed(char *buf, int bufLen, int &chunkIdx, int ofs);
 
   // Get SASL XOAUTH2 string
   MB_String getXOAUTH2String(const MB_String &email, const MB_String &accessToken);
 
+  // Check response callback was assigned?
+  bool isResponseCB(void *cb, bool isSMTP);
+
+  // Print library info
+  void printLibInfo(void *sessionPtr, bool isSMTP);
+
+  // Begin server connection
+  bool beginConnection(Session_Config *session_config, void *sessionPtr, bool isSMTP, bool secureMode);
+
+  // Prepare system time
+  bool prepareTime(Session_Config *session_config, void *sessionPtr, bool isSMTP);
+
+  // Check for session. Close session If not ready.
+  bool sessionReady(void *sessionPtr, bool isSMTP);
+
 #if defined(ESP32_TCP_CLIENT) || defined(ESP8266_TCP_CLIENT)
-  // Set Root CA cert or CA Cert for server authentication
-  void setCACert(ESP_MAIL_TCP_CLIENT &client, ESP_Mail_Session *session, std::shared_ptr<const char> caCert);
+  // Set cert data
+  void setCert(Session_Config *session_cfg, const char *ca);
+  // Set secure data
+  void setSecure(ESP_MAIL_TCP_CLIENT &client, Session_Config *session_config);
 #endif
+
+  void appendMultipartContentType(MB_String &buf, esp_mail_multipart_types type, const char *boundary);
+
+  String errorReason(bool isSMTP, int errorCode, const char *msg);
+
+  // Close TCP session and clear auth_capability, read/send_capability, connected and authenticate statuses
+  void closeTCPSession(void *sessionPtr, bool isSMTP);
+
+  // Get TCP connected status
+  bool connected(void *sessionPtr, bool isSMTP);
 
   // Get the memory allocation block size of multiple of 4
   size_t getReservedLen(size_t len);
@@ -956,7 +1096,7 @@ private:
   char *getRandomUID();
 
   // Spit the string into token strings
-  void splitToken(MB_String &str, MB_VECTOR<MB_String> &tk, const char *delim);
+  void splitToken(const char *str, MB_VECTOR<MB_String> &tk, const char *delim);
 
   // Decode base64 encoded string
   unsigned char *decodeBase64(const unsigned char *src, size_t len, size_t *out_len);
@@ -971,46 +1111,133 @@ private:
   MB_String mGetBase64(MB_StringPtr str);
 
   // Sub string
-  char *subStr(const char *buf, PGM_P beginH, PGM_P endH, int beginPos, int endPos = 0, bool caseSensitive = true);
-
-  // Append char to the null terminated string buffer
-  void strcat_c(char *str, char c);
+  char *subStr(const char *buf, PGM_P begin_PGM, PGM_P end_PGM, int beginPos, int endPos = 0, bool caseSensitive = true);
 
   // Find string
   int strpos(const char *haystack, const char *needle, int offset, bool caseSensitive = true);
 
   // Memory allocation
-  void *newP(size_t len);
+  template <typename T>
+  T allocMem(size_t size, bool clear = true);
 
   // Memory deallocation
-  void delP(void *ptr);
+  void freeMem(void *ptr);
 
   // PGM string compare
-  bool strcmpP(const char *buf, int ofs, PGM_P beginH, bool caseSensitive = true);
+  bool strcmpP(const char *buf, int ofs, PGM_P begin_PGM, bool caseSensitive = true);
 
   // Find PGM string
-  int strposP(const char *buf, PGM_P beginH, int ofs, bool caseSensitive = true);
+  int strposP(const char *buf, PGM_P begin_PGM, int ofs, bool caseSensitive = true);
 
   // Memory allocation for PGM string
   char *strP(PGM_P pgm);
 
+  // Memory allocation for PGM lower case string
+  char *strP2Lower(PGM_P pgm);
+
   // Set or sync device system time with NTP server
+  // Do not modify or remove
   void setTime(float gmt_offset, float day_light_offset, const char *ntp_server, const char *TZ_Var, const char *TZ_file, bool wait);
 
   // Set the device time zone via TZ environment variable
   void setTimezone(const char *TZ_Var, const char *TZ_file);
 
   // Get TZ environment variable from file
+  // Do not modify or remove
   void getTimezone(const char *TZ_file, MB_String &out);
 
+  // Check the session existent
+  bool sessionExisted(void *sessionPtr, bool isSMTP);
+
+  // Send SMTP/IMAP callback
+  void sendCallback(void *sessionPtr, PGM_P info, bool isSMTP, bool prependCRLF, bool success);
+
+  // Send IMAP/SMTP response callback and print debug message
+  void printDebug(void *sessionPtr, bool isSMTP, PGM_P cbMsg, PGM_P dbMsg, esp_mail_debug_tag_type type, bool prependCRLF, bool success);
+
   // Get header content from response based on the field name
-  bool getHeader(const char *buf, PGM_P beginH, MB_String &out, bool caseSensitive);
+  bool getHeader(const char *buf, PGM_P begin_PGM, MB_String &out, bool caseSensitive);
+
+  // Append header field to buffer
+  void appendHeaderField(MB_String &buf, const char *name, PGM_P value, bool comma, bool newLine, esp_mail_string_mark_type type = esp_mail_string_mark_type_none);
+
+  // Append header field name to buffer
+  void appendHeaderName(MB_String &buf, const char *name, bool clear = false, bool lowercase = false, bool space = true);
+
+  // Append lowercase string to buffer
+  void appendLowerCaseString(MB_String &buf, PGM_P value, bool clear = false);
+
+  // Append header field property to buffer
+  void appendHeaderProp(MB_String &buf, PGM_P prop, const char *value, bool firstProp, bool lowerCase, bool isString, bool newLine);
+
+  // Append quote string to buffer
+  void appendString(MB_String &buf, PGM_P value, bool comma, bool newLine, esp_mail_string_mark_type type = esp_mail_string_mark_type_none);
+
+  // Append list to buffer
+  template <class T>
+  void appendList(MB_String &buf, MB_VECTOR<T> &list);
+
+  // Append space to buffer
+  void appendSpace(MB_String &buf);
+
+  // Append space to buffer after value
+  void appendSpace(MB_String &buf, bool withTag, PGM_P value);
+
+  // Append space to buffer after values
+  void appendSpace(MB_String &buf, bool withTag, int nunArgs, ...);
+
+  // Append space to buffer before value
+  void prependSpace(MB_String &buf, PGM_P value);
+
+  // Append dot to buffer
+  void appendDot(MB_String &buf);
+
+  // Append IMAP string key value list
+  void appendImap4KeyValue(MB_String &buf, PGM_P key, PGM_P value);
+
+  // Append dot to buffer before value
+  void prependDot(MB_String &buf, PGM_P value);
+
+  // Join 2 strings to buffer with space
+  void joinStringSpace(MB_String &buf, bool withTag, int nunArgs, ...);
+
+  // Join 2 strings to buffer with dot
+  void joinStringDot(MB_String &buf, int nunArgs, ...);
+
+  // Append mask(*) string to buffer
+  void maskString(MB_String &buf, int len);
+
+  // Append domain to buffer
+  void appendDomain(MB_String &buf, const char *domain);
+
+  // Append embedded message header to buffer
+  void appendEmbedMessage(MB_String &buf, esp_mail_message_body_t &body, bool isHtml);
+
+  // Append crlf to buffer
+  void appendNewline(MB_String &buf);
+
+  // Append tag to the buffer
+  void appendTagSpace(MB_String &buf, PGM_P tag = NULL);
+
+  // Print newline
+  void debugPrintNewLine();
+
+  // Send newline to callback
+  void callBackSendNewLine(void *sessionPtr, bool isSMTP, bool success);
+
+  // Print progress bar
+  void printProgress(int progress, int &lastProgress);
 
   // Get file extension with dot from MIME string
   void getExtfromMIME(const char *mime, MB_String &ext);
 
+  // Prepare ports
+  void preparePortFunction(Session_Config *session_config, bool isSMTP, bool &secure, bool &secureMode, bool &ssl);
+
   // Get operation config based on port and its protocol
   void getPortFunction(uint16_t port, struct esp_mail_ports_functions &ports_functions, bool &secure, bool &secureMode, bool &ssl, bool &starttls);
+
+  void idle();
 
 #endif
 
@@ -1037,11 +1264,8 @@ private:
   // Send Email function
   bool mSendMail(SMTPSession *smtp, SMTP_Message *msg, bool closeSession = true);
 
-  // Reconnect the network if it disconnected
+  // Network reconnection and return the connection status
   bool reconnect(SMTPSession *smtp, unsigned long dataTime = 0);
-
-  // Close TCP session
-  void closeTCPSession(SMTPSession *smtp);
 
   // Send the error status callback
   void errorStatusCB(SMTPSession *smtp, int error);
@@ -1068,7 +1292,7 @@ private:
   bool sendContent(SMTPSession *smtp, SMTP_Message *msg, bool closeSession, bool rfc822MSG);
 
   // Send imap or smtp callback
-  void altSendCallback(SMTPSession *smtp, PGM_P s1, PGM_P s2, bool newline1, bool newline2);
+  void altSendCallback(SMTPSession *smtp, PGM_P cbMsg, PGM_P dbMsg, esp_mail_debug_tag_type type, bool prependCRLF, bool success);
 
   // Send message data
   bool sendMSGData(SMTPSession *smtp, SMTP_Message *msg, bool closeSession, bool rfc822MSG);
@@ -1079,8 +1303,14 @@ private:
   // Get RFC 822 message envelope
   void getRFC822MsgEnvelope(SMTPSession *smtp, SMTP_Message *msg, MB_String &buf);
 
+  // Append boundary string to buffer
+  void appendBoundaryString(MB_String &buf, const char *value, bool endMark, bool newLine);
+
   // Send BDAT command RFC 3030
   bool sendBDAT(SMTPSession *smtp, SMTP_Message *msg, int len, bool last);
+
+  // Get transfer encoding
+  void getXEncoding(esp_mail_msg_xencoding &xencoding, const char *enc);
 
   // Set the unencoded xencoding enum for html, text and attachment from its xencoding string
   void checkUnencodedData(SMTPSession *smtp, SMTP_Message *msg);
@@ -1124,23 +1354,20 @@ private:
   // Send text parts MIME message
   bool sendPartText(SMTPSession *smtp, SMTP_Message *msg, byte type, const char *boundary);
 
-  // Send imap APPEND data or smtp data
-  bool altSendData(MB_String &s, bool newLine, SMTPSession *smtp, SMTP_Message *msg, bool addSendResult, bool getResponse, esp_mail_smtp_command cmd, esp_mail_smtp_status_code respCode, int errCode);
+  // Alternative string data sending to send imap APPEND data or smtp data
+  bool altSendData(MB_String &s, bool newLine, SMTPSession *smtp, SMTP_Message *msg, bool addSendResult, bool getResponse, esp_mail_smtp_command cmd, esp_mail_smtp_status_code statusCode, int errCode);
 
-  // Send imap APPEND data or smtp data
-  bool altSendData(uint8_t *data, size_t size, SMTPSession *smtp, SMTP_Message *msg, bool addSendResult, bool getResponse, esp_mail_smtp_command cmd, esp_mail_smtp_status_code respCode, int errCode);
+  // Alternative bytes data sending to send imap APPEND data or smtp data
+  bool altSendData(uint8_t *data, size_t size, SMTPSession *smtp, SMTP_Message *msg, bool addSendResult, bool getResponse, esp_mail_smtp_command cmd, esp_mail_smtp_status_code statusCode, int errCode);
 
   // Send MIME message
   bool sendMSG(SMTPSession *smtp, SMTP_Message *msg, const MB_String &boundary);
 
   // Get an attachment part header string
-  void getAttachHeader(MB_String &header, const MB_String &boundary, SMTP_Attachment *attach, size_t size);
+  void getAttachHeader(MB_String &header, const MB_String &boundary, SMTP_Attachment *attach, size_t size, bool isInline);
 
   // Get RFC 8222 part header string
   void getRFC822PartHeader(SMTPSession *smtp, MB_String &header, const MB_String &boundary);
-
-  // Get an inline attachment header string
-  void getInlineHeader(MB_String &header, const MB_String &boundary, SMTP_Attachment *inlineAttach, size_t size);
 
   // Send BLOB type text part or html part MIME message
   bool sendBlobBody(SMTPSession *smtp, SMTP_Message *msg, uint8_t type);
@@ -1166,23 +1393,26 @@ private:
   // Send blob or file as base64 encoded chunk
   bool sendBase64(SMTPSession *smtp, SMTP_Message *msg, esp_mail_smtp_send_base64_data_info_t &data_info, bool base64, bool report);
 
+  // Save sending logs to file
+  void saveSendingLogs(SMTPSession *smtp, SMTP_Message *msg, bool result);
+
   // Get imap or smtp report progress var pointer
   uint32_t altProgressPtr(SMTPSession *smtp);
 
   // Send callback
   void smtpCB(SMTPSession *smtp, PGM_P info = "", bool prependCRLF = false, bool success = false);
 
-  // Get SMTP response status (respCode and text)
-  void getResponseStatus(const char *buf, esp_mail_smtp_status_code respCode, int beginPos, struct esp_mail_smtp_response_status_t &status);
+  // Send error callback
+  void smtpErrorCB(SMTPSession *smtp, PGM_P info, bool prependCRLF = false, bool success = false);
+
+  // Get SMTP response status (statusCode and text)
+  void getResponseStatus(const char *buf, esp_mail_smtp_status_code statusCode, int beginPos, struct esp_mail_smtp_response_status_t &status);
 
   // Parse SMTP authentication capability
   void parseAuthCapability(SMTPSession *smtp, char *buf);
 
-  // Get TCP connected status
-  bool connected(SMTPSession *smtp);
-
   // Add the sending result
-  bool addSendingResult(SMTPSession *smtp, SMTP_Message *msg, bool result);
+  bool addSendingResult(SMTPSession *smtp, SMTP_Message *msg, bool result, bool showResult);
 
   // Handle SMTP server authentication
   bool smtpAuth(SMTPSession *smtp, bool &ssl);
@@ -1192,7 +1422,7 @@ private:
   void checkTLSAlert(SMTPSession *smtp, const char *response);
 
   // Handle SMTP response
-  bool handleSMTPResponse(SMTPSession *smtp, esp_mail_smtp_command cmd, esp_mail_smtp_status_code respCode, int errCode);
+  bool handleSMTPResponse(SMTPSession *smtp, esp_mail_smtp_command cmd, esp_mail_smtp_status_code statusCode, int errCode);
 
   // Print the upload status to the debug port
   void uploadReport(const char *filename, uint32_t pgAddr, int progress);
@@ -1228,23 +1458,37 @@ private:
   // Get encoding type from character set string
   esp_mail_char_decoding_scheme getEncodingFromCharset(const char *enc);
 
-  // Decode header field string
-  void decodeHeader(IMAPSession *imap, MB_String &headerField);
+  // Decode string base on encoding
+  void decodeString(IMAPSession *imap, MB_String &string, const char *enc = "");
 
   // Decode Latin1 to UTF-8
   int decodeLatin1_UTF8(unsigned char *out, int *outlen, const unsigned char *in, int *inlen);
 
+  /**
+   * Encode a code point using UTF-8
+   *
+   * @author Ondřej Hruška <ondra@ondrovo.com>
+   * https://gist.github.com/MightyPork/52eda3e5677b4b03524e40c9f0ab1da5
+   *
+   * @license MIT
+   *
+   * @param out - output buffer (min 5 characters), will be 0-terminated
+   * @param utf - code point 0-0x10FFFF
+   * @return number of bytes on success, 0 on failure (also produces U+FFFD, which uses 3 bytes)
+   */
+  int encodeUnicode_UTF8(char *out, uint32_t utf);
+
   // Decode TIS620 to UTF-8
   void decodeTIS620_UTF8(char *out, const char *in, size_t len);
 
-  // Reconnect the network if it disconnected
+  // Network reconnection and return the connection status
   bool reconnect(IMAPSession *imap, unsigned long dataTime = 0, bool downloadRequestuest = false);
 
-  // Get the TCP connection status
-  bool connected(IMAPSession *imap);
+  // Append headers fetch command
+  void appendHeadersFetchCommand(IMAPSession *imap, MB_String &cmd, int index, bool debug);
 
-  // Close TCP session
-  void closeTCPSession(IMAPSession *imap);
+  // Append rfc822 headers fetch command
+  void appendRFC822HeadersFetchCommand(MB_String &cmd);
 
   // Get multipart MIME fetch command
   bool getMultipartFechCmd(IMAPSession *imap, int msgIdx, MB_String &partText);
@@ -1252,14 +1496,17 @@ private:
   // Fetch multipart MIME body header
   bool fetchMultipartBodyHeader(IMAPSession *imap, int msgIdx);
 
+  // Print body part fetching debug
+  void printBodyPartFechingDubug(IMAPSession *imap, const char *partNum, bool multiLevel);
+
   // Handle IMAP server authentication
   bool imapAuth(IMAPSession *imap, bool &ssl);
 
   // Send IMAP command
-  bool sendIMAPCommand(IMAPSession *imap, int msgIndex, int cmdCase);
+  bool sendFetchCommand(IMAPSession *imap, int msgIndex, esp_mail_imap_command cmdCase);
 
   // Send error callback
-  void errorStatusCB(IMAPSession *imap, int error);
+  void errorStatusCB(IMAPSession *imap, int error, bool clearStatus);
 
   // Send data
   size_t imapSend(IMAPSession *imap, PGM_P data, bool newline = false);
@@ -1273,26 +1520,29 @@ private:
   // Log out
   bool imapLogout(IMAPSession *imap);
 
-  // Send callback
-  void imapCB(IMAPSession *imap, PGM_P info = "", bool prependCRLF = false, bool success = false);
+  // Send error callback
+  void imapErrorCB(IMAPSession *imap, PGM_P info, bool prependCRLF = false, bool success = false);
 
   // Send storage error callback
   void sendStorageNotReadyError(IMAPSession *imap, esp_mail_file_storage_type storageType);
 
   // Parse search response
-  int parseSearchResponse(IMAPSession *imap, char *buf, int bufLen, int &chunkIdx, PGM_P tag, bool &endSearch, int &nump, const char *key, const char *pc);
+  int parseSearchResponse(IMAPSession *imap, esp_mail_imap_response_status &imapResp, char *buf, int bufLen, int &chunkIdx, PGM_P tag, bool &endSearch, int &nump, const char *key);
 
   // Parse header state
-  bool parseHeaderState(IMAPSession *imap, const char *buf, PGM_P beginH, bool caseSensitive, struct esp_mail_message_header_t &header, int &headerState, esp_mail_imap_header_state state);
+  bool parseHeaderField(IMAPSession *imap, const char *buf, PGM_P begin_PGM, bool caseSensitive, struct esp_mail_message_header_t &header, int &headerState, int state);
 
   // Parse header response
-  void parseHeaderResponse(IMAPSession *imap, char *buf, int bufLen, int &chunkIdx, struct esp_mail_message_header_t &header, int &headerState, int &octetCount, bool caseSensitive = true);
+  void parseHeaderResponse(IMAPSession *imap, esp_mail_imap_response_data &res, bool caseSensitive = true);
 
   // Set the header based on state parsed
-  void setHeader(IMAPSession *imap, char *buf, struct esp_mail_message_header_t &header, int state);
+  void collectHeaderField(IMAPSession *imap, char *buf, struct esp_mail_message_header_t &header, int state);
 
   // Get decoded header
-  bool getDecodedHeader(IMAPSession *imap, const char *buf, PGM_P beginH, MB_String &out, bool caseSensitive);
+  bool getDecodedHeader(IMAPSession *imap, const char *buf, PGM_P begin_PGM, MB_String &out, bool caseSensitive);
+
+  // Check attachment for firmware file
+  void checkFirmwareFile(IMAPSession *imap, const char *filename, struct esp_mail_message_part_info_t &part, bool defaultSize = false);
 
   // Parse part header response
   void parsePartHeaderResponse(IMAPSession *imap, const char *buf, int &chunkIdx, struct esp_mail_message_part_info_t &part, int &octetCount, bool caseSensitive = true);
@@ -1337,7 +1587,7 @@ private:
   void fetchReport(IMAPSession *imap, int progress, bool html);
 
   // Print the message search status via debug port
-  void searchReport(IMAPSession *imap, int progress, const char *percent);
+  void searchReport(IMAPSession *imap, int progress);
 
   // Get current message num item
   struct esp_mail_imap_msg_num_t cMSG(IMAPSession *imap);
@@ -1348,17 +1598,20 @@ private:
   // Get IMAP response status e.g. OK, NO and Bad status enum value
   esp_mail_imap_response_status imapResponseStatus(IMAPSession *imap, char *response, PGM_P tag);
 
-  // Add header item to string buffer to save to file
+  // Add header item to string buffer
   void addHeaderItem(MB_String &str, esp_mail_message_header_t *header, bool json);
 
-  // Add RFC822 headers to string buffer save to file
+  // Get RFC822 header string pointer by index
+  int getRFC822HeaderPtr(int index, esp_mail_imap_rfc822_msg_header_item_t *header);
+
+  // Add RFC822 headers to string buffer
   void addRFC822Headers(MB_String &s, esp_mail_imap_rfc822_msg_header_item_t *header, bool json);
 
-  // Add header string by name and value to string buffer to save to file
-  void addHeader(MB_String &s, const char *name, const MB_String &value, bool trim, bool json);
+  // Add RFC822 header item to string buffer
+  void addRFC822HeaderItem(MB_String &s, esp_mail_imap_rfc822_msg_header_item_t *header, int index, bool json);
 
-  // Add header string by name and value to string buffer to save to file
-  void addHeader(MB_String &s, const char *name, int value, bool json);
+  // Add header string by name and value to string buffer
+  void addHeader(MB_String &s, const char *name, const char *s_value, int num_value, bool trim, bool isJson);
 
   // Save header string buffer to file
   void saveHeader(IMAPSession *imap, bool json);
@@ -1375,6 +1628,9 @@ private:
   // Handle atachment parsing and download
   bool parseAttachmentResponse(IMAPSession *imap, char *buf, int bufLen, int &chunkIdx, MB_String &filePath, bool &downloadRequest, int &octetCount, int &octetLength);
 
+  // Get List
+  char *getList(char *buf, bool &isList);
+
   // Parse mailbox folder open response
   void parseFoldersResponse(IMAPSession *imap, char *buf, bool list);
 
@@ -1387,26 +1643,14 @@ private:
   // Parse Idle response
   bool parseIdleResponse(IMAPSession *imap);
 
-  // Parse Get UID response
-  void parseGetUIDResponse(IMAPSession *imap, char *buf);
+  // Append Fetch UID/Flags string to buffer
+  void appendFetchString(MB_String &buf, bool uid);
 
-  // Parse Get Flags response
-  void parseGetFlagsResponse(IMAPSession *imap, char *buf);
+  // Parse command response
+  void parseCmdResponse(IMAPSession *imap, char *buf, PGM_P find);
 
-  // Parse Get Quota response
-  void parseGetQuotaResponse(IMAPSession *imap, char *buf);
-
-  // Parse Get Quota roots response
-  void parseGetQuotaRootsResponse(IMAPSession *imap, char *buf);
-
-  // Parse Get ACL response
-  void parseGetACLResponse(IMAPSession *imap, char *buf, esp_mail_imap_command cmd);
-
-  // Parse Namespace response
-  void parseNamespaceResponse(IMAPSession *imap, char *buf);
-
-  // Parse Fetch Sequence set response
-  void parFetchSequenceSetResponse(IMAPSession *imap, char *buf);
+  // Get flags
+  bool getFlags(IMAPSession *imap, char *buf, esp_mail_imap_response_types type);
 
   // Parse examine response
   void parseExamineResponse(IMAPSession *imap, char *buf);
@@ -1415,7 +1659,7 @@ private:
   bool handleIMAPError(IMAPSession *imap, int err, bool ret);
 
   // Set Flag
-  bool mSetFlag(IMAPSession *imap, MB_StringPtr sequenceSet, MB_StringPtr flags, esp_mail_imap_store_flag_type type, bool closeSession, bool silent = false, bool UID = true);
+  bool mSetFlag(IMAPSession *imap, MB_StringPtr sequenceSet, MB_StringPtr flags, esp_mail_imap_store_flag_type type, bool closeSession, bool silent = false, bool UID = true, int32_t modsequence = -1);
 
 #endif
 };
@@ -1474,24 +1718,71 @@ public:
 
   /** Begin the IMAP server connection.
    *
-   * @param session The pointer to ESP_Mail_Session structured data that keeps
+   * @param session_config The pointer to Session_Config structured data that keeps
    * the server and log in details.
-   * @param config The pointer to IMAP_Config structured data that keeps the
+   * @param imap_data The pointer to IMAP_Data structured data that keeps the
    * operation options.
+   * @param login The bool option for login after server connection.
    * @return The boolean value which indicates the success of operation.
    */
-  bool connect(ESP_Mail_Session *session, IMAP_Config *config);
+  bool connect(Session_Config *session_config, IMAP_Data *imap_data, bool login = true);
+
+  /** Log in to IMAP server using Email and password.
+   *
+   * @param email The IMAP server account email.
+   * @param password The IMAP server account password.
+   * @return The boolean value which indicates the success of operation.
+   */
+  template <typename T1 = const char *, typename T2 = const char *>
+  bool loginWithPassword(T1 email, T2 password) { return mLogin(toStringPtr(email), toStringPtr(password), false); };
+
+  /** Log in to IMAP server using Email and access token.
+   *
+   * @param email The IMAP server account email.
+   * @param token The Access token to log in.
+   * @return The boolean value which indicates the success of operation.
+   */
+  template <typename T1 = const char *, typename T2 = const char *>
+  bool loginWithAccessToken(T1 email, T2 token) { return mLogin(toStringPtr(email), toStringPtr(token), true); };
+
+  /** Send the client identification to the server
+   *
+   * @param identification The pointer to IMAP_Identification structured data that keeps
+   * the key properties e.g., name, version, os, os_version, vendor, support_url, address,
+   * date, command, arguments, and environment.
+   */
+  bool id(IMAP_Identification *identification);
+
+  /** Return the server ID returns from ID command.
+   * @return The server ID string.
+   */
+  String serverID();
+
+  /** Return the SASL authentication status.
+   * @return The boolean value indicates SASL authentication status.
+   */
+  bool isAuthenticated();
+
+  /** Return the log status.
+   * @return The boolean value log in status.
+   */
+  bool isLoggedIn();
+
+  /** Return firmware update result when attachment filename matches.
+   * @return The boolean value indicates the firmware update status.
+   */
+  bool isFirmwareUpdateSuccess();
 
   /** Begin the IMAP server connection without authentication.
    *
-   * @param session The pointer to ESP_Mail_Session structured data that keeps
+   * @param session_config The pointer to Session_Config structured data that keeps
    * the server and log in details.
    * @param callback The callback function that accepts IMAP_Response as parameter.
    * @param tag The tag that pass to the callback function.
    * @return The boolean value indicates the success of operation.
    */
   template <typename T = const char *>
-  bool customConnect(ESP_Mail_Session *session, imapResponseCallback callback, T tag = "") { return mCustomConnect(session, callback, toStringPtr(tag)); };
+  bool customConnect(Session_Config *session_config, imapResponseCallback callback, T tag = "") { return mCustomConnect(session_config, callback, toStringPtr(tag)); };
 
   /** Close the IMAP session.
    *
@@ -1553,11 +1844,10 @@ public:
 
   /** Close the mailbox folder that was opened.
    *
-   * @param folderName The known mailbox folder name.
+   * @param expunge The option to allow emty the deleted flag set messages in case folder was open with editable mode.
    * @return The boolean value which indicates the success of operation.
    */
-  template <typename T = const char *>
-  bool closeFolder(T folderName) { return mCloseFolder(toStringPtr(folderName)); }
+  bool closeFolder(bool expunge = false) { return mCloseFolder(expunge); }
 
   /** Create folder.
    *
@@ -1707,19 +1997,27 @@ public:
    * @param toDelete The pointer to the MessageList class that contains the
    * list of messages to delete.
    * @param expunge The boolean option to expunge all messages.
+   * @param modsequence The int32_t option for UNCHANGESINCE conditional test.
    * @return The boolean value which indicates the success of operation.
+   *
+   * The modsequence value can be used only if IMAP server supports Conditional STORE extension
+   * and the selected mailbox supports modsequences.
    */
-  bool deleteMessages(MessageList *toDelete, bool expunge = false) { return mDeleteMessages(toDelete, expunge); }
+  bool deleteMessages(MessageList *toDelete, bool expunge = false, int32_t modsequence = -1) { return mDeleteMessages(toDelete, expunge, modsequence); }
 
   /** Delete the messages in the opened mailbox folder.
    *
    * @param sequenceSet The sequence set string i.g., unique identifier (UID) or message sequence number or ranges of UID or sequence number.
    * @param UID The option for sequenceSet whether it is UID or message sequence number.
    * @param expunge The boolean option to expunge all messages.
+   * @param modsequence The int32_t option for UNCHANGESINCE conditional test.
    * @return The boolean value which indicates the success of operation.
+   *
+   * The modsequence value can be used only if IMAP server supports Conditional STORE extension
+   * and the selected mailbox supports modsequences.
    */
   template <typename T = const char *>
-  bool deleteMessages(T sequenceSet, bool UID, bool expunge = false) { return mDeleteMessagesSet(toStringPtr(sequenceSet), UID, expunge); }
+  bool deleteMessages(T sequenceSet, bool UID, bool expunge = false, int32_t modsequence = -1) { return mDeleteMessagesSet(toStringPtr(sequenceSet), UID, expunge, modsequence); }
 
   /** Get the quota root's resource usage and limits.
    *
@@ -1815,6 +2113,11 @@ public:
    */
   bool folderChanged();
 
+  /** Send NOOP command to IMAP server.
+   * @return The boolean value which indicates the success of operation.
+   */
+  bool noop();
+
   /** Assign the callback function that returns the operating status when
    * fetching or reading the Email.
    *
@@ -1865,9 +2168,24 @@ public:
    */
   String errorReason();
 
+  /** Get the operating status error code.
+   *
+   * @return The int value of operating status error code.
+   *
+   * The negative value indicated error.
+   * See src/ESP_Mail_Error.h and extras/MB_FS.h
+   */
+  int errorCode();
+
   /** Clear all the cache data stored in the IMAP session object.
    */
   void empty();
+
+  /** Get the status of message fetching and searching.
+   *
+   * @return The IMAP_Status object contains the fetching and searching statuses.
+   */
+  IMAP_Status status();
 
   /** Get the JSON string of file name list of files that stored in SD card.
    *
@@ -1879,13 +2197,17 @@ public:
   /** Set the current timestamp.
    *
    * @param ts The current timestamp.
+   * @param gmtOffset The GMT offset.
    */
-  void setSystemTime(time_t ts);
+  void setSystemTime(time_t ts, float gmtOffset = 0);
 
   friend class ESP_Mail_Client;
   friend class foldderList;
 
 private:
+  // Log in to IMAP server
+  bool mLogin(MB_StringPtr email, MB_StringPtr password, bool isToken);
+
   // Clear message data
   void clearMessageData();
 
@@ -1902,10 +2224,10 @@ private:
   void getRFC822Messages(uint16_t messageIndex, struct esp_mail_imap_msg_item_t &msg);
 
   // Close mailbox
-  bool closeMailbox();
+  bool closeMailbox(bool expunge = false);
 
   // Open mailbox
-  bool openMailbox(MB_StringPtr folder, esp_mail_imap_auth_mode mode, bool waitResponse);
+  bool openMailbox(MB_StringPtr folder, esp_mail_imap_auth_mode mode, bool waitResponse, bool unselect);
 
   // Get folders list
   bool getMailboxes(FoldersCollection &folders);
@@ -1919,11 +2241,14 @@ private:
   // Unsubscribe the mailbox
   bool mUnSubscribe(MB_StringPtr folder);
 
+  // Get UID
+  int mGetUID(int msgNum);
+
   // Fetch by sequence set
   bool mFetchSequenceSet();
 
-  // Prepend TAG for response status parsing
-  MB_String prependTag(PGM_P tag, PGM_P cmd);
+  // Return string from TAG prepended command
+  MB_String prependTag(PGM_P cmd, PGM_P tag = NULL);
 
   // Check capabilities
   bool checkCapabilities();
@@ -1953,10 +2278,16 @@ private:
   bool mRenameFolder(MB_StringPtr currentFolderName, MB_StringPtr newFolderName);
 
   // Copy message
+  bool copyMsg(MessageList *toCopy, const char *sequenceSet, bool UID, MB_StringPtr dest);
+
+  // Copy message
   bool mCopyMessages(MessageList *toCopy, MB_StringPtr dest);
 
   // Copy message using sequence set
   bool mCopyMessagesSet(MB_StringPtr sequenceSet, bool UID, MB_StringPtr dest);
+
+  // Move message
+  bool moveMsg(MessageList *toMove, const char *sequenceSet, bool UID, MB_StringPtr dest);
 
   // Move message
   bool mMoveMessages(MessageList *toMove, MB_StringPtr dest);
@@ -1964,17 +2295,29 @@ private:
   // Move message using sequence set
   bool mMoveMessagesSet(MB_StringPtr sequenceSet, bool UID, MB_StringPtr dest);
 
-  // Delete messages
-  bool mDeleteMessages(MessageList *toDelete, bool expunge = false);
+  // Check for conditional STORE extention support
+  bool isCondStoreSupported();
+
+  // Check for mailbox mod-sequence support
+  bool isModseqSupported();
+
+  // add UNCHANGEDSINCE STORE modifier and CHANGEDSINCE FETCH modifier to command
+  void addModifier(MB_String &cmd, esp_mail_imap_command_types type, int32_t modsequence);
+
+  // Delete message
+  bool deleteMsg(MessageList *toDelete, const char *sequenceSet, bool UID, bool expunge, int32_t modsequence = -1);
 
   // Delete messages
-  bool mDeleteMessagesSet(MB_StringPtr sequenceSet, bool UID, bool expunge = false);
+  bool mDeleteMessages(MessageList *toDelete, bool expunge = false, int32_t modsequence = -1);
+
+  // Delete messages
+  bool mDeleteMessagesSet(MB_StringPtr sequenceSet, bool UID, bool expunge = false, int32_t modsequence = -1);
 
   // Get or set the quota root's resource usage and limits.
   bool mGetSetQuota(MB_StringPtr quotaRoot, IMAP_Quota_Root_Info *data, bool getMode);
 
   // Parse the IMAP_Quota_Root_info
-  void mParseQuota(MB_String &quota, IMAP_Quota_Root_Info *data);
+  void mParseQuota(const char *quota, IMAP_Quota_Root_Info *data);
 
   // Get the list of quota roots for the named mailbox.
   bool mGetQuotaRoots(MB_StringPtr mailbox, IMAP_Quota_Roots_List *quotaRootsList);
@@ -1994,14 +2337,14 @@ private:
   // Get namespace
   bool mNamespace(IMAP_Namespaces_List *ns);
 
-   // Enable the IMAP capability
+  // Enable the IMAP capability
   bool mEnable(MB_StringPtr capability);
 
   // Parse namespaces
   void parseNamespaces(MB_String &ns_str, IMAP_Namespaces *ns);
 
   // Close folder
-  bool mCloseFolder(MB_StringPtr folderName);
+  bool mCloseFolder(bool expunge = false);
 
   // Open folder
   bool mOpenFolder(MB_StringPtr folderName, bool readOnly);
@@ -2010,17 +2353,27 @@ private:
   bool mSelectFolder(MB_StringPtr folderName, bool readOnly);
 
   // Custom TCP connection
-  bool mCustomConnect(ESP_Mail_Session *session, imapResponseCallback callback, MB_StringPtr tag);
+  bool mCustomConnect(Session_Config *session_config, imapResponseCallback callback, MB_StringPtr tag);
+
+  // Append ID list to buffer
+  void appendIdList(MB_String &list, IMAP_Identification *identification);
 
   // Handle connection
-  bool handleConnection(ESP_Mail_Session *session, IMAP_Config *config, bool &ssl);
+  bool handleConnection(Session_Config *session_config, IMAP_Data *imap_data, bool &ssl);
 
   // Start TCP connection
   bool connect(bool &ssl);
 
+  // Print features not supported debug error message
+  void printDebugNotSupported();
+
   bool _tcpConnected = false;
+  bool _sessionSSL = false;
+  bool _sessionLogin = false;
+  bool _loginStatus = false;
   unsigned long _last_polling_error_ms = 0;
   unsigned long _last_host_check_ms = 0;
+  unsigned long _last_server_connect_ms = 0;
   struct esp_mail_imap_response_status_t _imapStatus;
   int _cMsgIdx = 0;
   int _cPartIdx = 0;
@@ -2037,9 +2390,15 @@ private:
   int _rfc822_part_count = 0;
   bool _unseen = false;
   bool _readOnlyMode = true;
-  struct esp_mail_auth_capability_t _auth_capability;
-  struct esp_mail_imap_capability_t _read_capability;
-  ESP_Mail_Session *_sesson_cfg;
+  bool _msgDownload = false;
+  bool _attDownload = false;
+  bool _storageReady = false;
+  bool _storageChecked = false;
+
+  bool _auth_capability[esp_mail_auth_capability_maxType];
+  bool _read_capability[esp_mail_imap_read_capability_maxType];
+  Session_Config *_session_cfg;
+  MB_List<int> _configPtrList;
   MB_String _currentFolder;
   bool _mailboxOpened = false;
   unsigned long _lastSameFolderOpenMillis = 0;
@@ -2050,9 +2409,10 @@ private:
   MB_String _quota_root_tmp;
   MB_String _acl_tmp;
   MB_String _ns_tmp;
+  MB_String _server_id_tmp;
   MB_String _sdFileList;
 
-  struct esp_mail_imap_read_config_t *_config = nullptr;
+  struct esp_mail_imap_data_config_t *_imap_data = nullptr;
 
   bool _headerOnly = true;
   bool _uidSearch = false;
@@ -2060,6 +2420,8 @@ private:
   bool _debug = false;
   int _debugLevel = 0;
   bool _secure = false;
+  bool _authenticated = false;
+  bool _isFirmwareUpdated = false;
   imapStatusCallback _readCallback = NULL;
   imapResponseCallback _customCmdResCallback = NULL;
   MIMEDataStreamCallback _mimeDataStreamCallback = NULL;
@@ -2071,10 +2433,6 @@ private:
   SelectedFolderInfo _mbif;
   int _uid_tmp = 0;
   int _lastProgress = -1;
-  int _certType = -1;
-#if defined(ESP32) || defined(ESP8266)
-  std::shared_ptr<const char> _caCert = nullptr;
-#endif
 
   ESP_MAIL_TCP_CLIENT client;
 
@@ -2175,15 +2533,44 @@ public:
 
   /** Begin the SMTP server connection.
    *
-   * @param session The pointer to ESP_Mail_Session structured data that keeps
+   * @param session_config The pointer to Session_Config structured data that keeps
    * the server and log in details.
+   * @param login The bool option for login after server connection.
    * @return The boolean value indicates the success of operation.
    */
-  bool connect(ESP_Mail_Session *session);
+  bool connect(Session_Config *session_config, bool login = true);
+
+  /** Log in to SMTP server using Email and password.
+   *
+   * @param email The SMTP server account email.
+   * @param password The SMTP server account password.
+   * @return The boolean value which indicates the success of operation.
+   */
+  template <typename T1 = const char *, typename T2 = const char *>
+  bool loginWithPassword(T1 email, T2 password) { return mLogin(toStringPtr(email), toStringPtr(password), false); };
+
+  /** Log in to SMTP server using Email and access token.
+   *
+   * @param email The SMTP server account email.
+   * @param token The Access token to log in.
+   * @return The boolean value which indicates the success of operation.
+   */
+  template <typename T1 = const char *, typename T2 = const char *>
+  bool loginWithAccessToken(T1 email, T2 token) { return mLogin(toStringPtr(email), toStringPtr(token), true); };
+
+  /** Return the SASL authentication status.
+   * @return The boolean value indicates SASL authentication status.
+   */
+  bool isAuthenticated();
+
+  /** Return the log status.
+   * @return The boolean value indicates log in status.
+   */
+  bool isLoggedIn();
 
   /** Begin the SMTP server connection without authentication.
    *
-   * @param session The pointer to ESP_Mail_Session structured data that keeps
+   * @param session_config The pointer to Session_Config structured data that keeps
    * the server and log in details.
    * @param callback The callback function that accepts the SMTP_Response as parameter.
    * @param commandID The command identifier number that will pass to the callback.
@@ -2191,7 +2578,7 @@ public:
    *
    * @note If commandID was not set or set to -1, the command identifier will be auto increased started from zero.
    */
-  int customConnect(ESP_Mail_Session *config, smtpResponseCallback callback, int commandID = -1);
+  int customConnect(Session_Config *session_config, smtpResponseCallback callback, int commandID = -1);
 
   /** Close the SMTP session.
    *
@@ -2252,6 +2639,30 @@ public:
    */
   String errorReason();
 
+  /** Get the SMTP server response status code.
+   *
+   * @return The int value of SMTP server response status code.
+   *
+   * See RFC 5321 standard's documentation.
+   */
+  int statusCode();
+
+  /** Get the SMTP server response status message.
+   *
+   * @return The int value of SMTP server response status message.
+   *
+   */
+  String statusMessage();
+
+  /** Get the operating status error code.
+   *
+   * @return The int value of operating status error code.
+   *
+   * The negative value indicated error.
+   * See src/ESP_Mail_Error.h and extras/MB_FS.h
+   */
+  int errorCode();
+
   /** Set the Email sending status callback function.
    *
    * @param smtpCallback The callback function that accept the
@@ -2259,11 +2670,18 @@ public:
    */
   void callback(smtpStatusCallback smtpCallback);
 
+  /** Get the status of message fetching and searching.
+   *
+   * @return The SMTP_Status object contains the sending status.
+   */
+  SMTP_Status status();
+
   /** Set the current timestamp.
    *
    * @param ts The current timestamp.
+   * @param gmtOffset The GMT offset.
    */
-  void setSystemTime(time_t ts);
+  void setSystemTime(time_t ts, float gmtOffset = 0);
 
   SendingResult sendingResult;
 
@@ -2271,6 +2689,8 @@ public:
 
 private:
   bool _tcpConnected = false;
+  bool _sessionSSL = false;
+  bool _sessionLogin = false;
   struct esp_mail_smtp_response_status_t _smtpStatus;
   int _sentSuccessCount = 0;
   int _sentFailedCount = 0;
@@ -2279,33 +2699,42 @@ private:
   uint32_t ts = 0;
 
   esp_mail_smtp_command _smtp_cmd = esp_mail_smtp_command::esp_mail_smtp_cmd_greeting;
-  struct esp_mail_auth_capability_t _auth_capability;
-  struct esp_mail_smtp_capability_t _send_capability;
-  ESP_Mail_Session *_sesson_cfg = NULL;
+
+  bool _auth_capability[esp_mail_auth_capability_maxType];
+  bool _send_capability[esp_mail_smtp_send_capability_maxType];
+
+  Session_Config *_session_cfg = NULL;
+  MB_List<int> _configPtrList;
 
   bool _debug = false;
   int _debugLevel = 0;
   bool _secure = false;
+  bool _authenticated = false;
+  bool _loginStatus = false;
+  bool _waitForAuthenticate = false;
+  bool _canForward = false;
   smtpStatusCallback _sendCallback = NULL;
   smtpResponseCallback _customCmdResCallback = NULL;
   int _commandID = -1;
+  bool _sdStorageReady = false;
+  bool _flashStorageReady = false;
+  bool _sdStorageChecked = false;
+  bool _flashStorageChecked = false;
 
   SMTP_Status _cbData;
   struct esp_mail_smtp_msg_type_t _msgType;
   int _lastProgress = -1;
-
-  int _certType = -1;
-#if defined(ESP32) || defined(ESP8266)
-  std::shared_ptr<const char> _caCert = nullptr;
-#endif
 
   ESP_MAIL_TCP_CLIENT client;
 
   // Start TCP connection
   bool connect(bool &ssl);
 
+  // Log in to SMTP server
+  bool mLogin(MB_StringPtr email, MB_StringPtr password, bool isToken);
+
   // Handle TCP connection
-  bool handleConnection(ESP_Mail_Session *config, bool &ssl);
+  bool handleConnection(Session_Config *session_config, bool &ssl);
 
   // Send custom command
   int mSendCustomCommand(MB_StringPtr cmd, smtpResponseCallback callback, int commandID = -1);
@@ -2343,7 +2772,7 @@ static void __attribute__((used)) esp_mail_dump_blob(unsigned char *buf, size_t 
     }
     else if ((u & 7) == 0)
     {
-      Serial.print(" ");
+      ESP_MAIL_PRINTF(" ");
     }
     ESP_MAIL_PRINTF(" %02x", buf[u]);
   }

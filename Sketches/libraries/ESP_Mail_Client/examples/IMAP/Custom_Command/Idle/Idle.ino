@@ -5,7 +5,26 @@
  *
  * Github: https://github.com/mobizt/ESP-Mail-Client
  *
- * Copyright (c) 2022 mobizt
+ * Copyright (c) 2023 mobizt
+ *
+ */
+
+/** ////////////////////////////////////////////////
+ *  Struct data names changed from v2.x.x to v3.x.x
+ *  ////////////////////////////////////////////////
+ *
+ * "ESP_Mail_Session" changes to "Session_Config"
+ * "IMAP_Config" changes to "IMAP_Data"
+ *
+ * Changes in the examples
+ *
+ * ESP_Mail_Session session;
+ * to
+ * Session_Config config;
+ *
+ * IMAP_Config config;
+ * to
+ * IMAP_Data imap_data;
  *
  */
 
@@ -16,7 +35,7 @@
  */
 
 #include <Arduino.h>
-#if defined(ESP32)
+#if defined(ESP32) || defined(ARDUINO_RASPBERRY_PI_PICO_W)
 #include <WiFi.h>
 #elif defined(ESP8266)
 #include <ESP8266WiFi.h>
@@ -67,6 +86,10 @@ IMAPSession imap;
 
 unsigned long lastIdleTerminatedMillis = 0;
 
+#if defined(ARDUINO_RASPBERRY_PI_PICO_W)
+WiFiMulti multi;
+#endif
+
 void customCommandCallback(IMAP_Response res)
 {
     // The server responses will included tagged and/or untagged data.
@@ -79,16 +102,12 @@ void customCommandCallback(IMAP_Response res)
     // When you send multiple commands with different tag simultaneously,
     // tag will be used as command identifier.
 
-    Serial.print("> C: TAG ");
-    Serial.println(res.tag.c_str());
-    Serial.print("< S: ");
-    Serial.println(res.text.c_str());
+    ESP_MAIL_PRINTF("> C: TAG %s\n", res.tag.c_str());
+    ESP_MAIL_PRINTF("< S: %s\n", res.text.c_str());
 
     if (res.completed)
     {
-        Serial.print("> C: Response finished with status ");
-        Serial.println(res.status.c_str());
-        Serial.println();
+        ESP_MAIL_PRINTF("> C: Response finished with status %s\n\n", res.status.c_str());
     }
 }
 
@@ -101,40 +120,60 @@ void setup()
     while (!Serial)
         ;
     Serial.println();
-    Serial.println("**** Custom built WiFiNINA firmware need to be installed.****\nTo install firmware, read the instruction here, https://github.com/mobizt/ESP-Mail-Client#install-custom-built-wifinina-firmware");
-
+    Serial.println("**** Custom built WiFiNINA firmware need to be installed.****\n");
+    Serial.println("To install firmware, read the instruction here, https://github.com/mobizt/ESP-Mail-Client#install-custom-build-wifinina-firmware");
 #endif
 
     Serial.println();
 
-    Serial.print("Connecting to AP");
-
+#if defined(ARDUINO_RASPBERRY_PI_PICO_W)
+    multi.addAP(WIFI_SSID, WIFI_PASSWORD);
+    multi.run();
+#else
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+#endif
+
+    Serial.print("Connecting to Wi-Fi");
+    unsigned long ms = millis();
     while (WiFi.status() != WL_CONNECTED)
     {
         Serial.print(".");
-        delay(200);
+        delay(300);
+#if defined(ARDUINO_RASPBERRY_PI_PICO_W)
+        if (millis() - ms > 10000)
+            break;
+#endif
     }
-
-    Serial.println("");
-    Serial.println("WiFi connected.");
-    Serial.println("IP address: ");
+    Serial.println();
+    Serial.print("Connected with IP: ");
     Serial.println(WiFi.localIP());
     Serial.println();
 
     /*  Set the network reconnection option */
     MailClient.networkReconnect(true);
 
-    /* Declare the ESP_Mail_Session for user defined session credentials */
-    ESP_Mail_Session session;
+    // The WiFi credentials are required for Pico W
+    // due to it does not have reconnect feature.
+#if defined(ARDUINO_RASPBERRY_PI_PICO_W)
+    MailClient.clearAP();
+    MailClient.addAP(WIFI_SSID, WIFI_PASSWORD);
+#endif
+
+    /* Declare the Session_Config for user defined session credentials */
+    Session_Config config;
 
     /* Set the session config */
-    session.server.host_name = IMAP_HOST;
-    session.server.port = IMAP_PORT;
+    config.server.host_name = IMAP_HOST;
+    config.server.port = IMAP_PORT;
 
     /* Connect to the server */
-    if (!imap.customConnect(&session /* session credentials */, customCommandCallback, F("A01") /* tag */))
+    if (!imap.customConnect(&config, customCommandCallback, F("A01") /* tag */))
         return;
+
+    if (imap.isAuthenticated())
+        Serial.println("\nSuccessfully logged in.\n");
+    else
+        Serial.println("\nConnected with no Auth.\n");
 
     String cmd = F("LOGIN ");
     cmd += AUTHOR_EMAIL;
@@ -159,7 +198,7 @@ void loop()
         if (!imap.sendCustomCommand(F("IDLE"), customCommandCallback, F("A05") /* tag */))
         {
             // If error, need to re-connect if imap.connected() returns false and re-log in again
-            Serial.println("TCP connection closed!");
+            Serial.println("\nTCP connection closed!");
             return;
         }
 

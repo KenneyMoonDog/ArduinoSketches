@@ -1,10 +1,8 @@
 /*
- * WiFiNINA TCP Client for ESP Mail Client, version 1.0.10
+ * WiFiNINA TCP Client for ESP Mail Client, version 1.0.12
  *
- * To do:
- * - Add support board SSL engine for external basic client 
  *
- * July 21, 2022
+ * March 2, 2023
  *
  * Add support Arduino Nano RP2040 Connect
  *
@@ -63,8 +61,9 @@ public:
    * Set Root CA certificate to verify.
    * @param certFile The certificate file path.
    * @param storageType The storage type mb_fs_mem_storage_type_flash or mb_fs_mem_storage_type_sd.
+   * @return true when certificate loaded successfully.
    */
-  void setCertFile(const char *certFile, mb_fs_mem_storage_type storageType);
+  bool setCertFile(const char *certFile, mb_fs_mem_storage_type storageType);
 
   /**
    * Set TCP connection time out in seconds.

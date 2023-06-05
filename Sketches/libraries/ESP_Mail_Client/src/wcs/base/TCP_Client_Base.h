@@ -1,10 +1,10 @@
 /*
- * TCP Client Base class, version 2.0.1
+ * TCP Client Base class, version 2.0.5
  *
- * Created July 26, 2022
+ * Created March 12, 2023
  *
  * The MIT License (MIT)
- * Copyright (c) 2022 K. Suwatchai (Mobizt)
+ * Copyright (c) 2023 K. Suwatchai (Mobizt)
  *
  *
  * Permission is hereby granted, free of charge, to any person returning a copy of
@@ -29,10 +29,20 @@
 #define TCP_CLIENT_BASE_H
 
 #include <Arduino.h>
+#include "ESP_Mail_FS.h"
+#if defined(ENABLE_SMTP) || defined(ENABLE_IMAP)
+
+
+#if defined(ESP32) && !defined(ESP_ARDUINO_VERSION) /* ESP32 core < v2.0.x */
 #include <sys/time.h>
+#else
+#include <time.h>
+#endif
+
 #include "ESP_Mail_Const.h"
 #include <IPAddress.h>
 #include <Client.h>
+#include "./extras/MB_Time.h"
 
 #define TCP_CLIENT_DEFAULT_TCP_TIMEOUT_SEC 30
 
@@ -81,40 +91,6 @@ public:
 
     virtual void disconnect(){};
 
-    virtual time_t getTime()
-    {
-        time_t tm = now;
-#if defined(ENABLE_IMAP) || defined(ENABLE_SMTP)
-#if defined(MB_MCU_ESP) || defined(MB_MCU_ATMEL_ARM) || defined(MB_MCU_RP2040)
-        if (tm < ESP_MAIL_CLIENT_VALID_TS)
-            tm = time(nullptr);
-#else
-        tm += millis() / 1000;
-#endif
-#endif
-        return tm;
-    }
-
-    virtual bool setSystemTime(time_t ts)
-    {
-
-#if defined(ESP8266) || defined(ESP32)
-
-        if (setTimestamp(ts) == 0)
-        {
-            this->now = time(nullptr);
-            return true;
-        }
-
-#else
-        if (ts > ESP_MAIL_CLIENT_VALID_TS)
-            this->now = ts - (millis() / 1000);
-
-#endif
-
-        return false;
-    }
-
     virtual String fwVersion()
     {
         return String();
@@ -162,33 +138,23 @@ public:
 
     void baseSetTimeout(uint32_t timeoutSec) { tmo = timeoutSec * 1000; }
 
-    int setTimestamp(time_t ts)
-    {
-#if defined(ESP32) || defined(ESP8266)
-        struct timeval tm; // sec, us
-        tm.tv_sec = ts;
-        tm.tv_usec = 0;
-        return settimeofday((const struct timeval *)&tm, 0);
-#endif
-        return -1;
-    }
-
     esp_mail_cert_type getCertType() { return certType; }
 
     int getProtocol(uint16_t port)
     {
-        if (session)
+#if defined(ENABLE_SMTP) || defined(ENABLE_IMAP)
+        if (session_config)
         {
-            if (session->ports_functions.list)
+            if (session_config->ports_functions.list)
             {
-                for (int i = 0; i < session->ports_functions.size; i++)
+                for (int i = 0; i < session_config->ports_functions.size; i++)
                 {
-                    if (session->ports_functions.list[i].port == port)
-                        return (int)session->ports_functions.list[i].protocol;
+                    if (session_config->ports_functions.list[i].port == port)
+                        return (int)session_config->ports_functions.list[i].protocol;
                 }
             }
         }
-
+#endif
         return -1;
     }
 
@@ -200,9 +166,9 @@ public:
 private:
     void setMBFS(MB_FS *mbfs) { this->mbfs = mbfs; }
 #if defined(ENABLE_IMAP) || defined(ENABLE_SMTP)
-    void setSession(ESP_Mail_Session *session)
+    void setSession(ESP_Mail_Session *session_config)
     {
-        this->session = session;
+        this->session_config = session_config;
     }
 #endif
     int tcpTimeout()
@@ -222,8 +188,10 @@ protected:
     esp_mail_cert_type certType = esp_mail_cert_type_undefined;
     esp_mail_external_client_type ext_client_type = esp_mail_external_client_type_basic;
 #if defined(ENABLE_IMAP) || defined(ENABLE_SMTP)
-    ESP_Mail_Session *session = nullptr;
+    ESP_Mail_Session *session_config = nullptr;
 #endif
 };
+
+#endif
 
 #endif

@@ -1,10 +1,10 @@
 /*
- * ESP32 TCP Client Library v2.0.2
+ * ESP32 TCP Client Library v2.0.10
  *
- * Created November 24, 2022
+ * Created March 28, 2023
  *
  * The MIT License (MIT)
- * Copyright (c) 2021 K. Suwatchai (Mobizt)
+ * Copyright (c) 2023 K. Suwatchai (Mobizt)
  *
  *
  * TCPClient Arduino library for ESP32
@@ -33,11 +33,12 @@
 #ifndef ESP32_TCP_Client_H
 #define ESP32_TCP_Client_H
 
-#ifdef ESP32
+#include <Arduino.h>
+#include "ESP_Mail_FS.h"
+#if defined(ESP32) && (defined(ENABLE_SMTP) || defined(ENABLE_IMAP))
 
 #define ESP32_TCP_CLIENT
 
-#include <Arduino.h>
 #include <WiFiClient.h>
 #include <ETH.h>
 #include "ESP32_WCS.h"
@@ -49,7 +50,7 @@ extern "C"
 #include <esp_wifi.h>
 }
 
-class ESP32_TCP_Client 
+class ESP32_TCP_Client
 {
 public:
   ESP32_TCP_Client();
@@ -71,8 +72,9 @@ public:
    * Set Root CA certificate to verify.
    * @param certFile The certificate file path.
    * @param storageType The storage type mb_fs_mem_storage_type_flash or mb_fs_mem_storage_type_sd.
+   * @return true when certificate loaded successfully.
    */
-  void setCertFile(const char *certFile, mb_fs_mem_storage_type storageType);
+  bool setCertFile(const char *certFile, mb_fs_mem_storage_type storageType);
 
   /**
    * Set the debug callback function.
@@ -257,24 +259,16 @@ public:
 
   void setMBFS(MB_FS *mbfs) { wcs->mbfs = mbfs; }
 
-  void setSession(ESP_Mail_Session *session)
+#if defined(ENABLE_SMTP) || defined(ENABLE_IMAP)
+  void setSession(ESP_Mail_Session *session_config)
   {
-    wcs->session = session;
+    wcs->session_config = session_config;
   }
-  
+#endif
+
   void setClockReady(bool rdy)
   {
     wcs->clockReady = rdy;
-  }
-
-  bool setSystemTime(time_t ts)
-  {
-    return wcs->setSystemTime(ts);
-  }
-
-  time_t getTime()
-  {
-    return wcs->getTime();
   }
 
   esp_mail_cert_type getCertType()
@@ -387,8 +381,6 @@ public:
   {
     networkStatus = status;
   }
-
-  
 
 #endif
 

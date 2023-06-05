@@ -72,10 +72,14 @@ param **`closeSession`** The option to close the IMAP session after set flag.
 
 param **`silent`** The option to ignore the response.
 
+param **`modsequence`** The int32_t option for UNCHANGESINCE conditional test.
+
 return **`boolean`** The boolean value indicates the success of operation.
 
+The modsequence value can be used only if IMAP server supports Conditional STORE extension and the selected mailbox supports modsequences.
+
 ```cpp
-bool setFlag(IMAPSession *imap, int msgUID, <string> flags, bool closeSession, bool silent = false);
+bool setFlag(IMAPSession *imap, int msgUID, <string> flags, bool closeSession, bool silent = false, int32_t modsequence = -1);
 ```
 
 
@@ -97,10 +101,14 @@ param **`closeSession`** The option to close the IMAP session after set flag.
 
 param **`silent`** The option to ignore the response.
 
+param **`modsequence`** The int32_t option for UNCHANGESINCE conditional test.
+
 return **`boolean`** The boolean value indicates the success of operation.
 
+The modsequence value can be used only if IMAP server supports Conditional STORE extension and the selected mailbox supports modsequences.
+
 ```cpp
-bool setFlag(IMAPSession *imap, <string> sequenceSet, bool UID, <string> flags, bool closeSession, bool silent = false);
+bool setFlag(IMAPSession *imap, <string> sequenceSet, bool UID, <string> flags, bool closeSession, bool silent = false, int32_t modsequence = -1);
 ```
 
 
@@ -119,10 +127,14 @@ param **`closeSession`** The option to close the IMAP session after add flag.
 
 param **`silent`** The option to ignore the response.
 
+param **`modsequence`** The int32_t option for UNCHANGESINCE conditional test.
+
 return **`boolean`** The boolean value indicates the success of operation.
- 
+
+The modsequence value can be used only if IMAP server supports Conditional STORE extension and the selected mailbox supports modsequences.
+
 ```cpp
-bool addFlag(IMAPSession *imap, int msgUID, <string> flags, bool closeSession);
+bool addFlag(IMAPSession *imap, int msgUID, <string> flags, bool closeSession, int32_t modsequence = -1);
 ```
 
 
@@ -144,10 +156,14 @@ param **`closeSession`** The option to close the IMAP session after set flag.
 
 param **`silent`** The option to ignore the response.
 
+param **`modsequence`** The int32_t option for UNCHANGESINCE conditional test.
+
 return **`boolean`** The boolean value indicates the success of operation.
+
+The modsequence value can be used only if IMAP server supports Conditional STORE extension and the selected mailbox supports modsequences.
  
 ```cpp
-bool addFlag(IMAPSession *imap, <string> sequenceSet, bool UID, <string> flags, bool closeSession, bool silent = false);
+bool addFlag(IMAPSession *imap, <string> sequenceSet, bool UID, <string> flags, bool closeSession, bool silent = false, int32_t modsequence = -1);
 ```
 
 
@@ -166,10 +182,14 @@ param **`closeSession`** The option to close the IMAP session after remove flag.
 
 param **`silent`** The option to ignore the response.
 
+param **`modsequence`** The int32_t option for UNCHANGESINCE conditional test.
+
 return **`boolean`** The boolean value indicates the success of operation.
 
+The modsequence value can be used only if IMAP server supports Conditional STORE extension and the selected mailbox supports modsequences.
+
 ```cpp
-bool removeFlag(IMAPSession *imap, int msgUID, <string> flags, bool closeSession);
+bool removeFlag(IMAPSession *imap, int msgUID, <string> flags, bool closeSession, int32_t modsequence = -1);
 ```
 
 
@@ -191,10 +211,14 @@ param **`closeSession`** The option to close the IMAP session after set flag.
 
 param **`silent`** The option to ignore the response.
 
+param **`modsequence`** The int32_t option for UNCHANGESINCE conditional test.
+
 return **`boolean`** The boolean value indicates the success of operation.
+
+The modsequence value can be used only if IMAP server supports Conditional STORE extension and the selected mailbox supports modsequences.
  
 ```cpp
-bool removeFlag(IMAPSession *imap, <string> sequenceSet, bool UID, <string> flags, bool closeSession, bool silent = false);
+bool removeFlag(IMAPSession *imap, <string> sequenceSet, bool UID, <string> flags, bool closeSession, bool silent = false, int32_t modsequence = -1);
 ```
 
 
@@ -399,29 +423,109 @@ void networkStatusRequestCallback(NetworkStatusRequestCallback networkStatusCB);
 ```
 
 
-
 #### Set system time with timestamp.
 
 param **`ts`** timestamp in seconds from midnight Jan 1, 1970.
 
+param **`gmtOffset`** The GMT offset.
+
 This function allows the internal time setting by timestamp i.e. timestamp from external RTC. 
 
 ```cpp
-void setSystemTime(time_t ts);
+void setSystemTime(time_t ts, float gmtOffset = 0);
 ```
 
 
 
 #### Begin the IMAP server connection.
 
-param **`session`** The pointer to ESP_Mail_Session structured data that keeps the server and log in details.
+param **`session_config`** The pointer to Session_Config structured data that keeps the server and log in details.
 
-param **`config`** The pointer to IMAP_Config structured data that keeps the operation options.
+param **`imap_data`** The pointer to IMAP_Data structured data that keeps the operation options.
+
+param **`login`** The bool option for login after server connection.
 
 return **`boolean`** The boolean value which indicates the success of operation.
 
 ```cpp
-bool connect(ESP_Mail_Session *session, IMAP_Config *config);
+bool connect(Session_Config *session_config, IMAP_Data *imap_data, bool login = true);
+```
+
+
+
+#### Login to IMAP server using Email and password.
+
+param **`email`** The IMAP server account email.
+
+param **`password`** The IMAP server account password.
+
+return **`boolean`** The boolean value which indicates the success of operation.
+
+```cpp
+bbool loginWithPassword(<string> email, <string> password);
+```
+
+
+
+#### Login to IMAP server using Email and access token.
+
+param **`email`** The IMAP server account email.
+
+param **`token`** The Access token to log in.
+
+return **`boolean`** The boolean value which indicates the success of operation.
+
+```cpp
+bbool loginWithAccessToken(<string> email, <string> token);
+```
+
+
+#### Send the client identification to the server
+
+param **`identification`** The pointer to IMAP_Identification structured data that keeps
+
+the key properties e.g., name, version, os, os_version, vendor, support_url, address,
+
+date, command, arguments, and environment.
+
+```cpp
+bool id(IMAP_Identification *identification);
+```
+
+
+#### Return the server ID returns from ID command.
+
+return **`The server ID string.`**
+
+```cpp
+String serverID();
+```
+
+
+#### Return the SASL authentication status.
+
+return **`boolean`** The boolean value indicates SASL authentication status.
+
+```cpp
+bool isAuthenticated();
+```
+
+
+#### Return the log in status.
+
+return **`boolean`** The boolean value indicates log in status.
+
+```cpp
+bool isLoggedIn();
+```
+
+
+#### Return firmware update result when attachment filename matches.
+
+return **`boolean`** The boolean value indicates the firmware update status.
+
+```cpp
+bool isFirmwareUpdateSuccess();
 ```
 
 
@@ -520,12 +624,12 @@ bool openFolder(<string> folderName, bool readOnly = true);
 
 #### Close the mailbox folder that was opened. 
 
-param **`folderName`** The mailbox folder name.
+param **`expunge`**  The option to allow emty the deleted flag set messages in case folder was open with editable mode.
 
 return **`boolean`** The boolean value which indicates the success of operation.
 
 ```cpp
-bool closeFolder(<string> folderName);
+bool closeFolder(bool expunge = false);
 ```
 
 
@@ -714,7 +818,7 @@ bool sendCustomData(uint8_t *data, size_t size, bool lastData = false);
 
 #### Begin the IMAP server connection without authentication.
 
-param **`session`** The pointer to ESP_Mail_Session structured data that keeps the server and log in details.
+param **`session_config`** The pointer to Session_Config structured data that keeps the server and log in details.
 
 param **`callback`** The callback function that accepts IMAP_Response as parameter.
 
@@ -723,7 +827,7 @@ param **`tag`** The tag that pass to the callback function.
 return **`The boolean`** value indicates the success of operation.
 
 ```cpp
-bool customConnect(ESP_Mail_Session *session, imapResponseCallback callback, <string> tag);
+bool customConnect(Session_Config *session_config, imapResponseCallback callback, <string> tag);
 ```
 
 
@@ -807,10 +911,14 @@ param **`toDelete`** The pointer to the MessageList class that contains the list
 
 param **`expunge`** The boolean option to expunge all messages.
 
-return **`boolean`** The boolean value which indicates the success of operation.
+param **`modsequence`** The int32_t option for UNCHANGESINCE conditional test.
+
+return **`boolean`** The boolean value indicates the success of operation.
+
+The modsequence value can be used only if IMAP server supports Conditional STORE extension and the selected mailbox supports modsequences.
 
 ```cpp
-bool deleteMessages(MessageList *toDelete, bool expunge = false);
+bool deleteMessages(MessageList *toDelete, bool expunge = false, int32_t modsequence = -1);
 ```
 
 
@@ -827,10 +935,14 @@ param **`UID`** The option for sequenceSet whether it is UID or message sequence
 
 param **`expunge`** The boolean option to expunge all messages.
 
-return **`boolean`** The boolean value which indicates the success of operation.
+param **`modsequence`** The int32_t option for UNCHANGESINCE conditional test.
+
+return **`boolean`** The boolean value indicates the success of operation.
+
+The modsequence value can be used only if IMAP server supports Conditional STORE extension and the selected mailbox supports modsequences.
 
 ```cpp
-bool deleteMessages(<string> sequenceSet, bool UID, bool expunge = false);
+bool deleteMessages(<string> sequenceSet, bool UID, bool expunge = false, int32_t modsequence = -1);
 ```
 
 
@@ -1078,7 +1190,6 @@ IMAP_MSG_List data();
 
 
 
-
 #### Get the details of the selected or opned mailbox folder
 
 return **`The SelectedFolderInfo class`** instance which contains the info about flags, total messages, next UID,  
@@ -1092,7 +1203,7 @@ SelectedFolderInfo selectedFolder();
 
 
 
-#### Get the error details when readingg the Emails
+#### Get the error details when readingg the Emails.
 
 return **`String`** The string of error details.
 
@@ -1101,6 +1212,17 @@ String errorReason();
 ```
 
 
+#### Get the operating status error code.
+
+return **`int`** The value of operating status error code.
+
+The negative value indicated error.
+
+See src/ESP_Mail_Error.h and extras/MB_FS.h
+
+```cpp
+int errorCode();
+```
 
 
 
@@ -1112,6 +1234,25 @@ void empty();
 
 
 
+#### Get the status of message fetching and searching.
+  
+return **`IMAP_Status`** The IMAP_Status object contains the fetching and searching statuses.
+
+```cpp
+IMAP_Status status();
+```
+
+
+
+#### Get the JSON string of file name list of files that stored in SD card.
+
+return **`The JSON string`** of filenames.
+
+note This will available only when standard SD library was used and file storage is SD.
+
+```cpp
+String fileList();
+```
 
 
 ## SMTPSession class functions
@@ -1187,26 +1328,74 @@ void networkStatusRequestCallback(NetworkStatusRequestCallback networkStatusCB);
 
 param **`ts`** timestamp in seconds from midnight Jan 1, 1970.
 
+param **`gmtOffset`** The GMT offset.
+
 This function allows the internal time setting by timestamp i.e. timestamp from external RTC. 
 
 ```cpp
-void setSystemTime(time_t ts);
+void setSystemTime(time_t ts, float gmtOffset = 0);
 ```
 
 
 
 #### Begin the SMTP server connection.
 
-param **`session`** The pointer to ESP_Mail_Session structured data that keeps the server and log in details.
+param **`session_config`** The pointer to Session_Config structured data that keeps the server and log in details.
+
+param **`login`** The bool option for login after server connection.
 
 return **`boolean`** The boolean value indicates the success of operation.
 
 ```cpp
-bool connect(ESP_Mail_Session *session);
+bool connect(Session_Config *session_config, bool login = true);
 ```
 
 
 
+#### Login to SMTP server using Email and password.
+
+param **`email`** The SMTP server account email.
+
+param **`password`** The SMTP server account password.
+
+return **`boolean`** The boolean value which indicates the success of operation.
+
+```cpp
+bool loginWithPassword(<string> email, <string> password);
+```
+
+
+
+#### Login to SMTP server using Email and access token.
+
+param **`email`** The SMTP server account email.
+
+param **`token`** The Access token to log in.
+
+return **`boolean`** The boolean value which indicates the success of operation.
+
+```cpp
+bool loginWithAccessToken(<string> email, <string> token);
+```
+
+
+#### Return the SASL authentication status.
+
+return **`boolean`** The boolean value indicates SASL authentication status.
+
+```cpp
+bool isAuthenticated();
+```
+
+
+
+#### Return the log in status.
+
+return **`boolean`** The boolean value indicates log in status.
+
+```cpp
+bool isLoggedIn();
+```
 
 
 #### Close the SMTP session.
@@ -1230,7 +1419,7 @@ bool connected();
 
 #### Begin the SMTP server connection without authentication.
 
-param **`session`** The pointer to ESP_Mail_Session structured data that keeps the server and log in details.
+param **`session_config`** The pointer to Session_Config structured data that keeps the server and log in details.
 
 param **`callback`** The callback function that accepts the SMTP_Response as parameter.
 
@@ -1241,7 +1430,7 @@ return **`The int`** value of response code.
 If commandID was not set or set to -1, the command identifier will be auto increased started from zero.
 
 ```cpp
-int customConnect(ESP_Mail_Session *config, smtpResponseCallback callback, int commandID = -1);
+int customConnect(Session_Config *session_config, smtpResponseCallback callback, int commandID = -1);
 ```
 
 
@@ -1325,6 +1514,39 @@ String errorReason();
 ```
 
 
+#### Get the operating status error code.
+
+return **`int`** The value of operating status error code.
+
+The negative value indicated error.
+
+See src/ESP_Mail_Error.h and extras/MB_FS.h
+
+```cpp
+int errorCode();
+```
+
+
+
+#### Get the SMTP server response status code.
+
+return **`int`** The value of SMTP server response status code.
+
+See RFC 5321 standard's documentation.
+
+```cpp
+int statusCode();
+```
+
+
+
+#### Get the SMTP server response status message.
+
+return **`String`** The value of SMTP server response status message.
+
+```cpp
+String statusMessage();
+```
 
 
 
@@ -1337,8 +1559,13 @@ void callback(smtpStatusCallback smtpCallback);
 ```
 
 
+#### Get the status of message fetching and searching.
 
+return **`SMTP_Status`** The SMTP_Status object contains the sending status.
 
+```cpp
+SMTP_Status status();
+```
 
 ## SMTP_Message class functions
 
@@ -2068,10 +2295,10 @@ String flag(size_t index);
 
 
 
-## ESP_Mail_Session type data
+## Session_Config type data
 
 
-The following properties are available from the ESP_Mail_Session data type.
+The following properties are available from the Session_Config data type.
 
 This data type is used for storing the session info about the server and login credentials.
 
@@ -2099,7 +2326,7 @@ This property has the sub properties
 
 ##### [consst char *] accessToken - The OAuth2.0 access token to log in.
 
-##### [consst char *] user_domain - The user domain or ip of client.
+##### [consst char *] user_domain - The host name or public IP of client system.
 
 ```cpp
 esp_mail_sesson_login_config_t login;
@@ -2190,10 +2417,10 @@ esp_mail_protocol protocol;
 
 
 
-## IMAP_Config type data
+## IMAP_Data type data
 
 
-The following properties are available from the IMAP_Config data type.
+The following properties are available from the IMAP_Data data type.
 
 This data type is used for storing the IMAP transport and operating options to 
 control and store the operation result e.g. the messahe contents from search and fetch.
@@ -2342,13 +2569,24 @@ esp_mail_imap_storage_config_t storage;
 ```
 
 
+#### [Properties] The config about firmware updates and downloads for ESP32, ESP8266 and Raspberry Pi Pico.
+
+This property has the sub properties
+
+##### [string] attach_filename - Update firmware using message attachments if one of its filename matches.
+
+##### [bool] save_to_file - Save firmware file option.
+
+```cpp
+esp_mail_imap_firmware_config_t firmware_update;
+```
 
 
 
 ## esp_mail_smtp_embed_message_body_t structured data
 
 
-The following properties are available from the IMAP_Config data type.
+The following properties are available from the IMAP_Data data type.
 
 This data type is used for storing the IMAP transport and operating options to 
 control and store the operation result e.g. the messahe contents from search and fetch.
@@ -3052,7 +3290,7 @@ String getDateTimeString();
 
 The MIT License (MIT)
 
-Copyright (c) 2022 K. Suwatchai (Mobizt)
+Copyright (c) 2023 K. Suwatchai (Mobizt)
 
 
 Permission is hereby granted, free of charge, to any person returning a copy of

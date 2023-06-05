@@ -1,7 +1,8 @@
 #ifndef _SDK_VERSION_COMMON_H
 #define _SDK_VERSION_COMMON_H
-
-#if defined(ESP8266)
+#include <Arduino.h>
+#include "MB_MCU.h"
+#if defined(ESP8266) || defined(MB_ARDUINO_PICO)
 
 #include <string>
 
@@ -25,7 +26,7 @@
 #include <LwipIntfDev.h>
 #endif
 
-#if __has_include(<ENC28J60lwIP.h>)
+#if __has_include(<ENC28J60lwIP.h>)&& defined(ENABLE_ESP8266_ENC28J60_ETH)
 #define INC_ENC28J60_LWIP
 #include <ENC28J60lwIP.h>
 #endif
@@ -35,9 +36,13 @@
 #include <W5100lwIP.h>
 #endif
 
-#if __has_include(<W5500lwIP.h>)
+#if __has_include(<W5500lwIP.h>)&& defined(ENABLE_ESP8266_W5500_ETH)
 #define INC_W5500_LWIP
 #include <W5500lwIP.h>
+#endif
+
+#if defined(MB_ARDUINO_PICO)
+
 #endif
 
 #endif
