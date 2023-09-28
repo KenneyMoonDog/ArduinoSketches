@@ -47,16 +47,27 @@ class timedOutputPinHandler {
   virtual void timedAction() {
 
     uint8_t pinValue=0;
+    static int counter = 0;
     
-    if (no_radians < (2 * 3.14)) {
-      no_radians+=0.01;
-    }
-    else {
-      no_radians=0;
-    }
+    if (counter++ > 500){
+      counter=0;
+      if (no_radians < 3.13) {
+        no_radians=no_radians+0.01;
+      }
+      else {
+        no_radians=0;
+      }
 
-    pinValue = round((1 + sin(no_radians)) * 125);
-    analogWrite(PIN, pinValue);
+      Serial.print("Radians:");  
+      Serial.println(no_radians);
+      Serial.print("Sin:");  
+      Serial.println(sin(no_radians));
+
+      pinValue = round((1.0 + sin(no_radians)) * 125.0);
+      analogWrite(PIN, pinValue);
+
+      Serial.print("pinValue:");  
+      Serial.println(pinValue);
     
     /*if ( rising ) {
       if (currentOutputValue < maxLimit  ){
@@ -76,6 +87,8 @@ class timedOutputPinHandler {
         rising=!rising;
       }      
     }  */  
+  
+    }
   }
 };
 
@@ -157,7 +170,6 @@ class jButton {
       if ( digitalRead(PIN) == false ) {
         if ((millis() - debounceTarget) > buttonDebounceDelay) { //then this should be a state change
           debounceTarget = millis();
-          //Serial.println("BUTTON PRESS TRUE");
           pressed = true;
         }
       }

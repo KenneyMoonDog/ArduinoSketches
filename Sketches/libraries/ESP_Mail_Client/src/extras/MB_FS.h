@@ -1,9 +1,9 @@
 /**
- * The MB_FS, filesystems wrapper class v1.0.15
+ * The MB_FS, filesystems wrapper class v1.0.17
  *
  * This wrapper class is for SD and Flash filesystems interface which supports SdFat (//https://github.com/greiman/SdFat)
  *
- *  Created March 5, 2023
+ *  Created September 13, 2023
  *
  * The MIT License (MIT)
  * Copyright (c) 2023 K. Suwatchai (Mobizt)
@@ -30,70 +30,20 @@
 #ifndef MBFS_CLASS_H
 #define MBFS_CLASS_H
 
-#if defined(ESP8266) || defined(ESP32)
-#ifndef MB_ARDUINO_ESP
-#define MB_ARDUINO_ESP
-#endif
-#endif
-
-#if defined(__arm__)
-#ifndef MB_ARDUINO_ARM
-#define MB_ARDUINO_ARM 
-#endif
-#endif
-
-#if defined(ARDUINO_ARCH_SAMD)
-#ifndef MB_ARDUINO_ARCH_SAMD
-#define MB_ARDUINO_ARCH_SAMD
-#endif
-#endif
-
-#if defined(ARDUINO_ARCH_RP2040)
-
-#if defined(ARDUINO_NANO_RP2040_CONNECT)
-#ifndef MB_ARDUINO_NANO_RP2040_CONNECT
-#define MB_ARDUINO_NANO_RP2040_CONNECT
-#endif
-#else
-#ifndef MB_ARDUINO_PICO
-#define MB_ARDUINO_PICO
-#endif
-#endif
-
-#endif
-
-
-#if defined(TEENSYDUINO)
-#ifndef MB_ARDUINO_TEENSY
-#define MB_ARDUINO_TEENSY
-#endif
-#endif
+#include <Arduino.h>
+#include "MB_MCU.h"
 
 #define FS_NO_GLOBALS
 #if defined(ESP32) || defined(ESP8266) || defined(MB_ARDUINO_PICO)
+#if defined(MBFS_FLASH_FS) || defined(MBFS_SD_FS)
 #include <FS.h>
+#endif
 #endif
 #include "MB_FS_Interfaces.h"
 #include MB_STRING_INCLUDE_CLASS
+
+#if defined(MBFS_FLASH_FS) || defined(MBFS_SD_FS)
 #include "SPI.h"
-
-#define STAT_INCUDE_PATH <sys/stat.h>
-
-#if defined(ESP32) && __has_include(STAT_INCUDE_PATH)
-#ifdef _LITTLEFS_H_
-#define MB_FS_USE_POSIX_STAT
-#include <sys/stat.h>
-namespace mb_fs_ns
-{
-    inline bool exists(const char *mountPoint, const char *filename)
-    {
-        MB_String path = mountPoint;
-        path += filename;
-        struct stat st;
-        return stat(path.c_str(), &st) == 0;
-    }
-};
-#endif
 #endif
 
 using namespace mb_string;
@@ -694,17 +644,7 @@ public:
 
 #if defined(MBFS_FLASH_FS)
         if (type == mbfs_flash)
-        {
-
-// The workaround for ESP32 LittleFS when calling vfs_api.cpp open() issue.
-// See https://github.com/espressif/arduino-esp32/issues/7615
-#if defined(MB_FS_USE_POSIX_STAT)
-            return mb_fs_ns::exists("/littlefs", filename.c_str());
-#else
             return MBFS_FLASH_FS.exists(filename.c_str());
-#endif
-        }
-
 #endif
 
 #if defined(MBFS_SD_FS)

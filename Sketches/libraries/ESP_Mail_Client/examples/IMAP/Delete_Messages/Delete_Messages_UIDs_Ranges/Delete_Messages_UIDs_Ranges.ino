@@ -1,17 +1,18 @@
 /**
- * This example shows how to delete messages from the mailbox using UIDs ranges.
+ * Created by K. Suwatchai (Mobizt)
  *
  * Email: suwatchai@outlook.com
  *
  * Github: https://github.com/mobizt/ESP-Mail-Client
  *
  * Copyright (c) 2023 mobizt
- *
  */
 
-/** ////////////////////////////////////////////////
- *  Struct data names changed from v2.x.x to v3.x.x
- *  ////////////////////////////////////////////////
+// This example shows how to delete messages from the mailbox using UIDs ranges.
+
+/** Note for library update from v2.x.x to v3.x.x.
+ *
+ *  Struct data names changed
  *
  * "ESP_Mail_Session" changes to "Session_Config"
  * "IMAP_Config" changes to "IMAP_Data"
@@ -25,7 +26,6 @@
  * IMAP_Config config;
  * to
  * IMAP_Data imap_data;
- *
  */
 
 /** For ESP8266, with BearSSL WiFi Client
@@ -39,12 +39,12 @@
 #include <WiFi.h>
 #elif defined(ESP8266)
 #include <ESP8266WiFi.h>
-#else
-
-// Other Client defined here
-// To use custom Client, define ENABLE_CUSTOM_CLIENT in  src/ESP_Mail_FS.h.
-// See the example Custom_Client.ino for how to use.
-
+#elif __has_include(<WiFiNINA.h>)
+#include <WiFiNINA.h>
+#elif __has_include(<WiFi101.h>)
+#include <WiFi101.h>
+#elif __has_include(<WiFiS3.h>)
+#include <WiFiS3.h>
 #endif
 
 #include <ESP_Mail_Client.h>
@@ -99,9 +99,6 @@ void setup()
 #if defined(ARDUINO_ARCH_SAMD)
     while (!Serial)
         ;
-    Serial.println();
-    Serial.println("**** Custom built WiFiNINA firmware need to be installed.****\n");
-    Serial.println("To install firmware, read the instruction here, https://github.com/mobizt/ESP-Mail-Client#install-custom-build-wifinina-firmware");
 #endif
 
     Serial.println();
@@ -114,7 +111,11 @@ void setup()
 #endif
 
     Serial.print("Connecting to Wi-Fi");
+
+#if defined(ARDUINO_RASPBERRY_PI_PICO_W)
     unsigned long ms = millis();
+#endif
+
     while (WiFi.status() != WL_CONNECTED)
     {
         Serial.print(".");
@@ -156,19 +157,20 @@ void setup()
     config.login.email = AUTHOR_EMAIL;
     config.login.password = AUTHOR_PASSWORD;
 
-    /** Declare the IMAP_Data object used for user defined IMAP operating options
-     * and contains the IMAP operating result
-     */
+    /* Define the IMAP_Data object used for user defined IMAP operating options. */
     IMAP_Data imap_data;
 
     /* Connect to the server */
     if (!imap.connect(&config, &imap_data))
+    {
+        MailClient.printf("Connection error, Error Code: %d, Reason: %s\n", imap.errorCode(), imap.errorReason().c_str());
         return;
+    }
 
     if (imap.isAuthenticated())
-        Serial.println("\nSuccessfully logged in.");
+        Serial.println("Successfully logged in.");
     else
-        Serial.println("\nConnected with no Auth.");
+        Serial.println("Connected with no Auth.");
 
     /*  {Optional} */
     printAllMailboxesInfo(imap);
@@ -205,7 +207,7 @@ void setup()
     else
         Serial.println("Error, Deleting messages using UIDs ranges");
 
-    ESP_MAIL_PRINTF("Free Heap: %d\n", MailClient.getFreeHeap());
+    MailClient.printf("Free Heap: %d\n", MailClient.getFreeHeap());
 }
 
 void loop()
@@ -224,7 +226,7 @@ void printAllMailboxesInfo(IMAPSession &imap)
         {
             /* Iterate each folder info using the  folder info item data */
             FolderInfo folderInfo = folders.info(i);
-            ESP_MAIL_PRINTF("%s%s%s", i == 0 ? "\nAvailable folders: " : ", ", folderInfo.name, i == folders.size() - 1 ? "\n" : "");
+            MailClient.printf("%s%s%s", i == 0 ? "\nAvailable folders: " : ", ", folderInfo.name, i == folders.size() - 1 ? "\n" : "");
         }
     }
 }

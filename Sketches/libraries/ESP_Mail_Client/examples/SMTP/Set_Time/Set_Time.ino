@@ -1,8 +1,5 @@
 
-
 /**
- * This example showes how to set the library and/or device time manually.
- *
  * Created by K. Suwatchai (Mobizt)
  *
  * Email: suwatchai@outlook.com
@@ -10,12 +7,13 @@
  * Github: https://github.com/mobizt/ESP-Mail-Client
  *
  * Copyright (c) 2023 mobizt
- *
  */
 
-/** ////////////////////////////////////////////////
- *  Struct data names changed from v2.x.x to v3.x.x
- *  ////////////////////////////////////////////////
+// This example showes how to set the library and/or device time manually.
+
+/** Note for library update from v2.x.x to v3.x.x.
+ *
+ *  Struct data names changed
  *
  * "ESP_Mail_Session" changes to "Session_Config"
  * "IMAP_Config" changes to "IMAP_Data"
@@ -29,7 +27,6 @@
  * IMAP_Config config;
  * to
  * IMAP_Data imap_data;
- *
  */
 
 #include <Arduino.h>
@@ -37,8 +34,13 @@
 #include <WiFi.h>
 #elif defined(ESP8266)
 #include <ESP8266WiFi.h>
-#else
-
+#elif __has_include(<WiFiNINA.h>)
+#include <WiFiNINA.h>
+#elif __has_include(<WiFi101.h>)
+#include <WiFi101.h>
+#elif __has_include(<WiFiS3.h>)
+#include <WiFiS3.h>
+#include "RTC.h"
 #endif
 
 #include <ESP_Mail_Client.h>
@@ -76,7 +78,11 @@ void setup()
 #endif
 
     Serial.print("Connecting to Wi-Fi");
+
+#if defined(ARDUINO_RASPBERRY_PI_PICO_W)
     unsigned long ms = millis();
+#endif
+
     while (WiFi.status() != WL_CONNECTED)
     {
         Serial.print(".");
@@ -91,42 +97,56 @@ void setup()
     Serial.println(WiFi.localIP());
     Serial.println();
 
-    // Method 1, set time using core function e.g. configTime or configTzTime before connecting to mail server
-    // This method requires internet connection.
-    // This method suites for ESP8266, ESP32, Raspberry Pi Pico (W)
+    Serial.print("Waiting for NTP server time reading");
 
-    Serial.print("Waiting for NTP server time synching");
+#if defined(ESP8266) || defined(ESP32) && !defined(ARDUINO_NANO_RP2040_CONNECT)
 
-    configTime(3, 0, "pool.ntp.org", "time.nist.gov");
-
-    ms = millis();
-
-    while (millis() - ms < 10000 && time(nullptr) < ESP_TIME_DEFAULT_TS)
+    configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+    while (time(nullptr) < ESP_MAIL_CLIENT_VALID_TS)
     {
-        Serial.print(".");
-        delay(300);
+        delay(100);
     }
-    Serial.println();
-    Serial.println();
 
-    // Method 2, set timestamp directly via smtp.setSystemTime or imap.setSystemTime
-    // This method doen not require internet connection.
-    // This method suites for non-system time (device local time) devices e.g. ARM, SAMD and AVR devices.
-    // The timestamp is the seconds since Midnight Jan 1, 1970 and can be taken from RTC chip
-    // and other providers.
+#elif defined(ARDUINO_RASPBERRY_PI_PICO_W)
 
-    // If use this method with ESP8266 and ESP32, the device system time will be set automatically.
+    configTime(10000, 0, "pool.ntp.org", "time.nist.gov");
+    while (time(nullptr) < ESP_MAIL_CLIENT_VALID_TS)
+    {
+        delay(100);
+    }
 
-    // time_t ts = 1577836800;
-    // float gmtOffset = 3.0; // GMT offset in hour
+#elif __has_include(<WiFiNINA.h>) || __has_include(<WiFi101.h>)
+    time_t ts = 0;
+    do
+    {
+        ts = WiFi.getTime();
+        delay(100);
+    } while (ts < ESP_MAIL_CLIENT_VALID_TS);
 
-    // smtp.setSystemTime(ts, gmtOffset);
+    float gmtOffset = 3.0; // GMT offset in hour
 
-    // Note:
-    // If time setting faild when using method 1 and method 2, the library internal NTP time synching will
-    // be started when valid time is required during server connection.
+    smtp.setSystemTime(ts, gmtOffset);
 
-    // To disable library internal NTP time synching, please comment or remove the following macro defined in src/ESP_Mail_FS.h
+#elif __has_include(<WiFiS3.h>)
+
+    // see https://docs.arduino.cc/tutorials/uno-r4-wifi/rtc
+
+    RTC.begin();
+
+    // RTCTime startTime(30, Month::JUNE, 2023, 13, 37, 00, DayOfWeek::WEDNESDAY, SaveLight::SAVING_TIME_ACTIVE);
+    // RTC.setTime(startTime);
+
+    RTCTime currentTime;
+
+    // Get current time from RTC
+    RTC.getTime(currentTime);
+
+    float gmtOffset = 3.0; // GMT offset in hour
+    smtp.setSystemTime(currentTime.getUnixTime(), gmtOffset);
+
+#endif
+
+    // To disable library internal NTP time reading, please comment or remove the following macro defined in src/ESP_Mail_FS.h
     // #define ENABLE_NTP_TIME
 
     MailClient.networkReconnect(true);
@@ -147,43 +167,56 @@ void setup()
     config.login.email = AUTHOR_EMAIL;
     config.login.password = AUTHOR_PASSWORD;
 
-    config.login.user_domain = F("mydomain.net");
+    config.login.user_domain = F("127.0.0.1");
+
+    /**
+     * Once the system time (using smtp.setSystemTime) or device time was set before calling smtp.connect, the following config will
+     * not take effect when NTP time is enabled.
+     *
+     * config.time.ntp_server
+     * config.time.gmt_offset
+     * config.time.day_light_offset
+     *
+     * To reset the reference time and use config.time instead, call smtp.setSystemTime(0) whenever you want.
+     */
 
     SMTP_Message message;
 
     /* Set the message headers */
     message.sender.name = F("ESP Mail");
     message.sender.email = AUTHOR_EMAIL;
-    message.subject = F("Test sending plain text Email");
     message.addRecipient(F("Someone"), RECIPIENT_EMAIL);
 
-    String textMsg = "This is simple plain text message";
-    message.text.content = textMsg;
+    /* The time format of timestamp to inject into subject or content as using in strftime C++ function */
+    message.timestamp.tag = "#esp_mail_current_time";
 
-    message.text.charSet = F("us-ascii");
+    /* The tag that will be replaced with current timestamp */
+    message.timestamp.format = "%B %d, %Y %H:%M:%S";
 
-    message.text.transfer_encoding = Content_Transfer_Encoding::enc_7bit;
+    message.subject = F("Test sending plain text Email (#esp_mail_current_time)");
+
+    message.text.content = "This is simple plain text message\n\nSent #esp_mail_current_time";
 
     if (!smtp.connect(&config))
     {
-        ESP_MAIL_PRINTF("Connection error, Status Code: %d, Error Code: %d, Reason: %s", smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());
+        MailClient.printf("Connection error, Status Code: %d, Error Code: %d, Reason: %s\n", smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());
         return;
     }
 
     if (!smtp.isLoggedIn())
     {
-        Serial.println("\nNot yet logged in.");
+        Serial.println("Not yet logged in.");
     }
     else
     {
         if (smtp.isAuthenticated())
-            Serial.println("\nSuccessfully logged in.");
+            Serial.println("Successfully logged in.");
         else
-            Serial.println("\nConnected with no Auth.");
+            Serial.println("Connected with no Auth.");
     }
 
     if (!MailClient.sendMail(&smtp, &message))
-        ESP_MAIL_PRINTF("Error, Status Code: %d, Error Code: %d, Reason: %s", smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());
+        MailClient.printf("Error, Status Code: %d, Error Code: %d, Reason: %s\n", smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());
 }
 
 void loop()
@@ -198,8 +231,8 @@ void smtpCallback(SMTP_Status status)
     {
 
         Serial.println("----------------");
-        ESP_MAIL_PRINTF("Message sent success: %d\n", status.completedCount());
-        ESP_MAIL_PRINTF("Message sent failed: %d\n", status.failedCount());
+        MailClient.printf("Message sent success: %d\n", status.completedCount());
+        MailClient.printf("Message sent failed: %d\n", status.failedCount());
         Serial.println("----------------\n");
 
         for (size_t i = 0; i < smtp.sendingResult.size(); i++)
@@ -207,11 +240,11 @@ void smtpCallback(SMTP_Status status)
 
             SMTP_Result result = smtp.sendingResult.getItem(i);
 
-            ESP_MAIL_PRINTF("Message No: %d\n", i + 1);
-            ESP_MAIL_PRINTF("Status: %s\n", result.completed ? "success" : "failed");
-            ESP_MAIL_PRINTF("Date/Time: %s\n", MailClient.Time.getDateTimeString(result.timestamp, "%B %d, %Y %H:%M:%S").c_str());
-            ESP_MAIL_PRINTF("Recipient: %s\n", result.recipients.c_str());
-            ESP_MAIL_PRINTF("Subject: %s\n", result.subject.c_str());
+            MailClient.printf("Message No: %d\n", i + 1);
+            MailClient.printf("Status: %s\n", result.completed ? "success" : "failed");
+            MailClient.printf("Date/Time: %s\n", MailClient.Time.getDateTimeString(result.timestamp, "%B %d, %Y %H:%M:%S").c_str());
+            MailClient.printf("Recipient: %s\n", result.recipients.c_str());
+            MailClient.printf("Subject: %s\n", result.subject.c_str());
         }
         Serial.println("----------------\n");
 

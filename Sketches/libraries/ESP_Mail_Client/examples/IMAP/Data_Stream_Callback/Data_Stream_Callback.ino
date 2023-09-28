@@ -1,17 +1,18 @@
 /**
- * This example shows how to read Email and collect the stream data to print or store via the callback function.
+ * Created by K. Suwatchai (Mobizt)
  *
  * Email: suwatchai@outlook.com
  *
  * Github: https://github.com/mobizt/ESP-Mail-Client
  *
  * Copyright (c) 2023 mobizt
- *
  */
 
-/** ////////////////////////////////////////////////
- *  Struct data names changed from v2.x.x to v3.x.x
- *  ////////////////////////////////////////////////
+// This example shows how to read Email and collect the stream data to print or store via the callback function.
+
+/** Note for library update from v2.x.x to v3.x.x.
+ *
+ *  Struct data names changed
  *
  * "ESP_Mail_Session" changes to "Session_Config"
  * "IMAP_Config" changes to "IMAP_Data"
@@ -25,7 +26,6 @@
  * IMAP_Config config;
  * to
  * IMAP_Data imap_data;
- *
  */
 
 /** Assign SD card type and FS used in src/ESP_Mail_FS.h and
@@ -37,12 +37,12 @@
 #include <WiFi.h>
 #elif defined(ESP8266)
 #include <ESP8266WiFi.h>
-#else
-
-// Other Client defined here
-// To use custom Client, define ENABLE_CUSTOM_CLIENT in  src/ESP_Mail_FS.h.
-// See the example Custom_Client.ino for how to use.
-
+#elif __has_include(<WiFiNINA.h>)
+#include <WiFiNINA.h>
+#elif __has_include(<WiFi101.h>)
+#include <WiFi101.h>
+#elif __has_include(<WiFiS3.h>)
+#include <WiFiS3.h>
 #endif
 
 #include <ESP_Mail_Client.h>
@@ -100,9 +100,6 @@ void setup()
 #if defined(ARDUINO_ARCH_SAMD)
     while (!Serial)
         ;
-    Serial.println();
-    Serial.println("**** Custom built WiFiNINA firmware need to be installed.****\n");
-    Serial.println("To install firmware, read the instruction here, https://github.com/mobizt/ESP-Mail-Client#install-custom-build-wifinina-firmware");
 #endif
 
     Serial.println();
@@ -115,7 +112,11 @@ void setup()
 #endif
 
     Serial.print("Connecting to Wi-Fi");
+
+#if defined(ARDUINO_RASPBERRY_PI_PICO_W)
     unsigned long ms = millis();
+#endif
+
     while (WiFi.status() != WL_CONNECTED)
     {
         Serial.print(".");
@@ -167,9 +168,7 @@ void setup()
     config.login.email = AUTHOR_EMAIL;
     config.login.password = AUTHOR_PASSWORD;
 
-    /** Declare the IMAP_Data object used for user defined IMAP operating options
-     * and contains the IMAP operating result
-     */
+    /* Define the IMAP_Data object used for user defined IMAP operating options. */
     IMAP_Data imap_data;
 
     /* Set the storage to save the downloaded files and attachments */
@@ -182,7 +181,7 @@ void setup()
      */
     imap_data.storage.type = esp_mail_file_storage_type_sd;
 
-    /** Set to download heades, text and html messaeges,
+    /** Set to download headers, text and html messaeges,
      * attachments and inline images respectively.
      */
     imap_data.download.header = true;
@@ -227,12 +226,15 @@ void setup()
 
     /* Connect to the server */
     if (!imap.connect(&config, &imap_data))
+    {
+        MailClient.printf("Connection error, Error Code: %d, Reason: %s\n", imap.errorCode(), imap.errorReason().c_str());
         return;
+    }
 
     if (imap.isAuthenticated())
-        Serial.println("\nSuccessfully logged in.");
+        Serial.println("Successfully logged in.");
     else
-        Serial.println("\nConnected with no Auth.");
+        Serial.println("Connected with no Auth.");
 
     /* Open or select the mailbox folder to read or search the message */
     if (!imap.selectFolder(F("INBOX")))

@@ -1,17 +1,20 @@
 /**
- * This example shows how to set messages flags using UIDs ranges.
+ * Created by K. Suwatchai (Mobizt)
  *
  * Email: suwatchai@outlook.com
  *
  * Github: https://github.com/mobizt/ESP-Mail-Client
  *
  * Copyright (c) 2023 mobizt
- *
  */
 
-/** ////////////////////////////////////////////////
- *  Struct data names changed from v2.x.x to v3.x.x
- *  ////////////////////////////////////////////////
+// This example shows how to set messages flags.
+
+// This example shows how to set messages flags using UIDs ranges.
+
+/** Note for library update from v2.x.x to v3.x.x.
+ *
+ *  Struct data names changed
  *
  * "ESP_Mail_Session" changes to "Session_Config"
  * "IMAP_Config" changes to "IMAP_Data"
@@ -25,7 +28,6 @@
  * IMAP_Config config;
  * to
  * IMAP_Data imap_data;
- *
  */
 
 /** For ESP8266, with BearSSL WiFi Client
@@ -39,12 +41,12 @@
 #include <WiFi.h>
 #elif defined(ESP8266)
 #include <ESP8266WiFi.h>
-#else
-
-// Other Client defined here
-// To use custom Client, define ENABLE_CUSTOM_CLIENT in  src/ESP_Mail_FS.h.
-// See the example Custom_Client.ino for how to use.
-
+#elif __has_include(<WiFiNINA.h>)
+#include <WiFiNINA.h>
+#elif __has_include(<WiFi101.h>)
+#include <WiFi101.h>
+#elif __has_include(<WiFiS3.h>)
+#include <WiFiS3.h>
 #endif
 
 #include <ESP_Mail_Client.h>
@@ -100,9 +102,6 @@ void setup()
 #if defined(ARDUINO_ARCH_SAMD)
     while (!Serial)
         ;
-    Serial.println();
-    Serial.println("**** Custom built WiFiNINA firmware need to be installed.****\n");
-    Serial.println("To install firmware, read the instruction here, https://github.com/mobizt/ESP-Mail-Client#install-custom-build-wifinina-firmware");
 #endif
 
     Serial.println();
@@ -115,7 +114,11 @@ void setup()
 #endif
 
     Serial.print("Connecting to Wi-Fi");
+
+#if defined(ARDUINO_RASPBERRY_PI_PICO_W)
     unsigned long ms = millis();
+#endif
+
     while (WiFi.status() != WL_CONNECTED)
     {
         Serial.print(".");
@@ -167,9 +170,7 @@ void setup()
     config.login.email = AUTHOR_EMAIL;
     config.login.password = AUTHOR_PASSWORD;
 
-    /** Define the IMAP_Data object used for user defined IMAP operating options
-     * and contains the IMAP operating result
-     */
+    /* Define the IMAP_Data object used for user defined IMAP operating options. */
     IMAP_Data imap_data;
 
     /* Set seen flag */
@@ -191,7 +192,7 @@ void setup()
      */
     imap_data.storage.type = esp_mail_file_storage_type_flash;
 
-    /** Set to download heades, text and html messaeges,
+    /** Set to download headers, text and html messaeges,
      * attachments and inline images respectively.
      */
     imap_data.download.header = true;
@@ -232,7 +233,15 @@ void setup()
 
     /* Connect to the server */
     if (!imap.connect(&config, &imap_data))
+    {
+        MailClient.printf("Connection error, Error Code: %d, Reason: %s\n", imap.errorCode(), imap.errorReason().c_str());
         return;
+    }
+
+    if (imap.isAuthenticated())
+        Serial.println("Successfully logged in.");
+    else
+        Serial.println("Connected with no Auth.");
 
     /*  {Optional} */
     printAllMailboxesInfo(imap);
@@ -261,7 +270,7 @@ void setup()
     else
         Serial.println("\nError, removing FLAG with UIDs ranges");
 
-    ESP_MAIL_PRINTF("Free Heap: %d\n", MailClient.getFreeHeap());
+    MailClient.printf("Free Heap: %d\n", MailClient.getFreeHeap());
 }
 
 void loop()
@@ -280,7 +289,7 @@ void printAllMailboxesInfo(IMAPSession &imap)
         {
             /* Iterate each folder info using the  folder info item data */
             FolderInfo folderInfo = folders.info(i);
-            ESP_MAIL_PRINTF("%s%s%s", i == 0 ? "\nAvailable folders: " : ", ", folderInfo.name, i == folders.size() - 1 ? "\n" : "");
+            MailClient.printf("%s%s%s", i == 0 ? "\nAvailable folders: " : ", ", folderInfo.name, i == folders.size() - 1 ? "\n" : "");
         }
     }
 }
@@ -288,18 +297,22 @@ void printAllMailboxesInfo(IMAPSession &imap)
 void printSelectedMailboxInfo(SelectedFolderInfo sFolder)
 {
     /* Show the mailbox info */
-    ESP_MAIL_PRINTF("\nInfo of the selected folder\nTotal Messages: %d\n", sFolder.msgCount());
-    ESP_MAIL_PRINTF("UID Validity: %d\n", sFolder.uidValidity());
-    ESP_MAIL_PRINTF("Predicted next UID: %d\n", sFolder.nextUID());
-    ESP_MAIL_PRINTF("Unseen Message Index: %d\n", sFolder.unseenIndex());
+    MailClient.printf("\nInfo of the selected folder\nTotal Messages: %d\n", sFolder.msgCount());
+    MailClient.printf("UID Validity: %d\n", sFolder.uidValidity());
+    MailClient.printf("Predicted next UID: %d\n", sFolder.nextUID());
+    if (sFolder.unseenIndex() > 0)
+        MailClient.printf("First Unseen Message Number: %d\n", sFolder.unseenIndex());
+    else
+        MailClient.printf("Unseen Messages: No\n");
+
     if (sFolder.modSeqSupported())
-        ESP_MAIL_PRINTF("Highest Modification Sequence: %d\n", sFolder.highestModSeq());
+        MailClient.printf("Highest Modification Sequence: %llu\n", sFolder.highestModSeq());
     for (size_t i = 0; i < sFolder.flagCount(); i++)
-        ESP_MAIL_PRINTF("%s%s%s", i == 0 ? "Flags: " : ", ", sFolder.flag(i).c_str(), i == sFolder.flagCount() - 1 ? "\n" : "");
+        MailClient.printf("%s%s%s", i == 0 ? "Flags: " : ", ", sFolder.flag(i).c_str(), i == sFolder.flagCount() - 1 ? "\n" : "");
 
     if (sFolder.flagCount(true))
     {
         for (size_t i = 0; i < sFolder.flagCount(true); i++)
-            ESP_MAIL_PRINTF("%s%s%s", i == 0 ? "Permanent Flags: " : ", ", sFolder.flag(i, true).c_str(), i == sFolder.flagCount(true) - 1 ? "\n" : "");
+            MailClient.printf("%s%s%s", i == 0 ? "Permanent Flags: " : ", ", sFolder.flag(i, true).c_str(), i == sFolder.flagCount(true) - 1 ? "\n" : "");
     }
 }

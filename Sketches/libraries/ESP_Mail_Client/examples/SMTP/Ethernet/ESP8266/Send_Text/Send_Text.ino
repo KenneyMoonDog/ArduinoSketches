@@ -1,8 +1,5 @@
 
-
 /**
- * This example shows how to send Email using ESP8266 and ENC28J60 Ethernet module.
- *
  * Created by K. Suwatchai (Mobizt)
  *
  * Email: suwatchai@outlook.com
@@ -10,12 +7,15 @@
  * Github: https://github.com/mobizt/ESP-Mail-Client
  *
  * Copyright (c) 2023 mobizt
- *
  */
 
-/** ////////////////////////////////////////////////
- *  Struct data names changed from v2.x.x to v3.x.x
- *  ////////////////////////////////////////////////
+// This example shows how to send Email using ESP8266 and ENC28J60 Ethernet module.
+
+// This example requires ESP8266 Arduino Core SDK v3.x.x
+
+/** Note for library update from v2.x.x to v3.x.x.
+ *
+ *  Struct data names changed
  *
  * "ESP_Mail_Session" changes to "Session_Config"
  * "IMAP_Config" changes to "IMAP_Data"
@@ -29,10 +29,7 @@
  * IMAP_Config config;
  * to
  * IMAP_Data imap_data;
- *
  */
-
-// This example requires ESP8266 Arduino Core SDK v3.x.x
 
 /**
  *
@@ -117,8 +114,15 @@ void sendMail()
   config.login.email = AUTHOR_EMAIL;
   config.login.password = AUTHOR_PASSWORD;
 
-  config.login.user_domain = F("mydomain.net");
+  config.login.user_domain = F("127.0.0.1");
 
+  /*
+  Set the NTP config time
+  For times east of the Prime Meridian use 0-12
+  For times west of the Prime Meridian add 12 to the offset.
+  Ex. American/Denver GMT would be -6. 6 + 12 = 18
+  See https://en.wikipedia.org/wiki/Time_zone for a list of the GMT/UTC timezone offsets
+  */
   config.time.ntp_server = F("pool.ntp.org,time.nist.gov");
   config.time.gmt_offset = 3;
   config.time.day_light_offset = 0;
@@ -135,17 +139,24 @@ void sendMail()
 
   if (!smtp.connect(&config))
   {
-    ESP_MAIL_PRINTF("Connection error, Status Code: %d, Error Code: %d, Reason: %s", smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());
+    MailClient.printf("Connection error, Status Code: %d, Error Code: %d, Reason: %s\n", smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());
     return;
   }
 
-  if (smtp.isAuthenticated())
-    Serial.println("\nSuccessfully logged in.");
+  if (!smtp.isLoggedIn())
+  {
+    Serial.println("Error, Not yet logged in.");
+  }
   else
-    Serial.println("\nConnected with no Auth.");
+  {
+    if (smtp.isAuthenticated())
+      Serial.println("Successfully logged in.");
+    else
+      Serial.println("Connected with no Auth.");
+  }
 
   if (!MailClient.sendMail(&smtp, &message))
-    ESP_MAIL_PRINTF("Error, Status Code: %d, Error Code: %d, Reason: %s", smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());
+    MailClient.printf("Error, Status Code: %d, Error Code: %d, Reason: %s\n", smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());
 }
 
 void setup()
@@ -205,8 +216,8 @@ void smtpCallback(SMTP_Status status)
   {
 
     Serial.println("----------------");
-    ESP_MAIL_PRINTF("Message sent success: %d\n", status.completedCount());
-    ESP_MAIL_PRINTF("Message sent failed: %d\n", status.failedCount());
+    MailClient.printf("Message sent success: %d\n", status.completedCount());
+    MailClient.printf("Message sent failed: %d\n", status.failedCount());
     Serial.println("----------------\n");
 
     for (size_t i = 0; i < smtp.sendingResult.size(); i++)
@@ -214,11 +225,11 @@ void smtpCallback(SMTP_Status status)
 
       SMTP_Result result = smtp.sendingResult.getItem(i);
 
-      ESP_MAIL_PRINTF("Message No: %d\n", i + 1);
-      ESP_MAIL_PRINTF("Status: %s\n", result.completed ? "success" : "failed");
-      ESP_MAIL_PRINTF("Date/Time: %s\n", MailClient.Time.getDateTimeString(result.timestamp, "%B %d, %Y %H:%M:%S").c_str());
-      ESP_MAIL_PRINTF("Recipient: %s\n", result.recipients.c_str());
-      ESP_MAIL_PRINTF("Subject: %s\n", result.subject.c_str());
+      MailClient.printf("Message No: %d\n", i + 1);
+      MailClient.printf("Status: %s\n", result.completed ? "success" : "failed");
+      MailClient.printf("Date/Time: %s\n", MailClient.Time.getDateTimeString(result.timestamp, "%B %d, %Y %H:%M:%S").c_str());
+      MailClient.printf("Recipient: %s\n", result.recipients.c_str());
+      MailClient.printf("Subject: %s\n", result.subject.c_str());
     }
     Serial.println("----------------\n");
     smtp.sendingResult.clear();

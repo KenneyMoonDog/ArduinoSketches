@@ -1,3 +1,9 @@
+#include <ButtonReader.h>
+#include <EN1701-REFIT.h>
+#include <IRStateReader.h>
+#include <SERIAL_COMM.h>
+#include <ShipOperations.h>
+
 
 #include <WiFi.h>
 //#include "types.h";

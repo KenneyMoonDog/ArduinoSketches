@@ -366,33 +366,59 @@ This class used for controlling IMAP transports and retrieving the data from the
 
 
 
+
+#### Set the tcp timeout.
+
+param **`timeoutSec`** The tcp timeout in seconds.
+
+```cpp
+void setTCPTimeout(unsigned long timeoutSec);
+```
+
+
+
 #### Assign custom Client from Arduino Clients.
 
 param **`client`** The pointer to Arduino Client derived class e.g. WiFiClient, WiFiClientSecure, EthernetClient or GSMClient.
 
-param **`type`** The type of external Client e.g. `esp_mail_external_client_type_basic` and `esp_mail_external_client_type_ssl`
 ```cpp
-void setClient(Client *client, esp_mail_external_client_type type = esp_mail_external_client_type_none);
+void setClient(Client *client);
 ```
 
 
+#### Assign TinyGsm Clients.
 
-#### Assign the callback function to handle the server connection for custom Client.
+param **`client`** The pointer to TinyGsmClient.
 
-param **`connectionCB`** The function that handles the server connection.
+param **`modem`** The pointer to TinyGsm modem object. Modem should be initialized and/or set mode before transfering data.
+
+param **`pin`** The SIM pin.
+
+param **`apn`** The GPRS APN (Access Point Name).
+
+param **`user`** The GPRS user.
+
+param **`password`** The GPRS password.
 
 ```cpp
-void connectionRequestCallback(ConnectionRequestCallback connectionCB);
+void setGSMClient(Client *client, void *modem, const char *pin, const char *apn, const char *user, const char *password);
 ```
 
 
-#### Assign the callback function to handle the server upgrade connection for custom Client.
+#### Assign external Ethernet Client.
 
-param **`upgradeCB`** The function that handles existing connection upgrade.
+param **`client`** The pointer to Ethernet client object.
+
+param **`macAddress`** The Ethernet MAC address.
+
+param **`csPin`** The Ethernet module SPI chip select pin.
+
+param **`resetPin`** The Ethernet module reset pin.
+
+param **`staticIP`** (Optional) The pointer to `ESP_Mail_StaticIP` object which included these IPAddress properties ipAddress, netMask, defaultGateway and dnsServer.
 
 ```cpp
-void connectionUpgradeRequetsCallback(ConnectionUpgradeRequestCallback upgradeCB);
-```
+ void setEthernetClient(Client *client, uint8_t macAddress[6], int csPin, int resetPin, ESP_Mail_StaticIP *staticIP = nullptr);
 
 
 
@@ -405,14 +431,6 @@ void networkConnectionRequestCallback(NetworkConnectionRequestCallback networkCo
 ```
 
 
-#### Assign the callback function to handle the network disconnection for custom Client.
-
-param **`networkDisconnectionCB`** The function that handles the network disconnection.
-
-```cpp
-void networkDisconnectionRequestCallback(NetworkDisconnectionRequestCallback networkDisconnectionCB);
-```
-
 
 #### Assign the callback function to handle the network connection status acknowledgement.
 
@@ -421,6 +439,29 @@ param **`networkStatusCB`** The function that handle the network connection stat
 ```cpp
 void networkStatusRequestCallback(NetworkStatusRequestCallback networkStatusCB);
 ```
+
+
+
+#### Set the network status acknowledgement.
+
+param **`status`** The network status.
+
+```cpp
+void setNetworkStatus(bool status);
+```
+
+
+
+#### Set the BearSSL IO buffer size.
+
+param **`rx`** The BearSSL receive buffer size in bytes.
+
+param **`tx`** The BearSSL trasmit buffer size in bytes.
+
+```cpp
+void setSSLBufferSize(int rx = -1, int tx = -1);
+```
+
 
 
 #### Set system time with timestamp.
@@ -537,6 +578,34 @@ return **`boolean`** The boolean value which indicates the success of operation.
 bool closeSession();
 ```
 
+
+#### Setup TCP KeepAlive for internal TCP client.
+
+param **`tcpKeepIdleSeconds`** lwIP TCP Keepalive idle in seconds.
+
+param **`tcpKeepIntervalSeconds`** lwIP TCP Keepalive interval in seconds.
+
+param **`tcpKeepCount`** lwIP TCP Keepalive count.
+
+For the TCP (KeepAlive) options, see [this doc](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/lwip.html#tcp-options).
+
+If value of one of these parameters is zero, the TCP KeepAlive will be disabled.
+
+You can check the server connecting status, by exexuting `<IMAPSession>.connected()` which will return true when connection to the server is still alive. 
+
+```cpp
+void keepAlive(int tcpKeepIdleSeconds, int tcpKeepIntervalSeconds, int tcpKeepCount);
+```
+
+
+
+#### Get TCP KeepAlive status.
+
+return **`Boolean`** status of TCP Keepalive.
+
+```cpp
+bool isKeepAlive();
+```
 
 
 
@@ -1266,35 +1335,61 @@ and retrieving the data from the SMTP server.
 
 
 
+#### Set the tcp timeout.
+
+param **`timeoutSec`** The tcp timeout in seconds.
+
+```cpp
+void setTCPTimeout(unsigned long timeoutSec);
+```
+
+
+
 #### Assign custom Client from Arduino Clients.
 
 param **`client`** The pointer to Arduino Client derived class e.g. WiFiClient, WiFiClientSecure, EthernetClient or GSMClient.
 
-param **`type`** The type of external Client e.g. `esp_mail_external_client_type_basic` and `esp_mail_external_client_type_ssl`
 ```cpp
-void setClient(Client *client, esp_mail_external_client_type type = esp_mail_external_client_type_none);
+void setClient(Client *client);
 ```
 
 
+#### Assign TinyGsm Clients.
 
-#### Assign the callback function to handle the server connection for custom Client.
+param **`client`** The pointer to TinyGsmClient.
 
-param **`connectionCB`** The function that handles the server connection.
+param **`modem`** The pointer to TinyGsm modem object. Modem should be initialized and/or set mode before transfering data.
+
+param **`pin`** The SIM pin.
+
+param **`apn`** The GPRS APN (Access Point Name).
+
+param **`user`** The GPRS user.
+
+param **`password`** The GPRS password.
 
 ```cpp
-void connectionRequestCallback(ConnectionRequestCallback connectionCB);
+void setGSMClient(Client *client, void *modem, const char *pin, const char *apn, const char *user, const char *password);
 ```
 
 
-#### Assign the callback function to handle the server upgrade connection for custom Client.
+#### Assign external Ethernet Client.
 
-param **`upgradeCB`** The function that handles existing connection upgrade.
+param **`client`** The pointer to Ethernet client object.
+
+param **`macAddress`** The Ethernet MAC address.
+
+param **`csPin`** The Ethernet module SPI chip select pin.
+
+param **`resetPin`** The Ethernet module reset pin.
+
+param **`staticIP`** (Optional) The pointer to `ESP_Mail_StaticIP` object which included these IPAddress properties ipAddress, netMask, defaultGateway and dnsServer.
 
 ```cpp
-void connectionUpgradeRequestCallback(ConnectionUpgradeRequestCallback upgradeCB);
-```
+ void setEthernetClient(Client *client, uint8_t macAddress[6], int csPin, int resetPin, ESP_Mail_StaticIP *staticIP = nullptr);
 
 
+ 
 #### Assign the callback function to handle the network connection for custom Client.
 
 param **`networkConnectionCB`** The function that handles the network connection.
@@ -1304,22 +1399,34 @@ void networkConnectionRequestCallback(NetworkConnectionRequestCallback networkCo
 ```
 
 
-#### Assign the callback function to handle the network disconnection for custom Client.
-
-param **`networkDisconnectionCB`** The function that handles the network disconnection.
-
-```cpp
-void networkDisconnectionRequestCallback(NetworkDisconnectionRequestCallback networkDisconnectionCB);
-```
-
-
-
 #### Assign the callback function to handle the network connection status acknowledgement.
 
 param **`networkStatusCB`** The function that handle the network connection status acknowledgement.
 
 ```cpp
 void networkStatusRequestCallback(NetworkStatusRequestCallback networkStatusCB);
+```
+
+
+
+#### Set the network status acknowledgement.
+
+param **`status`** The network status.
+
+```cpp
+void setNetworkStatus(bool status);
+```
+
+
+
+#### Set the BearSSL IO buffer size.
+
+param **`rx`** The BearSSL receive buffer size in bytes.
+
+param **`tx`** The BearSSL trasmit buffer size in bytes.
+
+```cpp
+void setSSLBufferSize(int rx = -1, int tx = -1);
 ```
 
 
@@ -1402,6 +1509,36 @@ bool isLoggedIn();
 
 ```cpp
 bool closeSession();
+```
+
+
+
+#### Setup TCP KeepAlive for internal TCP client.
+
+param **`tcpKeepIdleSeconds`** lwIP TCP Keepalive idle in seconds.
+
+param **`tcpKeepIntervalSeconds`** lwIP TCP Keepalive interval in seconds.
+
+param **`tcpKeepCount`** lwIP TCP Keepalive count.
+
+For the TCP (KeepAlive) options, see [this doc](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/lwip.html#tcp-options).
+
+If value of one of these parameters is zero, the TCP KeepAlive will be disabled.
+
+You can check the server connecting status, by exexuting `<SMTPSession>.connected()` which will return true when connection to the server is still alive. 
+
+```cpp
+void keepAlive(int tcpKeepIdleSeconds, int tcpKeepIntervalSeconds, int tcpKeepCount);
+```
+
+
+
+#### Get TCP KeepAlive status.
+
+return **`Boolean`** status of TCP Keepalive.
+
+```cpp
+bool isKeepAlive();
 ```
 
 

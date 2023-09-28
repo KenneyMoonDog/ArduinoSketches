@@ -1,12 +1,5 @@
 
-
 /**
- * This example shows how to send Email with inline image from ESP32 camera module.
- *
- * The ESP32 board used in this example is ESP32 PSRAM Timer Camera X (OV3660).
- *
- * The html and text version messages will be sent.
- *
  * Created by K. Suwatchai (Mobizt)
  *
  * Email: suwatchai@outlook.com
@@ -14,12 +7,17 @@
  * Github: https://github.com/mobizt/ESP-Mail-Client
  *
  * Copyright (c) 2023 mobizt
- *
  */
 
-/** ////////////////////////////////////////////////
- *  Struct data names changed from v2.x.x to v3.x.x
- *  ////////////////////////////////////////////////
+/**
+ * This example shows how to send Email with inline image from ESP32 camera module.
+ *
+ * The ESP32 board used in this example is ESP32 PSRAM Timer Camera X (OV3660).
+ */
+
+/** Note for library update from v2.x.x to v3.x.x.
+ *
+ *  Struct data names changed
  *
  * "ESP_Mail_Session" changes to "Session_Config"
  * "IMAP_Config" changes to "IMAP_Data"
@@ -33,7 +31,6 @@
  * IMAP_Config config;
  * to
  * IMAP_Data imap_data;
- *
  */
 
 #include <Arduino.h>
@@ -44,7 +41,31 @@
 #include <ESP_Mail_Client.h>
 
 #include "esp_camera.h"
+
+// ===================
+// Select camera model
+// ===================
+// #define CAMERA_MODEL_WROVER_KIT // Has PSRAM
+#define CAMERA_MODEL_ESP_EYE // Has PSRAM
+// #define CAMERA_MODEL_ESP32S3_EYE // Has PSRAM
+// #define CAMERA_MODEL_M5STACK_PSRAM // Has PSRAM
+// #define CAMERA_MODEL_M5STACK_V2_PSRAM // M5Camera version B Has PSRAM
+// #define CAMERA_MODEL_M5STACK_WIDE // Has PSRAM
+// #define CAMERA_MODEL_M5STACK_ESP32CAM // No PSRAM
+// #define CAMERA_MODEL_M5STACK_UNITCAM // No PSRAM
+// #define CAMERA_MODEL_AI_THINKER // Has PSRAM
+// #define CAMERA_MODEL_TTGO_T_JOURNAL // No PSRAM
+// #define CAMERA_MODEL_XIAO_ESP32S3 // Has PSRAM
+//  ** Espressif Internal Boards **
+// #define CAMERA_MODEL_ESP32_CAM_BOARD
+// #define CAMERA_MODEL_ESP32S2_CAM_BOARD
+// #define CAMERA_MODEL_ESP32S3_CAM_LCD
+// #define CAMERA_MODEL_DFRobot_FireBeetle2_ESP32S3 // Has PSRAM
+// #define CAMERA_MODEL_DFRobot_Romeo_ESP32S3 // Has PSRAM
 #include "camera_pins.h"
+
+// The camera_pins.h was taken from
+// https://github.com/espressif/arduino-esp32/blob/master/libraries/ESP32/examples/Camera/CameraWebServer
 
 #define WIFI_SSID "<ssid>"
 #define WIFI_PASSWORD "<password>"
@@ -89,33 +110,33 @@ void setup()
 
     Serial.println();
 
-    camera_config_t config;
-    config.ledc_channel = LEDC_CHANNEL_0;
-    config.ledc_timer = LEDC_TIMER_0;
-    config.pin_d0 = Y2_GPIO_NUM;
-    config.pin_d1 = Y3_GPIO_NUM;
-    config.pin_d2 = Y4_GPIO_NUM;
-    config.pin_d3 = Y5_GPIO_NUM;
-    config.pin_d4 = Y6_GPIO_NUM;
-    config.pin_d5 = Y7_GPIO_NUM;
-    config.pin_d6 = Y8_GPIO_NUM;
-    config.pin_d7 = Y9_GPIO_NUM;
-    config.pin_xclk = XCLK_GPIO_NUM;
-    config.pin_pclk = PCLK_GPIO_NUM;
-    config.pin_vsync = VSYNC_GPIO_NUM;
-    config.pin_href = HREF_GPIO_NUM;
-    config.pin_sscb_sda = SIOD_GPIO_NUM;
-    config.pin_sscb_scl = SIOC_GPIO_NUM;
-    config.pin_pwdn = PWDN_GPIO_NUM;
-    config.pin_reset = RESET_GPIO_NUM;
-    config.xclk_freq_hz = 20000000;
-    config.pixel_format = PIXFORMAT_JPEG;
-    config.frame_size = FRAMESIZE_QXGA;
-    config.jpeg_quality = 10;
-    config.fb_count = 2;
+    camera_config_t camCfg;
+    camCfg.ledc_channel = LEDC_CHANNEL_0;
+    camCfg.ledc_timer = LEDC_TIMER_0;
+    camCfg.pin_d0 = Y2_GPIO_NUM;
+    camCfg.pin_d1 = Y3_GPIO_NUM;
+    camCfg.pin_d2 = Y4_GPIO_NUM;
+    camCfg.pin_d3 = Y5_GPIO_NUM;
+    camCfg.pin_d4 = Y6_GPIO_NUM;
+    camCfg.pin_d5 = Y7_GPIO_NUM;
+    camCfg.pin_d6 = Y8_GPIO_NUM;
+    camCfg.pin_d7 = Y9_GPIO_NUM;
+    camCfg.pin_xclk = XCLK_GPIO_NUM;
+    camCfg.pin_pclk = PCLK_GPIO_NUM;
+    camCfg.pin_vsync = VSYNC_GPIO_NUM;
+    camCfg.pin_href = HREF_GPIO_NUM;
+    camCfg.pin_sscb_sda = SIOD_GPIO_NUM;
+    camCfg.pin_sscb_scl = SIOC_GPIO_NUM;
+    camCfg.pin_pwdn = PWDN_GPIO_NUM;
+    camCfg.pin_reset = RESET_GPIO_NUM;
+    camCfg.xclk_freq_hz = 20000000;
+    camCfg.pixel_format = PIXFORMAT_JPEG;
+    camCfg.frame_size = FRAMESIZE_QXGA;
+    camCfg.jpeg_quality = 10;
+    camCfg.fb_count = 2;
 
     // camera init
-    esp_err_t err = esp_camera_init(&config);
+    esp_err_t err = esp_camera_init(&camCfg);
     if (err != ESP_OK)
     {
         Serial.printf("Camera init failed with error 0x%x", err);
@@ -164,13 +185,19 @@ void setup()
      * as this is the part of EHLO/HELO command to identify the client system
      * to prevent connection rejection.
      * If host name or public IP is not available, ignore this or
-     * use generic host "mydomain.net".
+     * use loopback address "127.0.0.1".
      *
      * Assign any text to this option may cause the connection rejection.
      */
-    config.login.user_domain = F("mydomain.net");
+    config.login.user_domain = F("127.0.0.1");
 
-    /* Set the NTP config time */
+    /*
+    Set the NTP config time
+    For times east of the Prime Meridian use 0-12
+    For times west of the Prime Meridian add 12 to the offset.
+    Ex. American/Denver GMT would be -6. 6 + 12 = 18
+    See https://en.wikipedia.org/wiki/Time_zone for a list of the GMT/UTC timezone offsets
+    */
     config.time.ntp_server = F("pool.ntp.org,time.nist.gov");
     config.time.gmt_offset = 3;
     config.time.day_light_offset = 0;
@@ -233,23 +260,30 @@ void setup()
     /* Connect to the server */
     if (!smtp.connect(&config))
     {
-        ESP_MAIL_PRINTF("Connection error, Status Code: %d, Error Code: %d, Reason: %s", smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());
+        MailClient.printf("Connection error, Status Code: %d, Error Code: %d, Reason: %s\n", smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());
         return;
     }
 
-    if (smtp.isAuthenticated())
-        Serial.println("\nSuccessfully logged in.");
+    if (!smtp.isLoggedIn())
+    {
+        Serial.println("Error, Not yet logged in.");
+    }
     else
-        Serial.println("\nConnected with no Auth.");
+    {
+        if (smtp.isAuthenticated())
+            Serial.println("Successfully logged in.");
+        else
+            Serial.println("Connected with no Auth.");
+    }
 
     /* Start sending the Email and close the session */
     if (!MailClient.sendMail(&smtp, &message, true))
-        ESP_MAIL_PRINTF("Error, Status Code: %d, Error Code: %d, Reason: %s", smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());
+        MailClient.printf("Error, Status Code: %d, Error Code: %d, Reason: %s\n", smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());
 
     // to clear sending result log
     // smtp.sendingResult.clear();
 
-    ESP_MAIL_PRINTF("Free Heap: %d\n", MailClient.getFreeHeap());
+    MailClient.printf("Free Heap: %d\n", MailClient.getFreeHeap());
 }
 
 void loop()
@@ -265,13 +299,13 @@ void smtpCallback(SMTP_Status status)
     /* Print the sending result */
     if (status.success())
     {
-        // ESP_MAIL_PRINTF used in the examples is for format printing via debug Serial port
-        // that works for all supported Arduino platform SDKs e.g. AVR, SAMD, ESP32 and ESP8266.
+        // MailClient.printf used in the examples is for format printing via debug Serial port
+        // that works for all supported Arduino platform SDKs e.g. SAMD, ESP32 and ESP8266.
         // In ESP8266 and ESP32, you can use Serial.printf directly.
 
         Serial.println("----------------");
-        ESP_MAIL_PRINTF("Message sent success: %d\n", status.completedCount());
-        ESP_MAIL_PRINTF("Message sent failed: %d\n", status.failedCount());
+        MailClient.printf("Message sent success: %d\n", status.completedCount());
+        MailClient.printf("Message sent failed: %d\n", status.failedCount());
         Serial.println("----------------\n");
 
         for (size_t i = 0; i < smtp.sendingResult.size(); i++)
@@ -284,11 +318,11 @@ void smtpCallback(SMTP_Status status)
             // Other devices may show invalid timestamp as the device time was not set i.e. it will show Jan 1, 1970.
             // You can call smtp.setSystemTime(xxx) to set device time manually. Where xxx is timestamp (seconds since Jan 1, 1970)
 
-            ESP_MAIL_PRINTF("Message No: %d\n", i + 1);
-            ESP_MAIL_PRINTF("Status: %s\n", result.completed ? "success" : "failed");
-            ESP_MAIL_PRINTF("Date/Time: %s\n", MailClient.Time.getDateTimeString(result.timestamp, "%B %d, %Y %H:%M:%S").c_str());
-            ESP_MAIL_PRINTF("Recipient: %s\n", result.recipients.c_str());
-            ESP_MAIL_PRINTF("Subject: %s\n", result.subject.c_str());
+            MailClient.printf("Message No: %d\n", i + 1);
+            MailClient.printf("Status: %s\n", result.completed ? "success" : "failed");
+            MailClient.printf("Date/Time: %s\n", MailClient.Time.getDateTimeString(result.timestamp, "%B %d, %Y %H:%M:%S").c_str());
+            MailClient.printf("Recipient: %s\n", result.recipients.c_str());
+            MailClient.printf("Subject: %s\n", result.subject.c_str());
         }
         Serial.println("----------------\n");
 
