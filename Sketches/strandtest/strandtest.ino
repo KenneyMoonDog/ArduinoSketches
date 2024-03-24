@@ -15,15 +15,18 @@
  #include <avr/power.h> // Required for 16 MHz Adafruit Trinket
 #endif
 
+
+
 // Which pin on the Arduino is connected to the NeoPixels?
 // On a Trinket or Gemma we suggest changing this to 1:
-#define LED_PIN    6
+#define LED_PIN    19
 
 // How many NeoPixels are attached to the Arduino?
-#define LED_COUNT 5
+#define LED_COUNT 3
 
 // Declare our NeoPixel strip object:
-Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
+//Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel strip(LED_COUNT, LED_PIN,NEO_GRB + NEO_KHZ800);
 // Argument 1 = Number of pixels in NeoPixel strip
 // Argument 2 = Arduino pin number (most are valid)
 // Argument 3 = Pixel type flags, add together as needed:
@@ -60,21 +63,129 @@ void setup() {
 
 void loop() {
   // Fill along the length of the strip in various colors...
-  //colorWipe(strip.Color(255,   0,   0), 50); // Red
-  //colorWipe(strip.Color(  0, 255,   0), 50); // Green
-  //colorWipe(strip.Color(  0,   0, 255), 50); // Blue
+  /*colorWipe(strip.Color(127,   0,   0), 50); // Red
+  delay(500);
+  colorWipe(strip.Color(  0, 127,   0), 50); // Green
+  delay(500);
+  colorWipe(strip.Color(  0,   0, 127), 50); // Blue
+  delay(500);
+
 
   // Do a theater marquee effect in various colors...
-  //theaterChase(strip.Color(127, 127, 127), 50); // White, half brightness
-  //theaterChase(strip.Color(127,   0,   0), 50); // Red, half brightness
-  //theaterChase(strip.Color(  0,   0, 127), 50); // Blue, half brightness
+  theaterChase(strip.Color(127, 127, 127), 50); // White, half brightness
+  theaterChase(strip.Color(127,   0,   0), 50); // Red, half brightness
+  theaterChase(strip.Color(  0,   0, 127), 50); // Blue, half brightness*/
 
-  //rainbow(5);             // Flowing rainbow cycle along the whole strip
-  //theaterChaseRainbow(50); // Rainbow-enhanced theaterChase variant
-
-  warp_cruise_2();
+  //warp_cruise_3();
+  console_pulse_panel_check();
+  scanner_panel_check();
+ // delay(100);
+  //console_pulse_panel(strip.Color(0,0,127));
 }
 
+void scanner_panel_check(){
+
+}
+
+void console_pulse_panel_check() {
+
+  static byte R_values[3] = {127,0,110};
+  static byte G_values[3] = {60,120,44};
+  static byte B_values[3] = {20,0,127};
+
+  static bool colorFlow_R[3] = {true, false, true};
+  static bool colorFlow_G[3] = {false, true, true};
+  static bool colorFlow_B[3] = {true, true, false};
+
+  static uint32_t neoPixelColor[3] = { strip.Color(R_values[0], G_values[0], B_values[0]),
+                       strip.Color(R_values[1], G_values[1], B_values[1]),
+                       strip.Color(R_values[2], G_values[2], B_values[2]) };
+
+  static unsigned long lastColorUpdateTime = 0;
+  static unsigned long currentUpdateTime = millis();
+
+  static bool oneShot = true;
+  
+  if (oneShot) {
+    for(int n=0; n<strip.numPixels(); n++) { // For each pixel in strip...
+        strip.setPixelColor(n, neoPixelColor[n]);
+        strip.show();
+    }
+    oneShot = false;
+  }
+
+
+  if ((lastColorUpdateTime + 10) < currentUpdateTime) {
+
+      for(int i=0; i<strip.numPixels(); i++) { // For each pixel in strip...
+                          //  Update strip to match
+        if (colorFlow_R[i]) {
+          if (R_values[i] < 127) {
+            R_values[i]++;
+          }
+          else {
+            R_values[i]--;
+            colorFlow_R[i] = false;
+          }
+        }
+        else {
+          if (R_values[i] > 0) {
+            R_values[i]--;
+          }
+          else {
+            R_values[i]++;
+            colorFlow_R[i] = true;
+          }
+        }
+
+        if (colorFlow_G[i]) {
+          if (G_values[i] < 127) {
+            G_values[i]++;
+          }
+          else {
+            G_values[i]--;
+            colorFlow_G[i] = false;
+          }
+        }
+        else {
+          if (G_values[i] > 0) {
+            G_values[i]--;
+          }
+          else {
+            G_values[i]++;
+            colorFlow_G[i] = true;
+          }
+        }
+
+        if (colorFlow_B[i]) {
+          if (B_values[i] < 127) {
+            B_values[i]++;
+          }
+          else {
+            B_values[i]--;
+            colorFlow_B[i] = false;
+          }
+        }
+        else {
+          if (B_values[i] > 0) {
+            B_values[i]--;
+          }
+          else {
+            B_values[i]++;
+            colorFlow_B[i] = true;
+          }
+        }
+        neoPixelColor[i] = strip.Color(R_values[i], G_values[i], B_values[i]);
+        strip.setPixelColor(i, neoPixelColor[i]);         //  Set pixel's color (in RAM)
+      } //end for
+      
+      lastColorUpdateTime = currentUpdateTime;
+      strip.show();
+   }// end if
+
+   currentUpdateTime=millis();
+ //}//end while
+}
 
 // Some functions of our own for creating animated effects -----------------
 
@@ -108,7 +219,7 @@ void theaterChase(uint32_t color, int wait) {
   }
 }
 
-void warp_cruise_4(){
+/*void warp_cruise_4(){
 
   long hue[5] = {blue, blue, blue, blue, blue}; //0 (red) to 65535 (red)
   byte sat[5] = {50, 255, 100, 230, 20}; //(0-255) grey to full color 
@@ -160,7 +271,7 @@ while(1) {
     strip.show(); // Update strip with new contents
     delay(10);  // Pause for a moment
   }  //end while  
-}
+}*/
   /*long beginPixelHue = 65536/2;
   long endPixelHue = (5*65536)/6;
   int increment = 256;
@@ -214,14 +325,14 @@ void warp_cruise_3(){
   byte currentDirection[5] = {1,1,1,1,1};
   long check = 0;
 
-  for (int n = 0; n < 5; n++){
+  for (int n = 0; n < strip.numPixels(); n++){
     currentPixelHue[n] = beginPixelHue + (n*leadFactor);
     currentDirection[n] = 1;
   }
 
   while(1) {
 
-    for (int nPix = 0; nPix < 5; nPix++){
+    for (int nPix = 0; nPix < strip.numPixels(); nPix++){
       if (nPix == 0){
         if (currentDirection[nPix] == 1){
            check = currentPixelHue[nPix] + increment;
@@ -252,7 +363,7 @@ void warp_cruise_3(){
     }
     
     strip.show(); // Update strip with new contents
-    delay(10);  // Pause for a moment
+    delay(100);  // Pause for a moment
   }  //end while
 }
 
@@ -263,12 +374,12 @@ void warp_cruise_2(){
   int increment = 256;
   int leadFactor = 750;
   long primaryPixelHue = beginPixelHue;
-  byte primaryDirection;
+  byte primaryDirection=1;
   long check = 0;
 
   while(1) {
 
-    for (int nPix = 0; nPix < 5; nPix++){
+    for (int nPix = 0; nPix < strip.numPixels(); nPix++){
       if (nPix == 0){
         if (primaryDirection == 1){
            check = primaryPixelHue + increment;
