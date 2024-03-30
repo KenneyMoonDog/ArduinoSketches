@@ -14,19 +14,23 @@
 #define COMMAND_PANEL_LED_3 11
 #define COMMAND_PANEL_LED_4 10
 
-#define NAV_PANEL_LED_1 9
-#define NAV_PANEL_LED_2 7
-#define NAV_PANEL_LED_3 5
+#define NAV_PANEL_LED_1 5
+#define NAV_PANEL_LED_2 3
+#define NAV_PANEL_LED_3 9
 
-#define SCANNER_HUD_LED 19
-#define SCANNER_PANEL_LED 20
+#define SCANNER_HUD_LED 20
+#define SCANNER_PANEL_LED 23
 
 #define NAV_INDICATOR_LED_1 21
 #define NAV_INDICATOR_LED_2 22
-#define NAV_INDICATOR_LED_3 23
+#define NAV_INDICATOR_LED_3 19
 
 // How many NeoPixels are attached to the Arduino?
 #define NEOPIXEL_COUNT 3
+
+unsigned long currentUpdateTime = 0;
+byte command_panel_brightness = 140;
+byte nav_panel_brightness = 140;
 
 // Declare our NeoPixel strip object:
 //Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
@@ -76,49 +80,60 @@ void setup() {
   digitalWrite(NAV_PANEL_LED_2, LOW);
   digitalWrite(NAV_PANEL_LED_3, LOW);
 
-  digitalWrite(SCANNER_HUD_LED, HIGH);
-  digitalWrite(SCANNER_PANEL_LED, LOW);
+  digitalWrite(SCANNER_HUD_LED, HIGH);  
+  digitalWrite(SCANNER_PANEL_LED, LOW); 
 
   digitalWrite(NAV_INDICATOR_LED_1, LOW);
-  digitalWrite(NAV_INDICATOR_LED_2, LOW);
-  digitalWrite(NAV_INDICATOR_LED_3, LOW);
+  digitalWrite(NAV_INDICATOR_LED_2, LOW); 
+  digitalWrite(NAV_INDICATOR_LED_3, LOW); 
 
   strip.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
   strip.show();            // Turn OFF all pixels ASAP
-  strip.setBrightness(60); // Set BRIGHTNESS to about 1/5 (max = 255)
+  strip.setBrightness(25); // Set BRIGHTNESS to about 1/5 (max = 255)
 }
 
 void loop() {
+  currentUpdateTime = millis();
 
-  console_pulse_panel_check();
-  scanner_panel_check();
-  nav_panel_check();
-  nav_cluster_check();
-  command_panel_check();
-  
+  computer_panel_check(currentUpdateTime);
+  scanner_panel_check(currentUpdateTime);
+  nav_panel_check(currentUpdateTime);
+  nav_cluster_check(currentUpdateTime);
+  command_panel_check(currentUpdateTime);
 }
 
-void command_panel_check(){
-  static unsigned long current_command_time = 0;
+void command_panel_check(unsigned long current_command_time){
+
+  const byte MODE_LEFT_PASS = 0;
+  const byte MODE_LEFT_RIGHT_PASS = 1;
+  const byte MODE_ALTERNATE_PASS = 2;
+
   static unsigned long last_command_update_time = 0;
   static unsigned long command_delay_time = 50;
   static byte bitShifter = 0;
 
-  static byte command_mode = 0;
+  static byte command_mode = MODE_LEFT_PASS;
   static unsigned long last_mode_update_time = 0;
   static unsigned long mode_delay_time = 3000;
 
   static bool shift_left = true;
-  current_command_time = millis(); 
+  byte led_values = 0;
+  //current_command_time = millis(); 
 
   if (current_command_time > last_mode_update_time + mode_delay_time ) {
     last_mode_update_time = current_command_time;
     switch(command_mode) {
-      case 0:
-        command_mode = 1;
+      case MODE_LEFT_PASS:
+        command_mode = MODE_LEFT_RIGHT_PASS;
+        mode_delay_time = 3000;
         break;
-      case 1:
-        command_mode = 0;
+      case MODE_LEFT_RIGHT_PASS:
+        command_mode = MODE_ALTERNATE_PASS;
+        mode_delay_time = 5000;
+        break;
+      case MODE_ALTERNATE_PASS:
+        command_mode = MODE_LEFT_PASS;
+        mode_delay_time = 3000;
         break;
       default: 
         break;
@@ -126,8 +141,8 @@ void command_panel_check(){
   }
 
   switch(command_mode) {
-     case 0:
-       command_delay_time = 100;
+     case MODE_LEFT_RIGHT_PASS:
+       command_delay_time = 125;
        if (current_command_time > last_command_update_time + command_delay_time) {
           if (bitShifter == 0) {
             bitShifter=1;
@@ -149,13 +164,14 @@ void command_panel_check(){
             }
           }
           last_command_update_time = current_command_time;
-          digitalWrite(COMMAND_PANEL_LED_1, bitRead(bitShifter,0));
-          digitalWrite(COMMAND_PANEL_LED_2, bitRead(bitShifter,1));
-          digitalWrite(COMMAND_PANEL_LED_3, bitRead(bitShifter,2));
-          digitalWrite(COMMAND_PANEL_LED_4, bitRead(bitShifter,3));
+
+          analogWrite(COMMAND_PANEL_LED_1, bitRead(bitShifter,0) * command_panel_brightness);
+          analogWrite(COMMAND_PANEL_LED_2, bitRead(bitShifter,1) * command_panel_brightness);
+          analogWrite(COMMAND_PANEL_LED_3, bitRead(bitShifter,2) * command_panel_brightness);
+          analogWrite(COMMAND_PANEL_LED_4, bitRead(bitShifter,3) * command_panel_brightness);
         } 
         break;
-      case 1:
+      case MODE_LEFT_PASS:
         command_delay_time = 50;
         if (current_command_time > last_command_update_time + command_delay_time) {
 
@@ -168,31 +184,38 @@ void command_panel_check(){
            else { 
              bitShifter = bitShifter << 1;
            } 
+           
            last_command_update_time = current_command_time;
-           digitalWrite(COMMAND_PANEL_LED_1, bitRead(bitShifter,0));
-           digitalWrite(COMMAND_PANEL_LED_2, bitRead(bitShifter,1));
-           digitalWrite(COMMAND_PANEL_LED_3, bitRead(bitShifter,2));
-           digitalWrite(COMMAND_PANEL_LED_4, bitRead(bitShifter,3));
+
+           analogWrite(COMMAND_PANEL_LED_1, bitRead(bitShifter,0) * command_panel_brightness);
+           analogWrite(COMMAND_PANEL_LED_2, bitRead(bitShifter,1) * command_panel_brightness);
+           analogWrite(COMMAND_PANEL_LED_3, bitRead(bitShifter,2) * command_panel_brightness);
+           analogWrite(COMMAND_PANEL_LED_4, bitRead(bitShifter,3) * command_panel_brightness);
          }
          break;
-      case 3:
-         break;  
+      case MODE_ALTERNATE_PASS:
+        command_delay_time = 150;
+        if (current_command_time > last_command_update_time + command_delay_time) {
+          led_values = random(0,15);
+          last_command_update_time = current_command_time;
+          analogWrite(COMMAND_PANEL_LED_1, bitRead(led_values,0) * command_panel_brightness);
+          analogWrite(COMMAND_PANEL_LED_2, bitRead(led_values,1) * command_panel_brightness);
+          analogWrite(COMMAND_PANEL_LED_3, bitRead(led_values,2) * command_panel_brightness);
+          analogWrite(COMMAND_PANEL_LED_4, bitRead(led_values,3) * command_panel_brightness);
+        }
+        break;  
       default:
-         break;
+        break;
   }
 }
 
-void nav_cluster_check(){
-  static unsigned long current_cluster_time = 0;
+void nav_panel_check(unsigned long current_cluster_time){
   static unsigned long last_cluster_update_time = 0;
   static unsigned long cluster_delay_time = 350;
 
   long led_values = 7;
 
-  current_cluster_time = millis(); 
-
   if (current_cluster_time > last_cluster_update_time + cluster_delay_time) {
-     //nav_delay_time = 1000;
      led_values = random(0,7);
      last_cluster_update_time = current_cluster_time;
      digitalWrite(NAV_INDICATOR_LED_1, bitRead(led_values,0));
@@ -201,32 +224,38 @@ void nav_cluster_check(){
   }
 }
 
-void nav_panel_check(){
-  static unsigned long current_nav_time = 0;
+void nav_cluster_check(unsigned long current_nav_time){
+ 
   static unsigned long last_nav_update_time = 0;
   static unsigned long nav_delay_time = 750;
 
-  long led_values = 7;
+  static unsigned long last_primary_update_time = 0;
+  static unsigned long primary_delay_time = 200;
+  static bool primary_state_on = false;
 
-  current_nav_time = millis(); 
+  long led_values = 0;
 
   if (current_nav_time > last_nav_update_time + nav_delay_time) {
      //nav_delay_time = 1000;
      led_values = random(0,7);
      last_nav_update_time = current_nav_time;
-     digitalWrite(NAV_PANEL_LED_1, bitRead(led_values,0));
-     digitalWrite(NAV_PANEL_LED_2, bitRead(led_values,1));
-     digitalWrite(NAV_PANEL_LED_3, bitRead(led_values,2));
+     analogWrite(NAV_PANEL_LED_1, bitRead(led_values,0) * nav_panel_brightness);
+     analogWrite(NAV_PANEL_LED_2, bitRead(led_values,1) * nav_panel_brightness);
+     analogWrite(NAV_PANEL_LED_3, bitRead(led_values,2) * nav_panel_brightness);
   }
+
+  /*if (current_nav_time > last_primary_update_time + primary_delay_time) {
+     primary_state_on = !primary_state_on;
+     last_primary_update_time = current_nav_time;
+     digitalWrite(NAV_PANEL_LED_1, primary_state_on);
+  }*/
 }
 
-void scanner_panel_check(){
-  static unsigned long current_scanner_time = 0;
+void scanner_panel_check(unsigned long current_scanner_time){
+  //static unsigned long current_scanner_time = 0;
   static unsigned long last_scanner_update_time = 0;
   static unsigned long scanner_delay_time = 3000;
-  static bool scanner_on = false;
-
-  current_scanner_time = millis(); 
+  static bool scanner_on = false; 
 
   if (!scanner_on && 
       (current_scanner_time > last_scanner_update_time + scanner_delay_time)) {
@@ -244,7 +273,7 @@ void scanner_panel_check(){
   }
 }
 
-void console_pulse_panel_check() {
+void computer_panel_check(unsigned long current_neo_time) {
 
   static byte R_values[3] = {127,0,110};
   static byte G_values[3] = {60,120,44};
@@ -259,8 +288,6 @@ void console_pulse_panel_check() {
                        strip.Color(R_values[2], G_values[2], B_values[2]) };
 
   static unsigned long lastColorUpdateTime = 0;
-  static unsigned long currentUpdateTime = millis();
-
   static bool oneShot = true;
   
   if (oneShot) {
@@ -272,7 +299,7 @@ void console_pulse_panel_check() {
   }
 
 
-  if ((lastColorUpdateTime + 10) < currentUpdateTime) {
+  if ((lastColorUpdateTime + 5) < current_neo_time) {
 
       for(int i=0; i<strip.numPixels(); i++) { // For each pixel in strip...
                           //  Update strip to match
@@ -336,10 +363,7 @@ void console_pulse_panel_check() {
         strip.setPixelColor(i, neoPixelColor[i]);         //  Set pixel's color (in RAM)
       } //end for
       
-      lastColorUpdateTime = currentUpdateTime;
+      lastColorUpdateTime = current_neo_time;
       strip.show();
    }// end if
-
-   currentUpdateTime=millis();
- //}//end while
 }

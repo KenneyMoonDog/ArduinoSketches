@@ -1,8 +1,8 @@
 /**
  *
- * The Network Upgradable Arduino Secure TCP Client Class, ESP_Mail_TCPClient.h v3.4.15
+ * The Network Upgradable Arduino Secure TCP Client Class, ESP_Mail_TCPClient.h v3.4.16
  *
- * Created November 15, 2023
+ * Created March 1, 2024
  *
  * The MIT License (MIT)
  * Copyright (c) 2023 K. Suwatchai (Mobizt)
@@ -29,11 +29,6 @@
 #ifndef ESP_MAIL_TCPCLIENT_H
 #define ESP_MAIL_TCPCLIENT_H
 
-#include "ESP_Mail_Client_Version.h"
-#if !VALID_VERSION_CHECK(30415)
-#error "Mixed versions compilation."
-#endif
-
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #pragma GCC diagnostic ignored "-Wdelete-non-virtual-dtor"
 
@@ -49,7 +44,7 @@
 #if defined(ESP_MAIL_WIFI_IS_AVAILABLE)
 #define WIFI_HAS_HOST_BY_NAME
 #endif
-#include "extras/WiFiClientImpl.h"
+#include "WiFiClientImpl.h"
 #define BASE_WIFICLIENT WiFiClientImpl
 
 #elif defined(ESP_MAIL_WIFI_IS_AVAILABLE)
@@ -57,7 +52,11 @@
 #define BASE_WIFICLIENT WiFiClient
 #endif
 
-#include "SSLClient/ESP_SSLClient.h"
+#if __has_include(<ESP_SSLClient.h>)
+#include <ESP_SSLClient.h>
+#else
+#include "./client/SSLClient/ESP_SSLClient.h"
+#endif
 
 class ESP_Mail_TCPClient
 {
