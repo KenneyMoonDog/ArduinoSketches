@@ -118,7 +118,6 @@ void command_panel_check(unsigned long current_command_time){
 
   static bool shift_left = true;
   byte led_values = 0;
-  //current_command_time = millis(); 
 
   if (current_command_time > last_mode_update_time + mode_delay_time ) {
     last_mode_update_time = current_command_time;
@@ -196,7 +195,7 @@ void command_panel_check(unsigned long current_command_time){
       case MODE_ALTERNATE_PASS:
         command_delay_time = 150;
         if (current_command_time > last_command_update_time + command_delay_time) {
-          led_values = random(0,15);
+          led_values = random(0,16);
           last_command_update_time = current_command_time;
           analogWrite(COMMAND_PANEL_LED_1, bitRead(led_values,0) * command_panel_brightness);
           analogWrite(COMMAND_PANEL_LED_2, bitRead(led_values,1) * command_panel_brightness);
@@ -216,7 +215,7 @@ void nav_panel_check(unsigned long current_cluster_time){
   long led_values = 7;
 
   if (current_cluster_time > last_cluster_update_time + cluster_delay_time) {
-     led_values = random(0,7);
+     led_values = random(0,8);
      last_cluster_update_time = current_cluster_time;
      digitalWrite(NAV_INDICATOR_LED_1, bitRead(led_values,0));
      digitalWrite(NAV_INDICATOR_LED_2, bitRead(led_values,1));
@@ -237,7 +236,7 @@ void nav_cluster_check(unsigned long current_nav_time){
 
   if (current_nav_time > last_nav_update_time + nav_delay_time) {
      //nav_delay_time = 1000;
-     led_values = random(0,7);
+     led_values = random(0,8);
      last_nav_update_time = current_nav_time;
      analogWrite(NAV_PANEL_LED_1, bitRead(led_values,0) * nav_panel_brightness);
      analogWrite(NAV_PANEL_LED_2, bitRead(led_values,1) * nav_panel_brightness);
@@ -252,7 +251,6 @@ void nav_cluster_check(unsigned long current_nav_time){
 }
 
 void scanner_panel_check(unsigned long current_scanner_time){
-  //static unsigned long current_scanner_time = 0;
   static unsigned long last_scanner_update_time = 0;
   static unsigned long scanner_delay_time = 3000;
   static bool scanner_on = false; 
@@ -260,28 +258,32 @@ void scanner_panel_check(unsigned long current_scanner_time){
   if (!scanner_on && 
       (current_scanner_time > last_scanner_update_time + scanner_delay_time)) {
      scanner_on = true;
-     scanner_delay_time = 5000;
+     scanner_delay_time = 20000;
      last_scanner_update_time = current_scanner_time;
-     digitalWrite(SCANNER_PANEL_LED, HIGH);
+     digitalWrite(SCANNER_PANEL_LED, 0);
   }
   else if(scanner_on && 
           (current_scanner_time > last_scanner_update_time + scanner_delay_time)) {
      scanner_on = false;
-     scanner_delay_time = 100;
+     scanner_delay_time = 500;
      last_scanner_update_time = current_scanner_time;
-     digitalWrite(SCANNER_PANEL_LED, LOW);
+     digitalWrite(SCANNER_PANEL_LED, 1);
   }
 }
 
 void computer_panel_check(unsigned long current_neo_time) {
 
-  static byte R_values[3] = {127,0,110};
+  static byte R_values[3] = {110,23,110};
   static byte G_values[3] = {60,120,44};
-  static byte B_values[3] = {20,0,127};
+  static byte B_values[3] = {20,90,105};
 
-  static bool colorFlow_R[3] = {true, false, true};
-  static bool colorFlow_G[3] = {false, true, true};
-  static bool colorFlow_B[3] = {true, true, false};
+  static bool colorFlow_R[3] = {false, false, false};
+  static bool colorFlow_G[3] = {false, false, false};
+  static bool colorFlow_B[3] = {false, false, false};
+
+  static byte target_R_value[3] = {127, 100, 127};
+  static byte target_G_value[3] = {100, 127, 90};
+  static byte target_B_value[3] = {80, 100, 127};
 
   static uint32_t neoPixelColor[3] = { strip.Color(R_values[0], G_values[0], B_values[0]),
                        strip.Color(R_values[1], G_values[1], B_values[1]),
@@ -289,6 +291,8 @@ void computer_panel_check(unsigned long current_neo_time) {
 
   static unsigned long lastColorUpdateTime = 0;
   static bool oneShot = true;
+
+  //bool pulseMethod1 = false;
   
   if (oneShot) {
     for(int n=0; n<strip.numPixels(); n++) { // For each pixel in strip...
@@ -298,8 +302,7 @@ void computer_panel_check(unsigned long current_neo_time) {
     oneShot = false;
   }
 
-
-  if ((lastColorUpdateTime + 5) < current_neo_time) {
+  /*if ((lastColorUpdateTime + 5) < current_neo_time ) {
 
       for(int i=0; i<strip.numPixels(); i++) { // For each pixel in strip...
                           //  Update strip to match
@@ -366,4 +369,65 @@ void computer_panel_check(unsigned long current_neo_time) {
       lastColorUpdateTime = current_neo_time;
       strip.show();
    }// end if
+   */
+
+   if ((lastColorUpdateTime + 7) < current_neo_time ) {
+     for(int i=0; i<strip.numPixels(); i++) { // For each pixel in strip...
+
+        if (colorFlow_R[i]) {
+          if (R_values[i] < target_R_value[i]) {
+            R_values[i]++;
+          }
+        }
+        else {
+          if (R_values[i] > 0) {
+            R_values[i]--;
+          }
+        }
+
+        if (colorFlow_G[i]) {
+          if (G_values[i] < target_G_value[i]) {
+            G_values[i]++;
+          }
+        }
+        else {
+          if (G_values[i] > 0) {
+            G_values[i]--;
+          }
+        }
+
+        if (colorFlow_B[i]) {
+          if (B_values[i] < target_B_value[i]) {
+            B_values[i]++;
+          }
+        }
+        else {
+          if (B_values[i] > 0) {
+            B_values[i]--;
+          }
+        }
+
+        if (R_values[i] == 0 && G_values[i] == 0 && B_values[i] == 0) {
+           colorFlow_R[i] = true;
+           colorFlow_G[i] = true;
+           colorFlow_B[i] = true;
+           target_R_value[i] = random(10, 128);
+           target_G_value[i] = random(10, 128);
+           target_B_value[i] = random(10, 128);
+        }
+
+        if (R_values[i] == target_R_value[i] && G_values[i] == target_G_value[i] && B_values[i] == target_B_value[i]) {
+           colorFlow_R[i] = false;
+           colorFlow_G[i] = false;
+           colorFlow_B[i] = false;
+
+        }
+          
+        neoPixelColor[i] = strip.Color(R_values[i], G_values[i], B_values[i]);
+        strip.setPixelColor(i, neoPixelColor[i]);         //  Set pixel's color (in RAM)
+     }  //end for
+
+     lastColorUpdateTime = current_neo_time;
+     strip.show();
+   } //end if
 }
