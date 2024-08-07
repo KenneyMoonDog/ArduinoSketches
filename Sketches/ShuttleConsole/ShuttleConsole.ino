@@ -1,7 +1,7 @@
 #include "SPI.h"
 #include "Adafruit_GFX.h"
 #include "Adafruit_ILI9341.h"
-#include "XPT2046_Touchscreen.h"
+//#include "XPT2046_Touchscreen.h"
 #include "SD.h"
 
 // SPI and TFT pins
@@ -13,7 +13,7 @@
 #define TFT_MISO 12
 
 // Chip select for touch panel
-#define TS_CS 7
+//#define TS_CS 7
 
 // chip select for SD card
 #define SD_CS A2
@@ -22,12 +22,12 @@
 
 // Use hardware SPI (on Uno, #13, #12, #11) and the above for CS/DC/RST
 Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_RST);
-XPT2046_Touchscreen ts(TS_CS);
+//XPT2046_Touchscreen ts(TS_CS);
 
 int tftWidth, tftHeight;
 
 // array to hold image filenames
-#define MAX_IMAGES 12
+#define MAX_IMAGES 20
 String images[MAX_IMAGES];
 int imageToShow = 0;
 
@@ -306,8 +306,8 @@ void setup() {
   Serial.begin(115200);
 
   // avoid chip select contention
-  pinMode(TS_CS, OUTPUT);
-  digitalWrite(TS_CS, HIGH);
+//  pinMode(TS_CS, OUTPUT);
+//  digitalWrite(TS_CS, HIGH);
   pinMode(TFT_CS, OUTPUT);
   digitalWrite(TFT_CS, HIGH);
   pinMode(SD_CS, OUTPUT);
@@ -318,8 +318,8 @@ void setup() {
   tft.fillScreen(ILI9341_BLACK);
   tftWidth = tft.width();
   tftHeight = tft.height();
-  ts.begin();
-  ts.setRotation(ROTATION);
+  //ts.begin();
+  //ts.setRotation(ROTATION);
 
   if (!SD.begin(SD_CS)) {
     Serial.println("SD Card initialization failed!");
@@ -332,7 +332,7 @@ void setup() {
   int imageCount = 0;
 
   // initialise images array
-  for (imageCount = 0; imageCount < MAX_IMAGES; imageCount ++) {
+  for (imageCount = 0; imageCount <= MAX_IMAGES; imageCount ++) {
     images[imageCount] = String("");
   }
 
@@ -368,9 +368,10 @@ void loop() {
   if (images[imageToShow] != "") {
     Serial.println("showing");
     BitmapHandler bmh = BitmapHandler(images[imageToShow]);
-    bmh.serialPrintHeaders();
+    //bmh.serialPrintHeaders();
+    tft.fillScreen(ILI9341_DARKGREY);
     bmh.renderImage(tft,0,0);
-    delay(1000);
+    delay(2000);
   }
   imageToShow ++;
   if (imageToShow >= MAX_IMAGES){
