@@ -3,9 +3,9 @@
 JBitmapHandler::JBitmapHandler() {
 }
 
-JBitmapHandler::JBitmapHandler(String filename){
+bool JBitmapHandler::openAndRead(const char* filename){
   this->fileOK = false;
-  this->bmpFilename = filename;
+  this->bmpFilename = String(filename);
   this->bmpFile = SD.open(this->bmpFilename, FILE_READ);
   if (!this->bmpFile) {
     Serial.print(F("BitmapHandler : Unable to open file "));
@@ -31,6 +31,8 @@ JBitmapHandler::JBitmapHandler(String filename){
     // close file
     this->bmpFile.close();
   }
+
+  return this->fileOK;
 }
 
 uint8_t JBitmapHandler::read8Bit(){
@@ -40,7 +42,7 @@ uint8_t JBitmapHandler::read8Bit(){
       else {
         return this->bmpFile.read();
       }
-    }
+}
 
 uint16_t JBitmapHandler::read16Bit(){
       uint16_t lsb, msb;
@@ -52,7 +54,7 @@ uint16_t JBitmapHandler::read16Bit(){
         msb = this->bmpFile.read();
         return (msb<<8) + lsb;
       }
-    }
+}
 
 uint32_t JBitmapHandler::read32Bit(){
       uint32_t lsb, b2, b3, msb;
@@ -66,7 +68,7 @@ uint32_t JBitmapHandler::read32Bit(){
         msb = this->bmpFile.read();
         return (msb<<24) + (b3<<16) + (b2<<8) + lsb;
       }
-    }
+ }
 
   bool JBitmapHandler::readFileHeaders(){
     if (this->bmpFile) {
@@ -99,6 +101,31 @@ uint32_t JBitmapHandler::read32Bit(){
     else {
       return false;
     }
+  }
+
+  void JBitmapHandler::resetHandler(){
+      if (this->bmpFile){
+        this->bmpFile.close();
+      }
+      this->bmpFilename = "";
+
+      // BMP Header
+      this->headerField = 0;
+      this->fileSize = 0;
+      this->imageOffset = 0;
+
+      // DIB Header
+      this->headerSize = 0;
+      this->imageWidth = 0;
+      this->imageHeight = 0;
+      this->colourPlanes = 0;
+      this->bitsPerPixel = 0;
+      this->compression = 0;
+      this->imageSize = 0;
+      this->xPixelsPerMeter = 0;
+      this->yPixelsPerMeter = 0;
+      this->totalColors = 0;
+      this->importantColors = 0;
   }
 
   bool JBitmapHandler::checkFileHeaders(){
@@ -157,7 +184,7 @@ uint32_t JBitmapHandler::read32Bit(){
     Serial.println(this->importantColors);
   }
 
-  void JBitmapHandler::renderImage(Adafruit_ILI9341 screen, int screenX, int screenY){
+  void JBitmapHandler::renderImage(Adafruit_ILI9341 &screen, int screenX, int screenY){
 
     // read from sd card in blocks
     uint8_t pixelBuffer[3 * 10];
@@ -186,6 +213,7 @@ uint32_t JBitmapHandler::read32Bit(){
     if (displayedWidth > (screen.width() - screenX)){
       displayedWidth = screen.width() - screenX;
     }
+
     if (displayedHeight > (screen.height() - screenY)){
       displayedHeight = screen.height() - screenY;
     }
@@ -238,9 +266,7 @@ uint32_t JBitmapHandler::read32Bit(){
 
         // send pixel to tft
         screen.writeColor(screen.color565(r,g,b),1);
-
       } // pixelCol
-
     } // pixelRow
     screen.endWrite(); // turn off pixel stream
     this->bmpFile.close();

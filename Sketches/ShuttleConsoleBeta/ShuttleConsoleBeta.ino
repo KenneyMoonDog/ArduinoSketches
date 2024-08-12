@@ -28,6 +28,8 @@ Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_RST);
 
 int tftWidth, tftHeight;
 
+JBitmapHandler mBitmapHandler = JBitmapHandler();
+
 // array to hold image filenames
 #define MAX_IMAGES 20
 String images[MAX_IMAGES];
@@ -47,7 +49,7 @@ void setup() {
  
   tft.begin();
   tft.setRotation(ROTATION);
-  tft.fillScreen(ILI9341_BLACK);
+  //tft.fillScreen(ILI9341_BLACK);
   tftWidth = tft.width();
   tftHeight = tft.height();
   //ts.begin();
@@ -81,13 +83,20 @@ void setup() {
         // bmp found
         Serial.println("Bitmap");
         images[imageCount] = String(nextFileName);
-        imageCount ++;
+        imageCount++;
       }
     }
     nextFile.close();
   }
+
   if (nextFile) nextFile.close();
   rootFolder.close(); 
+
+  Serial.println("IMAGE DUMP:");
+  for (byte imgCount = 0; imgCount < MAX_IMAGES; imgCount++){
+     Serial.println(images[imgCount]);
+  }
+  imageToShow = 0;
 }
 
 void loop() {
@@ -98,13 +107,20 @@ void loop() {
   Serial.println(images[imageToShow]);
   
   if (images[imageToShow] != "") {
-    Serial.println("showing");
-    JBitmapHandler bmh = JBitmapHandler(images[imageToShow]);
-    //bmh.serialPrintHeaders();
+
+    int strLength = images[imageToShow].length() + 1;
+    char fileName[strLength];
+    const char* pFileName= &fileName[0];
+    images[imageToShow].toCharArray(fileName, strLength);
+
+    mBitmapHandler.openAndRead(pFileName);
+    mBitmapHandler.serialPrintHeaders();
     tft.fillScreen(ILI9341_DARKGREY);
-    bmh.renderImage(tft,0,0);
+    mBitmapHandler.renderImage(tft,0,0);
+    mBitmapHandler.resetHandler();
     delay(2000);
   }
+
   imageToShow ++;
   if (imageToShow >= MAX_IMAGES){
     imageToShow = 0;

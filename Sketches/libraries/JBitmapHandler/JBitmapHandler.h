@@ -11,11 +11,12 @@ class JBitmapHandler {
 public:
 
   JBitmapHandler();
-  JBitmapHandler(String filename);
+  bool openAndRead(const char* filename);
   bool readFileHeaders();
   bool checkFileHeaders();
   void serialPrintHeaders();
-  void renderImage(Adafruit_ILI9341 screen, int screenX, int screenY);
+  void renderImage(Adafruit_ILI9341 &screen, int screenX, int screenY);
+  void resetHandler();
 
   // BMP header fields
   uint16_t headerField;
@@ -34,12 +35,10 @@ public:
   uint32_t totalColors;
   uint32_t importantColors;
 
-
-
   private:
     bool fileOK = false;
     File bmpFile;
-    String bmpFilename;
+    String bmpFilename = "";
 
     uint8_t read8Bit();
     uint16_t read16Bit();
