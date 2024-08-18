@@ -3,6 +3,7 @@
 #include "Adafruit_ILI9341.h"
 //#include "XPT2046_Touchscreen.h"
 #include "SD.h"
+#include "JBitmapHandler.h"
 
 // SPI and TFT pins
 #define TFT_CS A5
@@ -367,8 +368,9 @@ void loop() {
   
   if (images[imageToShow] != "") {
     Serial.println("showing");
-    BitmapHandler bmh = BitmapHandler(images[imageToShow]);
-    //bmh.serialPrintHeaders();
+
+    JBitmapHandler bmh = JBitmapHandler(images[imageToShow]);
+    bmh.serialPrintHeaders();
     tft.fillScreen(ILI9341_DARKGREY);
     bmh.renderImage(tft,0,0);
     delay(2000);

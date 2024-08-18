@@ -6,24 +6,82 @@
  #include <avr/power.h> // Required for 16 MHz Adafruit Trinket
 #endif
 
+class Nacells {
+
+  #define NACELLS_POWER_ON 10
+  #define NACELLS_POWER_OFF 20
+
+  private:
+  volatile byte nacellsPin;
+
+  volatile unsigned long last_nacells_update_time = 0;
+  volatile unsigned long nacells_delay_time = 5;
+  volatile byte nacellsMode = NACELLS_POWER_ON;
+  volatile float no_radians = 0;
+  volatile int radianCounter = 0;
+  volatile uint8_t nacellPowerLevel=0;
+  //volatile byte impulseLevel = 0;
+
+  Nacells();
+
+  public:
+    Nacells(byte PIN_IN) {
+      nacellsPin = PIN_IN;
+      pinMode(PIN_IN, OUTPUT);
+      digitalWrite(nacellsPin, false);
+    }
+
+   NacellsUpdate(unsigned long current_nacells_update_time) {
+     if (current_nacells_update_time > last_nacells_update_time + nacells_delay_time) {
+        last_nacells_update_time = current_nacells_update_time;
+
+        switch (nacellsMode) {
+          case NACELLS_POWER_ON:
+            if (no_radians < 3.13) {
+              no_radians+=0.01;
+            }
+            else {
+              no_radians=0;
+            }
+     
+            nacellPowerLevel = round(sin(no_radians) * 190) + 64;
+            analogWrite(nacellsPin, nacellPowerLevel);
+            break;
+          case NACELLS_POWER_OFF:
+            break;
+          default:
+            break;
+        }
+     }
+   }
+};
+
 class ImpulseEngine {
 
   #define SHUTDOWN 10
   #define STARTUP 20
   #define IDLE 30
 
+  #define MAX_IMPULSE 225
+  #define MAX_IDLE 150
+  #define MIN_IDLE 50
+  #define MIN_IMPULSE 0
+
   private:
   volatile byte impulsePin;
 
   volatile unsigned long last_impulse_update_time = 0;
   volatile unsigned long impulse_delay_time = 10;
-  volatile byte impulseMode = SHUTDOWN;
+  volatile byte impulseMode = IDLE;
   volatile byte impulseLevel = 0;
+
+  volatile byte throttleUp = 0;
 
   ImpulseEngine();
   public: ImpulseEngine(byte PIN_IN) {
     impulsePin = PIN_IN;
     pinMode(PIN_IN, OUTPUT);
+    digitalWrite(impulsePin, false);
   }
 
   public: virtual void ImpulseUpdate(unsigned long current_impulse_update_time){
@@ -45,7 +103,18 @@ class ImpulseEngine {
         case STARTUP:
           break;
         case IDLE:
+          if (impulseLevel >= MAX_IDLE && throttleUp > 0) {
+            throttleUp = -10;
+          }
+          else if (impulseLevel <= MIN_IDLE && throttleUp <=0) {
+              throttleUp = 10;
+          }
+          
+          impulseLevel += throttleUp;
+
+          analogWrite(impulsePin, impulseLevel);
           break;
+
         default:
           break;
       }
@@ -135,21 +204,23 @@ private:
 #define TERMINAL_2a 7
 #define TERMINAL_2b 5
 #define TERMINAL_3a 2
-#define TERMINAL_3b 10
+#define TERMINAL_3b 12 //iygu
 #define TERMINAL_4a 3
 #define TERMINAL_4b 19
+
+#define FORWARD_LIGHTS 20
+#define CABIN_LIGHTS 13
+#define NACELLS 10 //ihuv
+#define IMPULSE_ENGINE 11
 
 ShuttleTerminal terminal_1(TERMINAL_1a,TERMINAL_1b);
 ShuttleTerminal terminal_2(TERMINAL_2a,TERMINAL_2b);
 ShuttleTerminal terminal_3(TERMINAL_3a,TERMINAL_3b);
 ShuttleTerminal terminal_4(TERMINAL_4a,TERMINAL_4b);
 
-#define FORWARD_LIGHTS 20
-#define CABIN_LIGHTS 13
-#define NACELLS 12
-#define IMPULSE_ENGINE 11
-
 ImpulseEngine impulseEngine(IMPULSE_ENGINE);
+Nacells nacells(NACELLS);
+
 
 byte testCount = 0;
 unsigned long currentUpdateTime = 0;
@@ -158,12 +229,9 @@ void setup() {
 
   pinMode(FORWARD_LIGHTS, OUTPUT);
   pinMode(CABIN_LIGHTS, OUTPUT);
-  pinMode(NACELLS, OUTPUT);
- //pinMode(IMPULSE_ENGINE, OUTPUT);
 
-  digitalWrite(IMPULSE_ENGINE, false);
+
   digitalWrite(CABIN_LIGHTS, true);
-  digitalWrite(NACELLS, true);
   digitalWrite(FORWARD_LIGHTS, true);
 }
 
@@ -175,6 +243,7 @@ void loop() {
   terminal_4.TerminalUpdate(currentUpdateTime);
 
   impulseEngine.ImpulseUpdate(currentUpdateTime);
+  nacells.NacellsUpdate(currentUpdateTime);
 }
 
 void clearAll() {

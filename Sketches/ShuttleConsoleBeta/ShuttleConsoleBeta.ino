@@ -5,6 +5,7 @@
 #include "JBitmapHandler.h"
 //#include "XPT2046_Touchscreen.h"
 #include "SD.h"
+#include "string.h"
 
 // SPI and TFT pins
 #define TFT_CS A5
@@ -29,11 +30,13 @@ Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_RST);
 int tftWidth, tftHeight;
 
 JBitmapHandler mBitmapHandler = JBitmapHandler();
+int imageIndex = 0;
 
 // array to hold image filenames
 #define MAX_IMAGES 20
-String images[MAX_IMAGES];
-int imageToShow = 0;
+#define MAX_NAME_LENGTH 30
+char images[MAX_IMAGES][MAX_NAME_LENGTH];
+char nextFileName[MAX_NAME_LENGTH] = ("              ");
 
 void setup() {
   
@@ -56,34 +59,37 @@ void setup() {
   //ts.setRotation(ROTATION);
 
   if (!SD.begin(SD_CS)) {
-    Serial.println("SD Card initialization failed!");
-  }
-  
-  // get list of bmp files in root directory
-  File rootFolder = SD.open("/");
-  File nextFile;
-  String nextFileName;
-  int imageCount = 0;
-
-  // initialise images array
-  for (imageCount = 0; imageCount <= MAX_IMAGES; imageCount ++) {
-    images[imageCount] = String("");
   }
 
   // load filenames into images array
-  imageCount = 0;
-  while((nextFile = rootFolder.openNextFile()) && (imageCount < MAX_IMAGES))  {
+  imageIndex = 0;
+  while((nextFile = rootFolder.openNextFile()) && (imageIndex < MAX_IMAGES))  {
     // check if directory
     if (!nextFile.isDirectory()) {
       // not a directory - check if bmp
-      nextFileName = nextFile.name();
-      Serial.print(nextFileName);
-      Serial.println(" found");
-      if (nextFileName.indexOf(".BMP") != -1) {
+
+      byte strLength = strlen(nextFile.name()) + 1;
+      Serial.println(" FOUND:");
+      Serial.println(nextFile.name());
+      if (strLength < MAX_NAME_LENGTH) {
+        strcpy(nextFileName, nextFile.name());
+        Serial.println(nextFileName);
+      }
+     // else {
+     //   Serial.println(strLength);
+     // }
+/*
+          int strLength = images[imageToShow].length() + 1;
+    char fileName[strLength];
+    const char* pFileName= &fileName[0];
+    images[imageToShow].toCharArray(fileName, strLength);
+*/    
+      if (strrchr(nextFileName,".BMP")) {
+     // if (nextFileName.indexOf(".BMP") != -1) {
         // bmp found
         Serial.println("Bitmap");
-        images[imageCount] = String(nextFileName);
-        imageCount++;
+        strcpy(images[imageIndex], nextFileName);
+        imageIndex++;
       }
     }
     nextFile.close();
@@ -94,24 +100,28 @@ void setup() {
 
   Serial.println("IMAGE DUMP:");
   for (byte imgCount = 0; imgCount < MAX_IMAGES; imgCount++){
-     Serial.println(images[imgCount]);
+    if (images[imgCount] != NULL){
+      Serial.println(images[imgCount]);
+    }
   }
-  imageToShow = 0;
+  imageIndex = 0;
 }
 
 void loop() {
 
-  Serial.print("Showing image ");
-  Serial.print(imageToShow);
-  Serial.print(" - ");
-  Serial.println(images[imageToShow]);
-  
-  if (images[imageToShow] != "") {
+  while(1){};
 
-    int strLength = images[imageToShow].length() + 1;
+  Serial.print("Showing image ");
+  Serial.print(imageIndex);
+  Serial.print(" - ");
+  Serial.println(images[imageIndex]);
+  
+  if (images[imageIndex] != NULL) {
+
+    int strLength =  strlen(images[imageIndex]) + 1;
     char fileName[strLength];
     const char* pFileName= &fileName[0];
-    images[imageToShow].toCharArray(fileName, strLength);
+    strcpy(fileName[imageIndex], fileName);
 
     mBitmapHandler.openAndRead(pFileName);
     mBitmapHandler.serialPrintHeaders();
@@ -121,9 +131,21 @@ void loop() {
     delay(2000);
   }
 
-  imageToShow ++;
-  if (imageToShow >= MAX_IMAGES){
-    imageToShow = 0;
+  imageIndex ++;
+  if (imageIndex >= MAX_IMAGES){
+    imageIndex = 0;
   }
 
 }
+
+    Serial.println("SD Card initialization failed!");
+  }
+  
+  // get list of bmp files in root directory
+  File rootFolder = SD.open("/");
+  File nextFile;
+
+  // initialise images array
+  //char emptyString[10] = "          ";
+ // for (imageIndex = 0; imageIndex <= MAX_IMAGES; imageIndex ++) {
+ //   strcpy(images[imageIndex],"\0");
