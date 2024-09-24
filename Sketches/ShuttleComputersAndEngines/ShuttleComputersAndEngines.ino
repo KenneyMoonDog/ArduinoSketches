@@ -63,21 +63,21 @@ class ImpulseEngine {
   #define IDLE 30
 
   #define MAX_IMPULSE 225
-  #define MAX_IDLE 150
-  #define MIN_IDLE 50
-  #define MIN_IMPULSE 0
+  #define MAX_IDLE 100
+  #define MIN_IDLE 25
+  #define MIN_IMPULSE 5
 
   private:
   volatile byte impulsePin;
 
   volatile unsigned long last_impulse_update_time = 0;
   volatile unsigned long impulse_delay_time = 10;
-  volatile byte impulseMode = IDLE;
+  volatile byte impulseMode = STARTUP;
   volatile byte impulseLevel = 0;
-
   volatile byte throttleUp = 0;
 
   ImpulseEngine();
+
   public: ImpulseEngine(byte PIN_IN) {
     impulsePin = PIN_IN;
     pinMode(PIN_IN, OUTPUT);
@@ -85,45 +85,149 @@ class ImpulseEngine {
   }
 
   public: virtual void ImpulseUpdate(unsigned long current_impulse_update_time){
+
+    static bool pulses[] = {true, false, false, false, false, false, false, false};
+    static byte pulseCount = 0;
+
+    static float impulse_no_radians = asin(MAX_IMPULSE/190);
+    static int impulse_radianCounter = 0;
+
+    static unsigned long flicker_delay_time = 3000;
+    static bool flickerCount = 0;
+    static bool flicker_off = false;
+
     if (current_impulse_update_time > last_impulse_update_time + impulse_delay_time) {
       last_impulse_update_time = current_impulse_update_time;
 
       switch (impulseMode){
         case SHUTDOWN:
-          if (impulseLevel > 0) {
-            impulseLevel -= 10;
-
-            if (impulseLevel < 0) {
-              impulseLevel = 0;
-            }
-            analogWrite(impulsePin, impulseLevel );
-          }
           break;
           
         case STARTUP:
-          break;
-        case IDLE:
-          if (impulseLevel >= MAX_IDLE && throttleUp > 0) {
-            throttleUp = -10;
-          }
-          else if (impulseLevel <= MIN_IDLE && throttleUp <=0) {
-              throttleUp = 10;
-          }
-          
-          impulseLevel += throttleUp;
+          switch (pulseCount) {
+            case 0: 
+            case 1:
+            case 2:  
+            case 3:
+              if (pulses[pulseCount]) {  //flash
+                if (impulseLevel <= MAX_IMPULSE) {
+                  impulseLevel += 40;
+                }
+                else {
+                  pulses[pulseCount] = false;
+                }
+              }
+              else { //the flashing is over.. reset the impulse level to 0
+                if (impulseLevel > 0){
+                  impulseLevel = 0;
+                }
+                else {
+                  pulses[++pulseCount] = true;
+                }
+              }
+              break;
+            
+            case 4:
+              if (pulses[pulseCount]) {  //flash
+                if (impulseLevel <= MAX_IMPULSE) {
+                  impulseLevel += 40;
+                }
+                else {  //the flash is over.. leave impulse level at MAX_IMPULSE
+                  pulses[pulseCount] = false;
+                }
+              }
+              else { 
+                pulses[++pulseCount] = true;
+              }
+              break;        
+              
+            case 5: //at pulse five we ramp down to impulse level 0.. remain there
+              if (pulses[pulseCount]) {
+                if (impulseLevel > 0) {
+                  if (impulse_no_radians < TWO_PI) {
+                    impulse_no_radians+=0.01;
+                  }
+                  else {
+                    impulse_no_radians = 0;
+                  }
+                  impulseLevel = sin(impulse_no_radians) * MAX_IMPULSE;
+                }
+                else {
+                  pulses[pulseCount] = false;
+                }
+              } 
+              else {
+                pulses[++pulseCount] = true;
+              }  
+              break;
+
+            case 6: //increase gradually to MAX_IDLE
+              if (pulses[pulseCount]) {
+                if (impulseLevel < MAX_IDLE){
+                  if (impulse_no_radians < TWO_PI) {
+                    impulse_no_radians+=0.04;
+                  }
+                  else {
+                    impulse_no_radians = 0;
+                  }
+                  impulseLevel = 1 + sin(impulse_no_radians) * MAX_IDLE;
+                }
+                else {
+                  pulses[pulseCount] = false;
+                }   
+              } 
+              else { //move to the next phase
+                pulses[++pulseCount] = true;
+              }
+              break;    
+
+            case 7: //we are now in idle state
+              impulseMode = IDLE;
+              break;
+          } //end pulse switch
 
           analogWrite(impulsePin, impulseLevel);
+          break;
+
+        case IDLE:
+          if (!flicker_off){
+            flicker_delay_time -= impulse_delay_time;
+          }
+
+          if (flicker_delay_time > 0){
+            if (impulse_no_radians < TWO_PI) {
+              impulse_no_radians+=0.07;
+            }
+            else {
+              impulse_no_radians=0;
+            }
+            impulseLevel = MAX_IDLE + sin(impulse_no_radians) * 30; //oscillate up to 30 levels around MAX_IDLE
+          }
+          else {            
+            if (flickerCount++ <= 3){
+              analogWrite(impulsePin, 0);
+            }
+            else {
+              flicker_off = true;
+            }
+
+            if (flicker_off) {
+              flicker_off = false;
+              flicker_delay_time = 1000 * random(2,6);
+              flickerCount = 0;
+            }
+          }
+          
+          if (!flicker_off) {
+            analogWrite(impulsePin, impulseLevel);
+          }
           break;
 
         default:
           break;
       }
     }
-  }
-
-  public: virtual void UpdateImpulseMode(byte impulseMode) {
-
-  }
+  } 
 };
 
 class ShuttleTerminal {
@@ -204,13 +308,13 @@ private:
 #define TERMINAL_2a 7
 #define TERMINAL_2b 5
 #define TERMINAL_3a 2
-#define TERMINAL_3b 12 //iygu
+#define TERMINAL_3b 12 
 #define TERMINAL_4a 3
 #define TERMINAL_4b 19
 
 #define FORWARD_LIGHTS 20
 #define CABIN_LIGHTS 13
-#define NACELLS 10 //ihuv
+#define NACELLS 10 
 #define IMPULSE_ENGINE 11
 
 ShuttleTerminal terminal_1(TERMINAL_1a,TERMINAL_1b);
@@ -244,18 +348,4 @@ void loop() {
 
   impulseEngine.ImpulseUpdate(currentUpdateTime);
   nacells.NacellsUpdate(currentUpdateTime);
-}
-
-void clearAll() {
-  digitalWrite(TERMINAL_1a, false);
-  digitalWrite(TERMINAL_1b, false);
-  digitalWrite(TERMINAL_2a, false);
-  digitalWrite(TERMINAL_2b, false);
-  digitalWrite(TERMINAL_3a, false);
-  digitalWrite(TERMINAL_3b, false);
-  digitalWrite(TERMINAL_4a, false);
-  digitalWrite(TERMINAL_4b, false);
-
-  digitalWrite(FORWARD_LIGHTS, false);
-  digitalWrite(NACELLS, false);
 }
