@@ -37,14 +37,14 @@ class Nacells {
 
         switch (nacellsMode) {
           case NACELLS_POWER_ON:
-            if (no_radians < 3.13) {
+            if (no_radians < TWO_PI) {
               no_radians+=0.01;
             }
             else {
               no_radians=0;
             }
      
-            nacellPowerLevel = round(sin(no_radians) * 190) + 64;
+            nacellPowerLevel = sin(no_radians) * 95 + 125;
             analogWrite(nacellsPin, nacellPowerLevel);
             break;
           case NACELLS_POWER_OFF:
@@ -93,7 +93,7 @@ class ImpulseEngine {
     static int impulse_radianCounter = 0;
 
     static unsigned long flicker_delay_time = 3000;
-    static bool flickerCount = 0;
+    static byte flickerCount = 0;
     static bool flicker_off = false;
 
     if (current_impulse_update_time > last_impulse_update_time + impulse_delay_time) {
@@ -203,18 +203,17 @@ class ImpulseEngine {
             }
             impulseLevel = MAX_IDLE + sin(impulse_no_radians) * 30; //oscillate up to 30 levels around MAX_IDLE
           }
-          else {            
-            if (flickerCount++ <= 3){
+          else {   //flicker delay time has gone to 0         
+            if (flickerCount++ < 1){
               analogWrite(impulsePin, 0);
-            }
-            else {
               flicker_off = true;
             }
-
-            if (flicker_off) {
-              flicker_off = false;
-              flicker_delay_time = 1000 * random(2,6);
-              flickerCount = 0;
+            else {
+              if (flicker_off) {
+                flicker_off = false;
+                flicker_delay_time = 1000 * random(2,6);
+                flickerCount = 0;
+              }
             }
           }
           
