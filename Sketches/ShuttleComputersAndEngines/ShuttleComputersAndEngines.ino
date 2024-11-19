@@ -15,7 +15,7 @@ class Nacells {
   volatile byte nacellsPin;
 
   volatile unsigned long last_nacells_update_time = 0;
-  volatile unsigned long nacells_delay_time = 5;
+  volatile unsigned long nacells_delay_time =3;
   volatile byte nacellsMode = NACELLS_POWER_ON;
   volatile float no_radians = 0;
   volatile int radianCounter = 0;
@@ -44,7 +44,7 @@ class Nacells {
               no_radians=0;
             }
      
-            nacellPowerLevel = sin(no_radians) * 95 + 125;
+            nacellPowerLevel = sin(no_radians) * 95 + 159;
             analogWrite(nacellsPin, nacellPowerLevel);
             break;
           case NACELLS_POWER_OFF:
@@ -54,6 +54,154 @@ class Nacells {
         }
      }
    }
+};
+
+class ImpulseEngine2 {
+
+  #define SHUTDOWN 10
+  #define STARTUP 20
+  #define IDLE 30
+
+  #define MAX_IMPULSE 254
+  #define MAX_IDLE 150
+  #define MIN_IDLE 25
+  #define MIN_IMPULSE 5
+
+  private:
+  volatile byte impulsePin;
+
+  volatile unsigned long last_impulse_update_time = 0;
+  volatile unsigned long impulse_delay_time = 10;
+
+  volatile unsigned long last_flash_update_time = 0;
+
+  volatile unsigned long last_idle_mode_update_time = 0;
+  volatile unsigned long idle_duration = 20000;
+
+  volatile unsigned long last_shutdown_update_time = 0;
+  volatile unsigned long shutdown_duration = 7500;
+
+  volatile int flash_delay = 75;
+  volatile int flash_duration = 10;
+  volatile byte impulseMode = STARTUP;
+  volatile byte impulseLevel = 0;
+
+  ImpulseEngine2();
+
+  public: ImpulseEngine2(byte PIN_IN) {
+    impulsePin = PIN_IN;
+    pinMode(PIN_IN, OUTPUT);
+    digitalWrite(impulsePin, false);
+  }
+
+  public: virtual void ImpulseUpdate(unsigned long current_impulse_update_time){
+
+    static float impulse_no_radians = asin(MAX_IMPULSE/190);
+    static int impulse_radianCounter = 0;
+
+    static byte flashCount = 0;
+    static bool flashOn = false;
+    static bool idleOn = false;
+    static bool initialIdle = true;
+    static bool initialShutdown = true;
+    static uint8_t ramp_up_impulse_level = 0;
+
+    byte flashMax = 20;
+    int flash_delay_time = 0;
+    uint8_t flash_level_increment = MAX_IMPULSE/flashMax;
+    uint8_t shutdown_increment = 1;
+
+    if (current_impulse_update_time > last_impulse_update_time + impulse_delay_time) {
+      last_impulse_update_time = current_impulse_update_time;
+
+      switch (impulseMode){
+
+        case SHUTDOWN:
+          if (initialShutdown) {
+            last_shutdown_update_time = current_impulse_update_time;
+
+            if (impulseLevel < (MAX_IMPULSE - shutdown_increment)){
+              impulseLevel += shutdown_increment;
+            }
+            else {
+              initialShutdown = false;
+            }
+          }
+          else {
+            if (impulseLevel >= shutdown_increment) {
+              impulseLevel -= shutdown_increment;
+            }
+            else {
+              impulseLevel = 0;
+            }
+          }
+
+          if (current_impulse_update_time > last_shutdown_update_time + shutdown_duration) {
+              initialShutdown = true;
+              last_shutdown_update_time = 0;
+              impulseMode = STARTUP;
+          }
+
+          break;
+          
+        case STARTUP:
+          if (flashOn) {
+            flash_delay_time = flash_duration;
+          }
+          else {
+            flash_delay_time = flash_delay;
+          }
+
+          if ( current_impulse_update_time > last_flash_update_time + flash_delay_time) {
+            last_flash_update_time = current_impulse_update_time;
+            if (flashCount++ <= flashMax){
+              if (!flashOn) {
+                impulseLevel = ramp_up_impulse_level;
+                flashOn = true;
+              }
+              else{
+                impulseLevel = 0;
+                ramp_up_impulse_level += flash_level_increment;
+                flashOn = false;
+              }
+            }
+            else {
+              impulseMode = IDLE;
+              last_flash_update_time = 0;
+              flashOn = false;
+              flashCount = 0;
+            }
+          } 
+          break;
+
+        case IDLE:
+
+          if (initialIdle) {
+            last_idle_mode_update_time = current_impulse_update_time;
+            initialIdle = false;
+          }
+
+          if (impulse_no_radians < TWO_PI) {
+            impulse_no_radians+=0.02;
+          }
+          else {
+            impulse_no_radians=0;
+          }
+          impulseLevel = MAX_IDLE + sin(impulse_no_radians) * (MAX_IMPULSE - MAX_IDLE); //oscillate around MAX_IDLE
+          
+          if (current_impulse_update_time > last_idle_mode_update_time + idle_duration) {
+            initialIdle = true;
+            last_idle_mode_update_time = 0;
+            impulseMode = SHUTDOWN;
+          }
+          break;
+
+        default:
+          break;
+      } //end switch
+      analogWrite(impulsePin, impulseLevel);
+    } //end timing
+  }
 };
 
 class ImpulseEngine {
@@ -321,7 +469,7 @@ ShuttleTerminal terminal_2(TERMINAL_2a,TERMINAL_2b);
 ShuttleTerminal terminal_3(TERMINAL_3a,TERMINAL_3b);
 ShuttleTerminal terminal_4(TERMINAL_4a,TERMINAL_4b);
 
-ImpulseEngine impulseEngine(IMPULSE_ENGINE);
+ImpulseEngine2 impulseEngine(IMPULSE_ENGINE);
 Nacells nacells(NACELLS);
 
 
