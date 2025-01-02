@@ -1056,16 +1056,21 @@ Thanks for Edward Chuang (莊坪達) from Google for selecting this project.
 
 ## Sponsors
 
-Thank your for the following users whose supporting me.
+Thanks for the following users whose supporting me via [Github sponsors](https://github.com/sponsors/mobizt).
 
-<img class="circle avatar-user" src="https://github.com/jiperez11.png" width="26" height="26" alt="@jiperez11"> [jiperez11](https://github.com/jiperez11)
+<a href="#sponsors"><img src="https://avatars.githubusercontent.com/u/13026382?s=35&v=4" width="35" height="35" alt="private sponsor"></a>
+<a href="https://github.com/Jagakatt"><img src="https://github.com/Jagakatt.png" width="35" height="35" alt="@Jagakatt"></a>
+<a href="#sponsors"><img src="https://avatars.githubusercontent.com/u/166620797?s=35&v=4" width="35" height="35" alt="private sponsor"></a>
+<a href="https://github.com/chris-gunawardena"><img src="https://github.com/chris-gunawardena.png" width="35" height="35" alt="@chris-gunawardena"></a>
 
-<img class="circle avatar-user" src="https://avatars.githubusercontent.com/u/13026382?s=52&amp;v=4" width="26" height="26" alt="private sponsor"> [Private sponsor](#sponsors)
+### Buy Me a Coffee
 
-<img class="circle avatar-user" src="https://github.com/Jagakatt.png" width="26" height="26" alt="@Jagakatt"> [Jagakatt](https://github.com/Jagakatt)
+Thanks for the following users for donation via [Buy Me a Coffee](https://www.buymeacoffee.com/Mobizt).
 
-If you like my works, you can give a star.
-If you can make benefit from my project or love it, you can sponsoring me.
+Giulio, Stepinside, Liew Wuttipat, Keith Le Breton, Etan Hayik, Nikolaj Nøhr-Rasmussen, bjdshp, Francis Hsueh, tjozsef, dkalliv, Allan Green, Forrest Milner, Someone, @Engine1992, Vasanth, Jason Duhamell and Yochaing.
+
+If you like my works, you can give a star. If you can make benefit from my project or love it, you can sponsoring me or [Buy Me a Coffee](https://www.buymeacoffee.com/Mobizt).
+
 
 ## License
 

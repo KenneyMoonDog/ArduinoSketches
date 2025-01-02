@@ -1,7 +1,7 @@
 #include "SPI.h"
 #include "Adafruit_GFX.h"
 #include "Adafruit_ILI9341.h"
-#include "XPT2046_Touchscreen.h"
+//#include "XPT2046_Touchscreen.h"
 #include "SD.h"
 
 // SPI and TFT pins
@@ -13,7 +13,7 @@
 #define TFT_MISO 12
 
 // Chip select for touch panel
-#define TS_CS 7
+//#define TS_CS 7
 
 // chip select for SD card
 #define SD_CS A2
@@ -22,12 +22,12 @@
 
 // Use hardware SPI (on Uno, #13, #12, #11) and the above for CS/DC/RST
 Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_RST);
-XPT2046_Touchscreen ts(TS_CS);
+//XPT2046_Touchscreen ts(TS_CS);
 
 int tftWidth, tftHeight;
 
 // array to hold image filenames
-#define MAX_IMAGES 12
+#define MAX_IMAGES 20
 String images[MAX_IMAGES];
 int imageToShow = 0;
 
@@ -229,9 +229,13 @@ class BitmapHandler {
       }
 
       // make sure screenX, screenY is on screen
-      if((screenX < 0) || (screenX >= screen.width()) 
+      /*if((screenX < 0) || (screenX >= screen.width()) 
         || (screenY < 0) || (screenY >= screen.height())){
         return false;
+      }*/
+
+      if (this->imageHeight <= screen.height()){
+         screenY = (screen.height() - this->imageHeight)/2;
       }
 
       // get dimensions of displayed image - crop if needed
@@ -262,7 +266,6 @@ class BitmapHandler {
       Serial.println(displayedWidth);
       Serial.print(F("displayedHeight : "));
       Serial.println(displayedHeight);
-      
 
       for (pixelRow = 0; pixelRow < displayedHeight; pixelRow ++) {
         // image stored bottom to top, screen top to bottom
@@ -306,8 +309,8 @@ void setup() {
   Serial.begin(115200);
 
   // avoid chip select contention
-  pinMode(TS_CS, OUTPUT);
-  digitalWrite(TS_CS, HIGH);
+//  pinMode(TS_CS, OUTPUT);
+  //digitalWrite(TS_CS, HIGH);
   pinMode(TFT_CS, OUTPUT);
   digitalWrite(TFT_CS, HIGH);
   pinMode(SD_CS, OUTPUT);
@@ -318,8 +321,8 @@ void setup() {
   tft.fillScreen(ILI9341_BLACK);
   tftWidth = tft.width();
   tftHeight = tft.height();
-  ts.begin();
-  ts.setRotation(ROTATION);
+  //ts.begin();
+  //ts.setRotation(ROTATION);
 
   if (!SD.begin(SD_CS)) {
     Serial.println("SD Card initialization failed!");
@@ -369,6 +372,7 @@ void loop() {
     Serial.println("showing");
     BitmapHandler bmh = BitmapHandler(images[imageToShow]);
     bmh.serialPrintHeaders();
+    tft.fillScreen(ILI9341_BLACK);
     bmh.renderImage(tft,0,0);
     delay(1000);
   }

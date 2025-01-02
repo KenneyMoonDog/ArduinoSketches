@@ -74,7 +74,7 @@ In your Arduino setup() function, use *new* to allocate a touchscreen object and
 ```
   // Allocate the touchscreen object, then initialize it.
   ts = new XPT2046_Touchscreen(TOUCH_CS_PIN);
-  //ts = new XPT2046_Touchscreen(TOUCH_CS_PIN);  // Param 2 - NULL - No interrupts
+  //ts = new XPT2046_Touchscreen(TOUCH_CS_PIN);  // Param 2 - nullptr - No interrupts
   //ts = new XPT2046_Touchscreen(TOUCH_CS_PIN, 255);  // Param 2 - 255 - No interrupts
   //ts = new XPT2046_Touchscreen(TOUCH_CS_PIN, TOUCH_IRQ_PIN);  // Param 2 - Touch IRQ Pin - interrupt enabled polling
   ts->begin();
@@ -320,7 +320,7 @@ You can model your own calibration screen after the one shown in this example pr
 
 ## Adafruit Library Compatibility
 
-XPT2046_Touchscreen is meant to be compatible with sketches written for Adafruit_STMPE610, offering the same functions, parameters and numerical ranges as Adafruit's library. It is also meant to be compatible with any display using the Adafruit_GFX library.
+XPT2046_Touchscreen is meant to be compatible with sketches written for Adafruit_STMPE610, offering the same functions, parameters and numerical ranges as Adafruit's library. It is also meant to be compatible with any display using the Adafruit_GFX_Library library.
 
 ## Using The Interrupt Pin
 

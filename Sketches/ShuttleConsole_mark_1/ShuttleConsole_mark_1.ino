@@ -13,6 +13,7 @@
 #define TFT_RST A4
 #define TFT_MISO 12
 
+
 // Chip select for touch panel
 //#define TS_CS 7
 
