@@ -229,13 +229,17 @@ class BitmapHandler {
       }
 
       // make sure screenX, screenY is on screen
-      /*if((screenX < 0) || (screenX >= screen.width()) 
+      if((screenX < 0) || (screenX >= screen.width()) 
         || (screenY < 0) || (screenY >= screen.height())){
         return false;
-      }*/
+      }
 
       if (this->imageHeight <= screen.height()){
          screenY = (screen.height() - this->imageHeight)/2;
+      }
+
+      if (this->imageWidth <= screen.width()){
+         screenX = (screen.width() - this->imageWidth)/2;
       }
 
       // get dimensions of displayed image - crop if needed
