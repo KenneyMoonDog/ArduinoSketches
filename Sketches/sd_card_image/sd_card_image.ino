@@ -6,10 +6,10 @@
 
 // SPI and TFT pins
 #define TFT_CS A5
+#define TFT_RST A4
 #define TFT_DC A3
 #define TFT_MOSI 11
 #define TFT_CLK 13
-#define TFT_RST A4
 #define TFT_MISO 12
 
 // Chip select for touch panel
