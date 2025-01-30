@@ -8,28 +8,22 @@
 
 class JBitmapHandler {
 
-private:
-
-
 public:
 
   JBitmapHandler();
-  JBitmapHandler(String filename);
-  //bool openAndRead(const char* filename);
 
-  virtual void serialPrintHeaders();
-  //void renderImage(Adafruit_ILI9341 &screen, int screenX, int screenY);
-  virtual void renderImage(Adafruit_ILI9341 screen, int screenX, int screenY);
-  //virtual void resetHandler();
+  void serialPrintHeaders();
+  bool renderImage(Adafruit_ILI9341* screen, int screenX, int screenY);
+  void loadBitmap(String filename);
 
 private:
-  virtual bool readFileHeaders();
-  virtual bool checkFileHeaders();
-  virtual uint8_t read8Bit();
-  virtual uint16_t read16Bit();
-  virtual uint32_t read32Bit();
+  bool readFileHeaders();
+  bool checkFileHeaders();
+  uint8_t read8Bit();
+  uint16_t read16Bit();
+  uint32_t read32Bit();
 
-/*  bool fileOK = false;
+  bool fileOK = false;
   File bmpFile;
   String bmpFilename;
 
@@ -48,6 +42,6 @@ private:
   uint32_t xPixelsPerMeter;
   uint32_t yPixelsPerMeter;
   uint32_t totalColors;
-  uint32_t importantColors;*/
+  uint32_t importantColors;
 };
 #endif
