@@ -2,6 +2,7 @@
 #include "Adafruit_GFX.h"
 #include "Adafruit_ILI9341.h"
 #include "SD.h"
+//#include <Preferences.h>
 
 #ifndef JBitmapHandler_h
 #define JBitmapHandler_h
@@ -26,6 +27,12 @@ private:
   bool fileOK = false;
   File bmpFile;
   String bmpFilename;
+
+  //const static int storageSize = 100000;
+  //uint8_t *bitmapImage;
+  //uint8_t bitmapImage[storageSize];
+
+  //Preferences preferences;
 
   // BMP header fields
   uint16_t headerField;

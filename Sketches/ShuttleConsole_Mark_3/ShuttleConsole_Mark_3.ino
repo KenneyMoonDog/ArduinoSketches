@@ -1,10 +1,9 @@
 #include "SPI.h"
 #include "Adafruit_GFX.h"
 #include "Adafruit_ILI9341.h"
+#include "JBitmapHandler.h"
 //#include "XPT2046_Touchscreen.h"
 //#include "SD.h"
-#include "JBitmapHandler.h"
-
 
 // SPI and TFT pins
 #define TFT_CS 5

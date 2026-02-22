@@ -2,6 +2,14 @@
 #include "JBitmapHandler.h"
 
 JBitmapHandler::JBitmapHandler(){
+    //preferences.begin("bitmapFlashStorage", false);
+  /*  bitmapImage = (uint8_t *) ps_malloc (storageSize * sizeof (uint8_t));
+
+    if(psramInit()){
+      Serial.println("\nPSRAM is correctly initialized");
+    }else{
+      Serial.println("PSRAM not available");
+    }*/
 }
 
     uint8_t JBitmapHandler::read8Bit(){
