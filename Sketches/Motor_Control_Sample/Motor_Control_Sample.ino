@@ -15,8 +15,9 @@ const int maxSpeed = 200;
 #define AUTO_OPERATION 20
 #define CLOCKWISE_LIMITED 22
 #define COUNTERCLOCKWISE_LIMITED 24
+#define TIMED_REVERSE 26
 
-#define CONSOLE_POLLING_FREQUENCY 500 //ms
+#define CONSOLE_POLLING_FREQUENCY 100 //ms
 #define SPEED_INCREMENT 20
 
 unsigned long previousMillis = 0;
@@ -29,9 +30,11 @@ volatile int motorSpeed = 0;
 volatile uint8_t motorDirection = CLOCKWISE;
 volatile uint8_t motorState = STOPPED;
 volatile bool reverseDirectionOnStop = false;
+bool counterclockwise_limit_tripped = false;
+bool clockwise_limit_tripped = false;
 
 // Pins for all inputs, keep in mind the PWM defines must be on PWM pins
-#define AIN1 3
+#define AIN1 18
 #define AIN2 7
 #define PWMA 5
 #define STBY 9
@@ -43,6 +46,7 @@ volatile bool reverseDirectionOnStop = false;
 #define LIMIT_SWITCH_RIGHT 1
 
 #define INTERRUPT_PIN 2
+#define INTERRUPT_LIMIT_PIN 3
 
 class jButton {
     
@@ -99,41 +103,52 @@ volatile jButton limit_switch_right(LIMIT_SWITCH_RIGHT);
 void setup() {
   Serial.begin(9600);
   pinMode(INTERRUPT_PIN, INPUT_PULLUP);
+  pinMode(INTERRUPT_LIMIT_PIN, INPUT_PULLUP);
   //interrupt time0 roughly halfway throuh 
   OCR0A = 0xAF;
   TIMSK0 |= _BV(OCIE0A);
   
   attachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN), buttonChangeHandler, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(INTERRUPT_LIMIT_PIN), limitChangeHandler, CHANGE);
 }
 
-void buttonChangeHandler() {
-  
+void limitChangeHandler() {
   if ((millis() - debounceTime) > stateDebounceDelay) {
-
-    Serial.println("EVENT");
+    //Serial.println("EVENT");
     debounceTime = millis();
 
     if(limit_switch_left.hasStateChanged()){
       if (limit_switch_left.readButtonState()){
-        Serial.println("Limit switch LEFT DOWN");
+        Serial.println("Counterclockwise Limit switch DOWN");
         motorState = COUNTERCLOCKWISE_LIMITED;
       }
       else {
-        Serial.println("Limit switch LEFT UP");
+        Serial.println("Counterclockwise Limit switch UP");
+        counterclockwise_limit_tripped = false;
       }
       return;
     }
 
     if(limit_switch_right.hasStateChanged()){
       if (limit_switch_right.readButtonState()){
-        Serial.println("Limit switch RIGHT DOWN");
+        Serial.println("Clockwise Limit switch switch DOWN");
         motorState = CLOCKWISE_LIMITED;
       }
       else {
-        Serial.println("Limit switch RIGHT UP");
+        Serial.println("Clockwise Limit switch switch UP");
+        clockwise_limit_tripped = false;
       }
       return;
     }
+  }
+}
+
+void buttonChangeHandler() {
+  
+  if ((millis() - debounceTime) > stateDebounceDelay) {
+
+    //Serial.println("EVENT");
+    debounceTime = millis();
   
     if(button_auto_turn.hasStateChanged()){
       if (button_auto_turn.readButtonState()){
@@ -192,8 +207,28 @@ void loop()
 {
   currentMillis = millis();
 
-  if (currentMillis - previousMillis >= CONSOLE_POLLING_FREQUENCY) {  //execute any timed operations every 250ms
+  if (currentMillis - previousMillis >= CONSOLE_POLLING_FREQUENCY) {  //execute any timed operations every X ms
     previousMillis = currentMillis; 
+
+    if (motorState == TIMED_REVERSE) { 
+      Serial.print("TIMED REVERSE");
+      reverseDirectionOnStop = false;
+
+      if (motorSpeed < (maxSpeed - SPEED_INCREMENT)) { //reverse
+        motorSpeed += SPEED_INCREMENT;
+
+        if (motorDirection == CLOCKWISE){
+          motor1.drive(motorSpeed);
+        }
+        else {
+          motor1.drive(-(motorSpeed));
+        }
+      }
+      else { 
+        delay(3000);
+        motorState = BRAKING;
+      }
+    }
 
     if (motorState == AUTO_OPERATION) {
       if (motorSpeed < (maxSpeed - SPEED_INCREMENT)) {
@@ -214,28 +249,28 @@ void loop()
       if (motorSpeed < (maxSpeed - SPEED_INCREMENT)) {
         motorSpeed += SPEED_INCREMENT;
 
-         if (motorDirection == CLOCKWISE){
+        if (motorDirection == CLOCKWISE){
           motor1.drive(motorSpeed);
-         }
-         else {
+        }
+        else {
           motor1.drive(-(motorSpeed));
-         }
+        }
       }
       return;
     }
 
     if (motorState == CLOCKWISE_LIMITED){
-       motorState = BRAKING;
+      clockwise_limit_tripped =  true;
+      motorState = BRAKING;
     }
 
     if (motorState == COUNTERCLOCKWISE_LIMITED){
-       motorState = BRAKING;
+      counterclockwise_limit_tripped =  true;
+      motorState = BRAKING;
     }
 
     if (motorState == BRAKING){
-      //Serial.println("BRAKING");
       motorSpeed -= SPEED_INCREMENT;
-      //Serial.println(motorSpeed);
       if (motorSpeed >= 0) {
         if (motorDirection == CLOCKWISE){
           motor1.drive(motorSpeed);
@@ -246,7 +281,6 @@ void loop()
 
       } 
       else {
-        //motor1.drive(0);
         Serial.println("STOPPED");
         motor1.brake();
         motor1.standby();
@@ -255,7 +289,7 @@ void loop()
       }
 
       if (motorState == STOPPED) {
-        if (reverseDirectionOnStop) {
+        if (reverseDirectionOnStop) {  //this should only be true if the former motorState was AUTO
           if (motorDirection == CLOCKWISE){
             motorDirection = COUNTERCLOCKWISE;
           }
@@ -263,13 +297,29 @@ void loop()
             motorDirection = CLOCKWISE;
           }
           motorState = AUTO_OPERATION;
+
+          Serial.println("Limited reached. Reverse direction: ");
+          Serial.println(reverseDirectionOnStop);
+          Serial.println("DIRECTION: ");
+          Serial.println(motorDirection);
+          Serial.println("State:");
+          Serial.println(motorState);
         }
-        Serial.println("reverse direction: ");
-        Serial.println(reverseDirectionOnStop);
-        Serial.println("DIRECTION: ");
-        Serial.println(motorDirection);
-        Serial.println("State:");
-        Serial.println(motorState);
+        else {  //then the rotation MAY have been stopped due to a limit swtch, back it out
+          if (clockwise_limit_tripped == true) {
+            Serial.println("CLOCKWISE Limited reached. Back up 3 seconds ");
+            clockwise_limit_tripped = false;
+            motorDirection = COUNTERCLOCKWISE;
+            motorState = TIMED_REVERSE;
+          }
+
+          if (counterclockwise_limit_tripped == true) {
+            Serial.println("COUNTERCLOCKWISE Limited reached. Back up 3 seconds ");
+            counterclockwise_limit_tripped = false;
+            motorDirection = CLOCKWISE; 
+            motorState = TIMED_REVERSE;
+          }
+        }
       } 
     }
   }
