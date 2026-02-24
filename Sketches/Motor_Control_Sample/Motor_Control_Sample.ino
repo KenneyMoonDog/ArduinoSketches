@@ -2,11 +2,10 @@
 #include <SparkFun_TB6612.h>
 #include "PinChangeInterrupt.h"
 
-// these constants are used to allow you to make your motor configuration 
-// line up with function names like forward.  Value can be 1 or -1
 const int motorNo = 1;
-const int maxSpeed = 200;
+const int maxSpeed = 150;
 
+//motor states and direction
 #define CLOCKWISE 10
 #define COUNTERCLOCKWISE 12
 #define STOPPED 14
@@ -16,9 +15,10 @@ const int maxSpeed = 200;
 #define CLOCKWISE_LIMITED 22
 #define COUNTERCLOCKWISE_LIMITED 24
 #define TIMED_REVERSE 26
+#define SPEED_INCREMENT 15
 
-#define CONSOLE_POLLING_FREQUENCY 100 //ms
-#define SPEED_INCREMENT 20
+#define CONSOLE_POLLING_FREQUENCY 100 //ms  how often we'll check for a change in state
+
 
 unsigned long previousMillis = 0;
 unsigned long currentMillis = 0;
@@ -30,8 +30,8 @@ volatile int motorSpeed = 0;
 volatile uint8_t motorDirection = CLOCKWISE;
 volatile uint8_t motorState = STOPPED;
 volatile bool reverseDirectionOnStop = false;
-bool counterclockwise_limit_tripped = false;
-bool clockwise_limit_tripped = false;
+volatile bool counterclockwise_limit_tripped = false;
+volatile bool clockwise_limit_tripped = false;
 
 // Pins for all inputs, keep in mind the PWM defines must be on PWM pins
 #define AIN1 18
@@ -39,16 +39,18 @@ bool clockwise_limit_tripped = false;
 #define PWMA 5
 #define STBY 9
 
+//pins for buttons
 #define BUTTON_TRN_CLKWISE 13
 #define BUTTON_TRN_AUTO 12
 #define BUTTON_TRN_CNTCLKWISE 11
 #define LIMIT_SWITCH_LEFT 10
 #define LIMIT_SWITCH_RIGHT 1
 
+//we have two interrupts required for concurrent actions
 #define INTERRUPT_PIN 2
 #define INTERRUPT_LIMIT_PIN 3
 
-class jButton {
+class jButton {  //create an instance per button passing in the pin.  
     
   private:
     int8_t PIN = 0;
@@ -64,7 +66,7 @@ class jButton {
        return pressed;
     }
 
-    bool hasStateChanged() {
+    bool hasStateChanged() {  //return true if the value of the button has changed
 
        bool currentButtonState = pressed;
        pressed = this->onButtonChange();
@@ -77,7 +79,7 @@ class jButton {
        }
     }
 
-    bool onButtonChange(){
+    bool onButtonChange(){  //read the digital pin for its value.  Note this assumes the signal is debounced properly
       delay(20);
       if ( digitalRead(PIN) == LOW ){
         return true;
@@ -94,6 +96,7 @@ class jButton {
 
 Motor motor1 = Motor(AIN1, AIN2, PWMA, motorNo, STBY);
 
+//all buttons and/or switches
 volatile jButton button_clk_wise(BUTTON_TRN_CLKWISE);
 volatile jButton button_cnt_clk_wise(BUTTON_TRN_CNTCLKWISE);
 volatile jButton button_auto_turn(BUTTON_TRN_AUTO);
@@ -112,9 +115,11 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(INTERRUPT_LIMIT_PIN), limitChangeHandler, CHANGE);
 }
 
+//this handler responds only to changes in the rotation limited switches
 void limitChangeHandler() {
+
+  //once detected, act on the first occurance only and ignore any spurious signals for 'stateDebounceDelay' ms
   if ((millis() - debounceTime) > stateDebounceDelay) {
-    //Serial.println("EVENT");
     debounceTime = millis();
 
     if(limit_switch_left.hasStateChanged()){
@@ -145,9 +150,9 @@ void limitChangeHandler() {
 
 void buttonChangeHandler() {
   
+  //once detected, act on the first occurance only and ignore any spurious signals for 'stateDebounceDelay' ms
   if ((millis() - debounceTime) > stateDebounceDelay) {
 
-    //Serial.println("EVENT");
     debounceTime = millis();
   
     if(button_auto_turn.hasStateChanged()){
@@ -158,9 +163,15 @@ void buttonChangeHandler() {
           motorState = BRAKING;
         }
         else {
-          Serial.println("Toggling Auto ON");
-          reverseDirectionOnStop = true;
-          motorState = AUTO_OPERATION;
+          if (motorState == RUNNING) {  //if auto buttton invoked while the motor is already running, everything stops
+            Serial.println("AUTO button interrupted RUN status");
+            motorState = BRAKING;
+          }
+          else {
+            Serial.println("Toggling Auto ON");
+            reverseDirectionOnStop = true;
+            motorState = AUTO_OPERATION;
+          }
         }
       }
       else {
