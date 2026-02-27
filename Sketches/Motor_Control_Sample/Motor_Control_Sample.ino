@@ -15,7 +15,7 @@ const int maxSpeed = 150;
 #define CLOCKWISE_LIMITED 22
 #define COUNTERCLOCKWISE_LIMITED 24
 #define TIMED_REVERSE 26
-#define SPEED_INCREMENT 15
+#define SPEED_INCREMENT 10
 
 #define CONSOLE_POLLING_FREQUENCY 100 //ms  how often we'll check for a change in state
 
