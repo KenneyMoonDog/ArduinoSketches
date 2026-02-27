@@ -24,7 +24,7 @@ const int maxSpeed = 150;
 unsigned long previousMillis = 0;
 unsigned long currentMillis = 0;
 
-volatile unsigned long stateDebounceDelay = 100;
+volatile unsigned long stateDebounceDelay = 50;
 volatile unsigned long debounceTime = millis();
 
 volatile int motorSpeed = 0;
@@ -71,28 +71,16 @@ Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 //   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
 //   NEO_RGBW    Pixels are wired for RGBW bitstream (NeoPixel RGBW products)
 
-/*const long red = 65535;
-const long pink = 65536*5/6;
-const long blue = 65536*2/3;
-const long teal = 65536/2;
-const long green = 65536/3;
-const long yellow = 65536/6;*/
-
-/*long colorSet[LED_COUNT] = {red, pink, blue, teal, green};
-long hue[LED_COUNT] = {blue, blue, blue, blue, blue}; //0 (red) to 65535 (red)
-byte sat[LED_COUNT] = {50, 255, 100, 230, 20}; //(0-255) grey to full color 
-byte bright[LED_COUNT] = {25, 40, 20, 60, 10}; //(0-255) black to full bright
-byte inout[LED_COUNT] = {1,0,1,0,1}; //0 or 1 
-byte satStep[LED_COUNT] =  {1,1,1,1,1};
-byte brightStep[LED_COUNT] = {1,2,1,2,1};*/
-
 #define BUTX_CLOCKWISE 0
 #define BUTX_COUNTERCLOCKWISE 2
 #define BUTX_AUTO 1
 
-const byte maxBright = 255;
-const byte halfBright = 127;
-const byte minBright = 0;
+#define MAXBRIGHT 255
+#define THREEQUARTERBRIGHT 191
+#define HALFBRIGHT 127
+#define QUARTERBRIGHT 64
+#define MINBRIGHT 20
+#define OFF 0
 
 class jButton {  //create an instance per button passing in the pin.  
     
@@ -174,7 +162,7 @@ void showStartupSequence() {
 
   //do a pass from start to end of successive flashes
     for (int ledCount = 0; ledCount < LED_COUNT; ledCount++) {
-      strip.setPixelColor(ledCount, (0, 0, 127));
+      strip.setPixelColor(ledCount, (0, 0, HALFBRIGHT));
       if (ledCount > 0){
         strip.setPixelColor((ledCount-1), (0, 0, 0));
       }
@@ -184,7 +172,7 @@ void showStartupSequence() {
 
     //do a pass from end to start of successive flashes
     for (int ledCount = (LED_COUNT-1); ledCount >= 0; ledCount--) {
-      strip.setPixelColor(ledCount,(0, 0, 127));
+      strip.setPixelColor(ledCount,(0, 0, HALFBRIGHT));
       if (ledCount < LED_COUNT){
         strip.setPixelColor((ledCount + 1), (0, 0, 0));
       }
@@ -195,7 +183,7 @@ void showStartupSequence() {
     setAndShowPixel(0,0,0,0);
   }
 
-  for (int newBright = 0; newBright <= maxBright; newBright++){
+  for (int newBright = 0; newBright <= MAXBRIGHT; newBright++){
     for (int ledCount = 0; ledCount < LED_COUNT; ledCount++) {
       strip.setPixelColor(ledCount, (0, 0, newBright));
     }
@@ -203,7 +191,7 @@ void showStartupSequence() {
     delay(2);
   }
 
-  for (int newBright = maxBright; newBright >= halfBright; newBright--){
+  for (int newBright = MAXBRIGHT; newBright >= QUARTERBRIGHT; newBright--){
     for (int ledCount = 0; ledCount < LED_COUNT; ledCount++) {
       strip.setPixelColor(ledCount, (0, 0, newBright));
     }
@@ -224,7 +212,7 @@ void setAndShowPixel(byte pixelNumber, int R, int G, int B){
 
 void resetAllButtonLights(){
     for (int ledCount = 0; ledCount < LED_COUNT; ledCount++) {
-      strip.setPixelColor(ledCount, (0,0,127));
+      strip.setPixelColor(ledCount, (0,0,QUARTERBRIGHT));
     }
     strip.show();
 }
@@ -355,12 +343,12 @@ void loop()
 
         if (motorDirection == CLOCKWISE){
           motor1.drive(motorSpeed);
-          strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),255,0,0);
+          strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),MAXBRIGHT,0,0);
           strip.show();
         }
         else {
           motor1.drive(-(motorSpeed));
-          strip.setPixelColor(button_clk_wise.getButtonIndex(),255,0,0);
+          strip.setPixelColor(button_clk_wise.getButtonIndex(),MAXBRIGHT,0,0);
           strip.show();
         }
       }
@@ -378,15 +366,15 @@ void loop()
         motorSpeed += SPEED_INCREMENT;
 
         if (motorDirection == CLOCKWISE){
-          strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),0,0,127);
-          strip.setPixelColor(button_clk_wise.getButtonIndex(),255,165,0);
+          strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),0,0,QUARTERBRIGHT);
+          strip.setPixelColor(button_clk_wise.getButtonIndex(),255,165,0); //orange
           strip.show();
           motor1.drive(motorSpeed);
         }
         else {
           motor1.drive(-(motorSpeed));
-          strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),255,165,0);
-          strip.setPixelColor(button_clk_wise.getButtonIndex(),0,0,127);
+          strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),255,165,0); //orange
+          strip.setPixelColor(button_clk_wise.getButtonIndex(),0,0,QUARTERBRIGHT);
           strip.show();
         }
       }
@@ -399,12 +387,12 @@ void loop()
         motorSpeed += SPEED_INCREMENT;
 
         if (motorDirection == CLOCKWISE){
-          strip.setPixelColor(button_clk_wise.getButtonIndex(),0,255,0);
+          strip.setPixelColor(button_clk_wise.getButtonIndex(),0,MAXBRIGHT,0);
           strip.show();
           motor1.drive(motorSpeed);
         }
         else {
-          strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),0,255,0);
+          strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),0,MAXBRIGHT,0);
           strip.show();
           motor1.drive(-(motorSpeed));
         }
@@ -448,14 +436,14 @@ void loop()
         if (reverseDirectionOnStop) {  //this should only be true if the former motorState was AUTO
           if (motorDirection == CLOCKWISE){
             motorDirection = COUNTERCLOCKWISE;
-            strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),255,165,0);
-            strip.setPixelColor(button_clk_wise.getButtonIndex(),0,0,127);
+            strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),255,165,0); //orange
+            strip.setPixelColor(button_clk_wise.getButtonIndex(),0,0,QUARTERBRIGHT);
             strip.show();
           }
           else {
             motorDirection = CLOCKWISE;
-            strip.setPixelColor(button_clk_wise.getButtonIndex(),255,165,0);
-            strip.setPixelColor(button_clk_wise.getButtonIndex(),0,0,127);
+            strip.setPixelColor(button_clk_wise.getButtonIndex(),255,165,0); //orange
+            strip.setPixelColor(button_clk_wise.getButtonIndex(),0,0,QUARTERBRIGHT);
             strip.show();
           }
           motorState = AUTO_OPERATION;
@@ -469,7 +457,7 @@ void loop()
         }
         else {  //then the rotation MAY have been stopped due to a limit swtch, back it out
           if (clockwise_limit_tripped == true) {
-            strip.setPixelColor(button_clk_wise.getButtonIndex(),255,0,0);
+            strip.setPixelColor(button_clk_wise.getButtonIndex(),MAXBRIGHT,0,0);
             strip.show();
             Serial.println("CLOCKWISE Limited reached. Back up 3 seconds ");
             clockwise_limit_tripped = false;
@@ -478,7 +466,7 @@ void loop()
           }
 
           if (counterclockwise_limit_tripped == true) {
-            strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),255,0,0);
+            strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),MAXBRIGHT,0,0);
             strip.show();
             Serial.println("COUNTERCLOCKWISE Limited reached. Back up 3 seconds ");
             counterclockwise_limit_tripped = false;
