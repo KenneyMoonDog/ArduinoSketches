@@ -57,7 +57,7 @@ bool firstPass = true;
 // On a Trinket or Gemma we suggest changing this to 1:
 #define LED_PIN   19
 // How many NeoPixels are attached to the Arduino?
-#define LED_COUNT 5
+#define LED_COUNT 3
 
 // Declare our NeoPixel strip object:
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
@@ -71,9 +71,9 @@ Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 //   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
 //   NEO_RGBW    Pixels are wired for RGBW bitstream (NeoPixel RGBW products)
 
-#define BUTX_CLOCKWISE 0
+#define BUTX_CLOCKWISE 1
 #define BUTX_COUNTERCLOCKWISE 2
-#define BUTX_AUTO 1
+#define BUTX_AUTO 0
 
 #define MAXBRIGHT 255
 #define THREEQUARTERBRIGHT 191
@@ -93,6 +93,12 @@ class jButton {  //create an instance per button passing in the pin.
     jButton(uint8_t pin, byte indx) {
       PIN=pin;
       pinMode(PIN, INPUT_PULLUP);
+      indexNum=indx;
+    }
+
+    jButton(uint8_t pin, byte indx, byte type) {
+      PIN=pin;
+      pinMode(PIN, type);
       indexNum=indx;
     }
 
@@ -140,11 +146,12 @@ volatile jButton button_cnt_clk_wise(BUTTON_TRN_CNTCLKWISE, BUTX_COUNTERCLOCKWIS
 volatile jButton button_auto_turn(BUTTON_TRN_AUTO, BUTX_AUTO);
 volatile jButton limit_switch_left(LIMIT_SWITCH_LEFT, BUTX_COUNTERCLOCKWISE);
 volatile jButton limit_switch_right(LIMIT_SWITCH_RIGHT, BUTX_CLOCKWISE);
+volatile jButton optical_limit_switch(INTERRUPT_LIMIT_PIN, BUTX_COUNTERCLOCKWISE, INPUT);
 
 void setup() {
   Serial.begin(9600);
   pinMode(INTERRUPT_PIN, INPUT_PULLUP);
-  pinMode(INTERRUPT_LIMIT_PIN, INPUT_PULLUP);
+  //pinMode(INTERRUPT_LIMIT_PIN, INPUT);
   //interrupt time0 roughly halfway throuh 
   OCR0A = 0xAF;
   TIMSK0 |= _BV(OCIE0A);
@@ -217,8 +224,24 @@ void resetAllButtonLights(){
     strip.show();
 }
 
-//this handler responds only to changes in the rotation limited switches
 void limitChangeHandler() {
+      if (digitalRead(INTERRUPT_LIMIT_PIN)){
+        if ( motorDirection == CLOCKWISE ) {
+          Serial.println("CLOCKWISE limit reached");
+          motorState = CLOCKWISE_LIMITED;
+        } 
+        else {
+          Serial.println("COUNTER CLOCKWISE limit reached");
+          motorState = COUNTERCLOCKWISE_LIMITED;
+        }
+      }
+      else {
+        clockwise_limit_tripped = false;
+        counterclockwise_limit_tripped = false;
+      }
+}
+//this handler responds only to changes in the rotation limited switches
+/*void limitChangeHandler() {
 
   //once detected, act on the first occurance only and ignore any spurious signals for 'stateDebounceDelay' ms
   if ((millis() - debounceTime) > stateDebounceDelay) {
@@ -248,7 +271,7 @@ void limitChangeHandler() {
       return;
     }
   }
-}
+} */
 
 void buttonChangeHandler() {
   
