@@ -1,4 +1,5 @@
-#if defined(ARDUINO_ARCH_RP2350)
+#if defined(ARDUINO_ARCH_RP2350) || defined(PICO_RP2350) ||                    \
+    defined(TARGET_RP2350)
 
 #include "WatchdogRP2350.h"
 
@@ -184,4 +185,4 @@ bool WatchdogRP2350::startAonTimer() {
   return _aon_timer_started;
 }
 
-#endif // ARDUINO_ARCH_RP2350
+#endif // ARDUINO_ARCH_RP2350 || PICO_RP2350 || TARGET_RP2350

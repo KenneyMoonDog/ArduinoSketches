@@ -1,0 +1,224 @@
+#include "SPI.h"
+#include "Adafruit_GFX.h"
+#include "Adafruit_ILI9341.h"
+#include "JButton.h"
+#include "JBitmapHandler.h"
+#include "SD.h"
+
+volatile unsigned long previousMillis = millis();
+volatile unsigned long currentMillis = millis();
+
+unsigned long stateDebounceDelay = 20;
+unsigned long debounceTime = millis();
+
+//defines for video control buttons
+#define BUTTON_PIN_PREVIOUS_PICTURE 10
+#define BUTTON_PIN_AUTO_SHOW 11
+#define BUTTON_PIN_NEXT_PICTURE 12
+#define INTERRUPT_PIN 7
+#define STATUS_LED 2
+
+#define DISPLAY_INTERVAL 8000
+
+// SPI and TFT pins
+#define TFT_CS 5                                          
+#define TFT_RST 3 //22
+#define TFT_DC 9                       
+#define TFT_MOSI 16 //23
+#define TFT_CLK 15 //18
+#define TFT_MISO 14 //19
+
+// chip select for SD card
+ #define SD_CS 13
+
+ bool StartupFailed = false;
+
+#define ROTATION 3
+
+// Use hardware SPI (on Uno, #13, #12, #11) and the above for CS/DC/RST
+Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_RST);
+//XPT2046_Touchscreen ts(TS_CS);
+
+int tftWidth, tftHeight;
+
+// array to hold image filenames
+#define MAX_IMAGES 20
+String images[MAX_IMAGES];
+int imageToShow = 0;
+
+JBitmapHandler bmh = JBitmapHandler();
+
+volatile JButton button_homescreen(BUTTON_PIN_PREVIOUS_PICTURE, 0);
+volatile JButton button_auto_show(BUTTON_PIN_AUTO_SHOW, 1);
+volatile JButton button_next_picture(BUTTON_PIN_NEXT_PICTURE, 2);
+
+volatile bool auto_show=false;
+volatile bool show_homescreen=false;
+volatile bool show_next=false;
+
+void setup() {
+  
+  Serial.begin(115200);
+  //Serial.begin(9600);
+
+  pinMode(INTERRUPT_PIN, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN), buttonChangeHandler, FALLING);
+
+  // avoid chip select contention
+  pinMode(TFT_CS, OUTPUT);
+  digitalWrite(TFT_CS, HIGH);
+  pinMode(SD_CS, OUTPUT);
+  digitalWrite(SD_CS, HIGH);
+ 
+  tft.begin();
+  tft.setRotation(ROTATION);
+  tft.fillScreen(ILI9341_BLACK);
+  tftWidth = tft.width();
+  tftHeight = tft.height();
+
+  if (!SD.begin(SD_CS)) {
+    Serial.println("SD Card initialization failed!");
+    StartupFailed=true;
+  }
+  else {
+    // get list of bmp files in root directory 
+
+    File rootFolder = SD.open("/");
+    File nextFile;
+    String nextFileName;
+    int imageCount = 0;
+
+    // initialise images array
+    for (imageCount = 0; imageCount < MAX_IMAGES; imageCount ++) {
+      images[imageCount] = String("");
+    }
+
+    // load filenames into images array
+    imageCount = 0;
+    while((nextFile = rootFolder.openNextFile()) && (imageCount < MAX_IMAGES))  {
+      // check if directory
+      if (!nextFile.isDirectory()) {
+        // not a directory - check if bmp
+        nextFileName = nextFile.name();
+
+        //Serial.println(nextFileName.indexOf(".BMP"));
+        //Serial.print(nextFileName);
+        //Serial.println(" found");
+
+        if (nextFileName.indexOf(".BMP") != -1) {
+          // bmp found
+          //Serial.println("Bitmap");
+          images[imageCount] = String("/" + nextFileName);
+          //Serial.println(images[imageCount]);
+          imageCount ++;
+        }
+      }
+      nextFile.close();
+    }
+    if (nextFile) nextFile.close();
+    rootFolder.close(); 
+
+    noInterrupts();
+    bmh.loadBitmap("/UFP.BMP");
+    bmh.renderImage(&tft,0,0);
+    interrupts();
+  }
+
+  pinMode(STATUS_LED, OUTPUT);
+  digitalWrite(STATUS_LED, HIGH);
+  Serial.println("SETUP COMPLETE");
+}
+
+void buttonChangeHandler() {  //handles Down Events Only
+  
+  //once detected, act on the first occurance only and ignore any spurious signals for 'stateDebounceDelay' ms
+  if ((millis() - debounceTime) > stateDebounceDelay) {
+
+    debounceTime = millis();
+  
+    if(button_homescreen.hasStateChanged()){
+      auto_show = false;
+      show_next = false;
+      show_homescreen = true;
+      Serial.println("SHOW_HOMESCREEN");
+      return;
+    } 
+
+    if(button_auto_show.hasStateChanged()){
+      previousMillis = 0;
+
+      show_homescreen = false;
+      show_next = false;
+      auto_show = !auto_show;
+      Serial.println("AUTO:");
+      Serial.println(auto_show);
+      return;
+    } 
+
+    if(button_next_picture.hasStateChanged()){
+      auto_show = false;
+      show_homescreen = false;
+      show_next = true;
+      Serial.println("SHOW_NEXT");
+      return;
+    } 
+  } 
+}
+
+void loop() {
+  
+  if (!StartupFailed) {
+
+    if (show_homescreen==true){
+      noInterrupts();
+      tft.fillScreen(ILI9341_BLACK);
+      bmh.loadBitmap("/UFP.BMP");
+      bmh.renderImage(&tft,0,0);
+      show_homescreen = false;
+      interrupts();
+      return;
+    }
+
+    if (show_next==true){
+      noInterrupts();
+      imageToShow ++;
+      
+      if (imageToShow >= MAX_IMAGES){
+          imageToShow = 0;
+      } 
+
+      if (images[imageToShow] != "") {
+        tft.fillScreen(ILI9341_BLACK);
+        bmh.loadBitmap(images[imageToShow]);
+        bmh.renderImage(&tft,0,0);
+      }
+      show_next = false;
+      interrupts();
+      return;
+    }
+
+    if (auto_show==true) { //and timer is cleared or expired
+      currentMillis = millis();
+      if (currentMillis > (previousMillis + DISPLAY_INTERVAL) ||
+          (previousMillis == 0)){
+
+        noInterrupts();
+
+        if (images[imageToShow] != "") {
+          tft.fillScreen(ILI9341_BLACK);
+          bmh.loadBitmap(images[imageToShow]);
+          bmh.renderImage(&tft,0,0);
+          previousMillis=millis();
+
+        }
+
+        imageToShow ++;
+        if (imageToShow >= MAX_IMAGES){
+          imageToShow = 0;
+        } 
+
+        interrupts();
+      }
+    } //if auto_show is on
+  }//if not failed
+}

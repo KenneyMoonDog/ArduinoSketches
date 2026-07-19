@@ -3,6 +3,11 @@
 #include "PinChangeInterrupt.h"
 #include <Adafruit_NeoPixel.h>
 
+/*#include "SPI.h"
+#include "Adafruit_GFX.h"
+#include "Adafruit_ILI9341.h"
+#include "JBitmapHandler.h" */
+
 const int motorNo = 1;
 const int maxSpeed = 150;
 
@@ -24,7 +29,7 @@ const int maxSpeed = 150;
 unsigned long previousMillis = 0;
 unsigned long currentMillis = 0;
 
-volatile unsigned long stateDebounceDelay = 50;
+volatile unsigned long stateDebounceDelay = 20;
 volatile unsigned long debounceTime = millis();
 
 volatile int motorSpeed = 0;
@@ -46,8 +51,6 @@ bool firstPass = true;
 #define BUTTON_TRN_CLKWISE 13
 #define BUTTON_TRN_AUTO 12
 #define BUTTON_TRN_CNTCLKWISE 11
-#define LIMIT_SWITCH_LEFT 10
-#define LIMIT_SWITCH_RIGHT 1
 
 //we have two interrupts required for concurrent actions
 #define INTERRUPT_PIN 2
@@ -55,9 +58,10 @@ bool firstPass = true;
 
 // Which pin on the Arduino is connected to the NeoPixels?
 // On a Trinket or Gemma we suggest changing this to 1:
-#define LED_PIN   19
+#define LED_PIN   10 //was 19
 // How many NeoPixels are attached to the Arduino?
 #define LED_COUNT 3
+#define POWER_PIN 23
 
 // Declare our NeoPixel strip object:
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
@@ -144,13 +148,13 @@ Motor motor1 = Motor(AIN1, AIN2, PWMA, motorNo, STBY);
 volatile jButton button_clk_wise(BUTTON_TRN_CLKWISE, BUTX_CLOCKWISE);
 volatile jButton button_cnt_clk_wise(BUTTON_TRN_CNTCLKWISE, BUTX_COUNTERCLOCKWISE);
 volatile jButton button_auto_turn(BUTTON_TRN_AUTO, BUTX_AUTO);
-volatile jButton limit_switch_left(LIMIT_SWITCH_LEFT, BUTX_COUNTERCLOCKWISE);
-volatile jButton limit_switch_right(LIMIT_SWITCH_RIGHT, BUTX_CLOCKWISE);
 volatile jButton optical_limit_switch(INTERRUPT_LIMIT_PIN, BUTX_COUNTERCLOCKWISE, INPUT);
 
 void setup() {
   Serial.begin(9600);
   pinMode(INTERRUPT_PIN, INPUT_PULLUP);
+  pinMode(POWER_PIN, OUTPUT);
+  digitalWrite(POWER_PIN, HIGH);
   //pinMode(INTERRUPT_LIMIT_PIN, INPUT);
   //interrupt time0 roughly halfway throuh 
   OCR0A = 0xAF;
@@ -161,6 +165,8 @@ void setup() {
   
   strip.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
   strip.show();            // Turn OFF all pixels ASAP
+
+  showStartupSequence();
 }
 
 void showStartupSequence() {
@@ -212,11 +218,6 @@ void setAndShowPixel(byte pixelNumber, int R, int G, int B){
   strip.show();
 }
 
-//void setAndShowPixel(byte pixelNumber, long color, byte sat, byte brightness){
-//    strip.setPixelColor(pixelNumber, strip.gamma32(strip.ColorHSV(color, sat, brightness)));
-//    strip.show(); // Update strip with new contents
-//}
-
 void resetAllButtonLights(){
     for (int ledCount = 0; ledCount < LED_COUNT; ledCount++) {
       strip.setPixelColor(ledCount, (0,0,QUARTERBRIGHT));
@@ -240,38 +241,6 @@ void limitChangeHandler() {
         counterclockwise_limit_tripped = false;
       }
 }
-//this handler responds only to changes in the rotation limited switches
-/*void limitChangeHandler() {
-
-  //once detected, act on the first occurance only and ignore any spurious signals for 'stateDebounceDelay' ms
-  if ((millis() - debounceTime) > stateDebounceDelay) {
-    debounceTime = millis();
-
-    if(limit_switch_left.hasStateChanged()){
-      if (limit_switch_left.readButtonState()){
-        Serial.println("Counterclockwise Limit switch DOWN");
-        motorState = COUNTERCLOCKWISE_LIMITED;
-      }
-      else {
-        Serial.println("Counterclockwise Limit switch UP");
-        counterclockwise_limit_tripped = false;
-      }
-      return;
-    }
-
-    if(limit_switch_right.hasStateChanged()){
-      if (limit_switch_right.readButtonState()){
-        Serial.println("Clockwise Limit switch switch DOWN");
-        motorState = CLOCKWISE_LIMITED;
-      }
-      else {
-        Serial.println("Clockwise Limit switch switch UP");
-        clockwise_limit_tripped = false;
-      }
-      return;
-    }
-  }
-} */
 
 void buttonChangeHandler() {
   
@@ -346,12 +315,6 @@ SIGNAL(TIMER0_COMPA_vect) //handler for timed interrupts
 
 void loop()
 {
-
-  if (firstPass){
-      showStartupSequence();
-      firstPass = false;
-  }
-
   currentMillis = millis();
 
   if (currentMillis - previousMillis >= CONSOLE_POLLING_FREQUENCY) {  //execute any timed operations every X ms

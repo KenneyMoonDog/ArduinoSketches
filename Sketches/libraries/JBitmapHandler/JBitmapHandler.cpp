@@ -222,6 +222,7 @@ JBitmapHandler::JBitmapHandler(){
       if (!this->bmpFile) {
         Serial.print("renderImage failed to open file: ");
         Serial.println(this->bmpFilename);
+        this->bmpFile.close();
         return false;
       }
 

@@ -6,11 +6,11 @@
 
 // SPI and TFT pins
 #define TFT_CS 5
-#define TFT_RST 22
-#define TFT_DC 21
-#define TFT_MOSI 23
-#define TFT_CLK 18
-#define TFT_MISO 19
+#define TFT_RST 3
+#define TFT_DC 7
+#define TFT_MOSI 16
+#define TFT_CLK 15
+#define TFT_MISO 14
 
 // Chip select for touch panel
 //#define TS_CS 7
@@ -347,6 +347,8 @@ void setup() {
   //ts.begin();
   //ts.setRotation(ROTATION);
 
+  delay(1000);
+  
   if (!SD.begin(SD_CS)) {
     Serial.println("SD Card initialization failed!");
   }

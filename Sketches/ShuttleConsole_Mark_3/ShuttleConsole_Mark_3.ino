@@ -2,22 +2,23 @@
 #include "Adafruit_GFX.h"
 #include "Adafruit_ILI9341.h"
 #include "JBitmapHandler.h"
-//#include "XPT2046_Touchscreen.h"
-//#include "SD.h"
+#include "SD.h"
 
 // SPI and TFT pins
-#define TFT_CS 5
-#define TFT_RST 22
-#define TFT_DC 21
-#define TFT_MOSI 23
-#define TFT_CLK 18
-#define TFT_MISO 19
+#define TFT_CS 5                                          
+#define TFT_RST 3 //22
+#define TFT_DC 9                         
+#define TFT_MOSI 16 //23
+#define TFT_CLK 15 //18
+#define TFT_MISO 14 //19
 
 // Chip select for touch panel
 //#define TS_CS 7
 
 // chip select for SD card
-#define SD_CS 15
+ #define SD_CS 13
+
+ bool StartupFailed = false;
 
 #define ROTATION 3
 
@@ -52,12 +53,15 @@ void setup() {
   tftHeight = tft.height();
   //ts.begin();
   //ts.setRotation(ROTATION);
+  //delay(3000);
 
   if (!SD.begin(SD_CS)) {
     Serial.println("SD Card initialization failed!");
+    StartupFailed=true;
   }
   else {
-    // get list of bmp files in root directory
+    // get list of bmp files in root directory 
+
     File rootFolder = SD.open("/");
     File nextFile;
     String nextFileName;
@@ -75,9 +79,12 @@ void setup() {
       if (!nextFile.isDirectory()) {
         // not a directory - check if bmp
         nextFileName = nextFile.name();
+
+        Serial.println(nextFileName.indexOf(".BMP"));
         Serial.print(nextFileName);
         Serial.println(" found");
-        if (nextFileName.indexOf(".bmp") != -1) {
+
+        if (nextFileName.indexOf(".BMP") != -1) {
           // bmp found
           Serial.println("Bitmap");
           images[imageCount] = String("/" + nextFileName);
@@ -96,10 +103,12 @@ void setup() {
 
 void loop() {
   
-  Serial.print("Showing image ");
+  if (!StartupFailed) {
+
+  /*Serial.print("Showing image ");
   Serial.print(imageToShow);
   Serial.print(" - ");
-  Serial.println(images[imageToShow]); 
+  Serial.println(images[imageToShow]); */
   
   if (images[imageToShow] != "") {
     Serial.print("attempting to show: ");
@@ -115,4 +124,5 @@ void loop() {
   if (imageToShow >= MAX_IMAGES){
     imageToShow = 0;
   } 
+  }//if not failed
 }
