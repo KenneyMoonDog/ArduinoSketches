@@ -9,7 +9,7 @@
 #include "JBitmapHandler.h" */
 
 const int motorNo = 1;
-const int maxSpeed = 150;
+const int maxSpeed = 175;
 
 //motor states and direction
 #define CLOCKWISE 10
@@ -226,6 +226,14 @@ void resetAllButtonLights(){
 }
 
 void limitChangeHandler() {
+
+      
+      if ((motorState == TIMED_REVERSE ||
+          motorState == STOPPED ||
+          motorState == BRAKING)){
+        return;
+      }
+
       if (digitalRead(INTERRUPT_LIMIT_PIN)){
         if ( motorDirection == CLOCKWISE ) {
           Serial.println("CLOCKWISE limit reached");
@@ -248,6 +256,10 @@ void buttonChangeHandler() {
   if ((millis() - debounceTime) > stateDebounceDelay) {
 
     debounceTime = millis();
+
+    if (motorState == TIMED_REVERSE){
+       return;
+    }
   
     if(button_auto_turn.hasStateChanged()){
       if (button_auto_turn.readButtonState()){
@@ -255,7 +267,8 @@ void buttonChangeHandler() {
           Serial.println("Toggling Auto OFF");
           reverseDirectionOnStop = false;
           motorState = BRAKING;
-
+          clockwise_limit_tripped = false;
+          counterclockwise_limit_tripped = false;
         }
         else {
           if (motorState == RUNNING) {  //if auto buttton invoked while the motor is already running, everything stops
@@ -276,6 +289,7 @@ void buttonChangeHandler() {
     }
 
     if(button_clk_wise.hasStateChanged()){
+
       if (button_clk_wise.readButtonState()){
         Serial.println("CLOCKWISE DOWN");
         reverseDirectionOnStop = false;
@@ -292,6 +306,7 @@ void buttonChangeHandler() {
    }
 
     if(button_cnt_clk_wise.hasStateChanged()){
+
       if (button_cnt_clk_wise.readButtonState()){
         Serial.println("COUNTER CLOCKWISE DOWN");
         reverseDirectionOnStop = false;
@@ -353,13 +368,13 @@ void loop()
 
         if (motorDirection == CLOCKWISE){
           strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),0,0,QUARTERBRIGHT);
-          strip.setPixelColor(button_clk_wise.getButtonIndex(),255,165,0); //orange
+          strip.setPixelColor(button_clk_wise.getButtonIndex(),255,35,0); //orange
           strip.show();
           motor1.drive(motorSpeed);
         }
         else {
           motor1.drive(-(motorSpeed));
-          strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),255,165,0); //orange
+          strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),255,35,0); //orange
           strip.setPixelColor(button_clk_wise.getButtonIndex(),0,0,QUARTERBRIGHT);
           strip.show();
         }
