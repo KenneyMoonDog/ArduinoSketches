@@ -3,11 +3,6 @@
 #include "PinChangeInterrupt.h"
 #include <Adafruit_NeoPixel.h>
 
-/*#include "SPI.h"
-#include "Adafruit_GFX.h"
-#include "Adafruit_ILI9341.h"
-#include "JBitmapHandler.h" */
-
 const int motorNo = 1;
 const int maxSpeed = 175;
 
@@ -24,7 +19,6 @@ const int maxSpeed = 175;
 #define SPEED_INCREMENT 10
 
 #define CONSOLE_POLLING_FREQUENCY 100 //ms  how often we'll check for a change in state
-
 
 unsigned long previousMillis = 0;
 unsigned long currentMillis = 0;

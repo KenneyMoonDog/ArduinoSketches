@@ -19,9 +19,13 @@ const int maxSpeed = 175;
 #define SPEED_INCREMENT 10
 
 #define CONSOLE_POLLING_FREQUENCY 100 //ms  how often we'll check for a change in state
+#define FLASH_PERIOD 250
 
 unsigned long previousMillis = 0;
 unsigned long currentMillis = 0;
+
+unsigned long oldFlasherTime = 0;
+unsigned long currentFlasherTime = 0;
 
 volatile unsigned long stateDebounceDelay = 20;
 volatile unsigned long debounceTime = millis();
@@ -93,20 +97,14 @@ class jButton {  //create an instance per button passing in the pin.
     
   private:
     int8_t PIN = 0;
-    int8_t mRed = 0;
-    int8_t mGreen = 0;
-    int8_t mBlue = 0;
+    byte mRed = 0;
+    byte mGreen = 0;
+    byte mBlue = 0;
 
     bool pressed = false;
-    byte indexNum=0;
+    byte indexNum = 0;
     bool isButtonFlasher = false;
     bool isButtonLit = false;
-  
-    unsigned long previousFlashMillis = 0;
-    unsigned long currentFlashMillis = 0;
-
-    int8_t FLASH_ON_INTERVAL = 750;
-    int8_t FLASH_OFF_INTERVAL = 200;
 
   public:
     jButton(uint8_t pin, byte indx) {
@@ -121,17 +119,17 @@ class jButton {  //create an instance per button passing in the pin.
       indexNum=indx;
     }
 
-    void setFlasherState(bool flasherInState, int8_t red, int8_t green, int8_t blue){
-
-      if ( isButtonFlasher == false &&
-           flasherInState == true) {  //reset the flasher timer iff and the flasherState is turning from false to true
-        previousFlashMillis = millis();
-        currentFlashMillis = millis();
-
-        mRed = red;
-        mGreen = green;
-        mBlue = blue;
-      }
+    byte getIndex() {
+      return indexNum;
+    }
+    void setFlasherState(bool flasherState){
+      isButtonFlasher = flasherState;
+    }
+    
+    void setFlasherState(bool flasherInState, byte red, byte green, byte blue){
+      mRed = red;
+      mGreen = green;
+      mBlue = blue;
 
       isButtonFlasher = flasherInState;
     }
@@ -140,25 +138,11 @@ class jButton {  //create an instance per button passing in the pin.
       return isButtonFlasher;
     }
 
+    void setButtonLit(bool isOn){
+      isButtonLit = isOn;
+    }
+
     bool getIsButtonLit() {
-
-      if (isButtonFlasher) {
-
-        currentFlashMillis = millis();
-
-        if(isButtonLit){
-          if((currentFlashMillis - previousFlashMillis) >= FLASH_ON_INTERVAL ) {
-            previousFlashMillis = currentFlashMillis;
-            isButtonLit != isButtonLit;
-          }
-        }
-        else {
-          if((currentFlashMillis - previousFlashMillis) >= FLASH_OFF_INTERVAL ) {
-            previousFlashMillis = currentFlashMillis;
-            isButtonLit != isButtonLit;
-          }
-        }
-      }
       return isButtonLit;
     }
 
@@ -288,14 +272,26 @@ void showStartupSequence() {
   strip.show()
 }*/
 
-void resetAllButtonLights(){
-    for (int ledCount = 0; ledCount < LED_COUNT; ledCount++) {
-      strip.setPixelColor(ledCount, (0,0,QUARTERBRIGHT));
-    }
 
-    button_clk_wise.setFlasherState(false, 0,0,0);
-    button_cnt_clk_wise.setFlasherState(false, 0,0,0);
-    button_auto_turn.setFlasherState(false, 0,0,0);
+void resetDirectionButtonLights(){
+    button_clk_wise.setFlasherState(false);
+    button_cnt_clk_wise.setFlasherState(false);
+    button_auto_turn.setFlasherState(false);
+
+    strip.setPixelColor(button_clk_wise.getIndex(), 0, 0, HALFBRIGHT);
+    strip.setPixelColor(button_cnt_clk_wise.getIndex(), 0, 0,HALFBRIGHT);
+
+    strip.show();
+}
+
+void resetAllButtonLights(){
+    button_clk_wise.setFlasherState(false);
+    button_cnt_clk_wise.setFlasherState(false);
+    button_auto_turn.setFlasherState(false);
+
+    for (int ledCount = 0; ledCount < LED_COUNT; ledCount++) {
+      strip.setPixelColor(ledCount, (0,0,HALFBRIGHT));
+    }
 
     strip.show();
 }
@@ -403,34 +399,37 @@ SIGNAL(TIMER0_COMPA_vect) //handler for timed interrupts
 } 
 
 void flashButtonsIfEnabled() {
-      if (button_clk_wise.getFlasherState()) {
-       if (button_clk_wise.getIsButtonLit()) {
-         strip.setPixelColor(button_clk_wise.getButtonIndex(),button_clk_wise.getRedValue(),button_clk_wise.getGreenValue(),button_clk_wise.getBlueValue());
+  
+    currentFlasherTime = millis();
+
+    if (button_clk_wise.getFlasherState()) {
+       if (currentFlasherTime > (oldFlasherTime + FLASH_PERIOD)) {
+          oldFlasherTime = currentFlasherTime;
+          if (button_clk_wise.getIsButtonLit()) {
+             button_clk_wise.setButtonLit(false);
+             strip.setPixelColor(button_clk_wise.getButtonIndex(),button_clk_wise.getRedValue(),button_clk_wise.getGreenValue(),button_clk_wise.getBlueValue());
+          }
+          else {
+            button_clk_wise.setButtonLit(true);
+            strip.setPixelColor(button_clk_wise.getButtonIndex(),0,0,0);
+          }
+          strip.show();
        }
-       else {
-         strip.setPixelColor(button_clk_wise.getButtonIndex(),0,0,0);
-       }
-       strip.show();
     }
 
     if (button_cnt_clk_wise.getFlasherState()) {
-       if (button_cnt_clk_wise.getIsButtonLit()) {
-         strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),button_cnt_clk_wise.getRedValue(),button_cnt_clk_wise.getGreenValue(),button_cnt_clk_wise.getBlueValue());
+       if (currentFlasherTime > (oldFlasherTime + FLASH_PERIOD)) {
+          oldFlasherTime = currentFlasherTime;
+          if (button_cnt_clk_wise.getIsButtonLit()) {
+             button_cnt_clk_wise.setButtonLit(false);
+             strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),button_cnt_clk_wise.getRedValue(),button_cnt_clk_wise.getGreenValue(),button_cnt_clk_wise.getBlueValue());
+          }
+          else {
+            button_cnt_clk_wise.setButtonLit(true);
+            strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),0,0,0);
+          }
+          strip.show();
        }
-       else {
-         strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),0,0,0);
-       }
-       strip.show();
-    }
-
-    if (button_auto_turn.getFlasherState()) {
-       if (button_auto_turn.getIsButtonLit()) {
-         strip.setPixelColor(button_auto_turn.getButtonIndex(),button_auto_turn.getRedValue(),button_auto_turn.getGreenValue(),button_auto_turn.getBlueValue());
-       }
-       else {
-         strip.setPixelColor(button_auto_turn.getButtonIndex(),0,0,0);
-       }
-       strip.show();
     }
 }
 
@@ -453,22 +452,21 @@ void loop()
         if (motorDirection == CLOCKWISE){ 
           motor1.drive(motorSpeed);
 
-          button_cnt_clk_wise.setFlasherState(true, MAXBRIGHT,0,0);
-          strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),MAXBRIGHT,0,0);
-
-          strip.setPixelColor(button_clk_wise.getButtonIndex(),0,0,0);
-          strip.setPixelColor(button_auto_turn.getButtonIndex(),0,0,0);
-          strip.show();
+          //flash counterclockwise button red
+          if (button_cnt_clk_wise.getFlasherState() == false) {
+            button_cnt_clk_wise.setFlasherState(true, MAXBRIGHT,0,0);
+            strip.show();
+          }
         }
         else {
           motor1.drive(-(motorSpeed));
 
-          button_clk_wise.setFlasherState(true, MAXBRIGHT,0,0);
-          strip.setPixelColor(button_clk_wise.getButtonIndex(),MAXBRIGHT,0,0);
-
-          strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),0,0,0);
-          strip.setPixelColor(button_auto_turn.getButtonIndex(),0,0,0);
-          strip.show();
+          //flash counterclockwise button red
+          if (button_cnt_clk_wise.getFlasherState() == false) {
+            button_clk_wise.setFlasherState(true, MAXBRIGHT,0,0);
+            strip.setPixelColor(button_clk_wise.getButtonIndex(),MAXBRIGHT,0,0);
+            strip.show();
+          }
         }
       }
       else { 
@@ -478,29 +476,27 @@ void loop()
     }
 
     if (motorState == AUTO_OPERATION) {
-      strip.setPixelColor(button_auto_turn.getButtonIndex(),0,255,0);
+      strip.setPixelColor(button_auto_turn.getButtonIndex(),0,MAXBRIGHT,0);
       strip.show();
 
       if (motorSpeed < (maxSpeed - SPEED_INCREMENT)) {
         motorSpeed += SPEED_INCREMENT;
 
         if (motorDirection == CLOCKWISE){
-          strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),0,0,QUARTERBRIGHT);
-
-          button_clk_wise.setFlasherState(true, 255,35,0);
-          strip.setPixelColor(button_clk_wise.getButtonIndex(),255,35,0); //orange
-
-          strip.show();
+          if (button_clk_wise.getFlasherState() == false) {
+            button_clk_wise.setFlasherState(true, 255,35,0);
+            strip.setPixelColor(button_clk_wise.getButtonIndex(),255,35,0); //orange
+            strip.show();
+          }
           motor1.drive(motorSpeed);
         }
         else {
+          if (button_cnt_clk_wise.getFlasherState() == false) {
+            button_cnt_clk_wise.setFlasherState(true, 255,35,0);
+            strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),255,35,0); //orange
+            strip.show();
+          }
           motor1.drive(-(motorSpeed));
-
-          button_cnt_clk_wise.setFlasherState(true, 255,35,0);
-          strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),255,35,0); //orange
-
-          strip.setPixelColor(button_clk_wise.getButtonIndex(),0,0,QUARTERBRIGHT);
-          strip.show();
         }
       }
 
@@ -513,15 +509,19 @@ void loop()
         motorSpeed += SPEED_INCREMENT;
 
         if (motorDirection == CLOCKWISE){
-          button_clk_wise.setFlasherState(true, 0,MAXBRIGHT,0);
-          strip.setPixelColor(button_clk_wise.getButtonIndex(),0,MAXBRIGHT,0);
-          strip.show();
+          if (button_clk_wise.getFlasherState() != true) {
+            button_clk_wise.setFlasherState(true, 0,MAXBRIGHT,0);
+            strip.setPixelColor(button_clk_wise.getButtonIndex(),0,MAXBRIGHT,0);
+            strip.show();
+          }
           motor1.drive(motorSpeed);
         }
         else {
-          button_cnt_clk_wise.setFlasherState(true, 0,MAXBRIGHT,0);
-          strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),0,MAXBRIGHT,0);
-          strip.show();
+          if (button_cnt_clk_wise.getFlasherState() != true) {
+            button_cnt_clk_wise.setFlasherState(true, 0,MAXBRIGHT,0);
+            strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),0,MAXBRIGHT,0);
+            strip.show();
+          }
           motor1.drive(-(motorSpeed));
         }
       }
@@ -555,25 +555,25 @@ void loop()
         motor1.standby();
         motorState = STOPPED;  
         motorSpeed = 0;
-        resetAllButtonLights();
+        //resetAllButtonLights();
       }
 
       if (motorState == STOPPED) {
         resetAllButtonLights();
+        //resetDirectionButtonLights();
         
         if (reverseDirectionOnStop) {  //this should only be true if the former motorState was AUTO
+
           if (motorDirection == CLOCKWISE){
             motorDirection = COUNTERCLOCKWISE;
-            button_cnt_clk_wise.setFlasherState(true, 255,165,0);
-            strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),255,165,0); //orange
-            strip.setPixelColor(button_clk_wise.getButtonIndex(),0,0,0);
+            button_cnt_clk_wise.setFlasherState(true, 255,35,0);
+            strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),255,35,0); //orange formally 255, 165,0
             strip.show();
           }
           else {
             motorDirection = CLOCKWISE;
-            button_clk_wise.setFlasherState(true, 255,165,0);
-            strip.setPixelColor(button_clk_wise.getButtonIndex(),255,165,0); //orange
-            strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),0,0,0);
+            button_clk_wise.setFlasherState(true, 255,35,0);
+            strip.setPixelColor(button_clk_wise.getButtonIndex(),255,35,0); //orange
             strip.show();
           }
           motorState = AUTO_OPERATION;
@@ -586,10 +586,8 @@ void loop()
           Serial.println(motorState);
         }
         else {  //then the rotation MAY have been stopped due to a limit swtch, back it out
+
           if (clockwise_limit_tripped == true) {
-            button_clk_wise.setFlasherState(true, MAXBRIGHT,0,0);
-            strip.setPixelColor(button_clk_wise.getButtonIndex(),MAXBRIGHT,0,0);
-            strip.show();
             Serial.println("CLOCKWISE Limited reached. Back up 3 seconds ");
             clockwise_limit_tripped = false;
             motorDirection = COUNTERCLOCKWISE;
@@ -597,9 +595,6 @@ void loop()
           }
 
           if (counterclockwise_limit_tripped == true) {
-            button_cnt_clk_wise.setFlasherState(true, MAXBRIGHT,0,0);
-            strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),MAXBRIGHT,0,0);
-            strip.show();
             Serial.println("COUNTERCLOCKWISE Limited reached. Back up 3 seconds ");
             counterclockwise_limit_tripped = false;
             motorDirection = CLOCKWISE; 
