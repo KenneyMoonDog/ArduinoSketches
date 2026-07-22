@@ -27,6 +27,10 @@ unsigned long currentMillis = 0;
 unsigned long oldFlasherTime = 0;
 unsigned long currentFlasherTime = 0;
 
+unsigned long startTimer = 0;
+unsigned long endTimer = 0;
+bool timerEnabled = false;
+
 volatile unsigned long stateDebounceDelay = 20;
 volatile unsigned long debounceTime = millis();
 
@@ -433,6 +437,33 @@ void flashButtonsIfEnabled() {
     }
 }
 
+void setTimer(unsigned long timerTime){
+  if (!timerEnabled) {
+    startTimer = millis();
+    endTimer = startTimer + timerTime;
+    timerEnabled = true;
+  }
+}
+
+bool isTimerExpired(){
+   if (timerEnabled) {
+     if (millis() >= endTimer) {
+        timerEnabled = false;
+        return true;
+     }
+     else {
+       return false;
+     }
+   }
+   else {
+     return false;
+   }
+}
+
+bool isTimerEnabled() {
+   return timerEnabled;
+}
+
 void loop()
 {
   currentMillis = millis();
@@ -455,6 +486,7 @@ void loop()
           //flash counterclockwise button red
           if (button_cnt_clk_wise.getFlasherState() == false) {
             button_cnt_clk_wise.setFlasherState(true, MAXBRIGHT,0,0);
+            strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),MAXBRIGHT,0,0);
             strip.show();
           }
         }
@@ -462,7 +494,7 @@ void loop()
           motor1.drive(-(motorSpeed));
 
           //flash counterclockwise button red
-          if (button_cnt_clk_wise.getFlasherState() == false) {
+          if (button_clk_wise.getFlasherState() == false) {
             button_clk_wise.setFlasherState(true, MAXBRIGHT,0,0);
             strip.setPixelColor(button_clk_wise.getButtonIndex(),MAXBRIGHT,0,0);
             strip.show();
@@ -470,10 +502,19 @@ void loop()
         }
       }
       else { 
-        delay(3000);
-        motorState = BRAKING;
+        //delay(3000);
+        //motorState = BRAKING;
+        if ( isTimerEnabled() ) {
+           if (isTimerExpired() ) {
+             motorState = BRAKING;
+           }
+        }
+        else {
+           setTimer(5000);
+           return;
+        }
       }
-    }
+    } //end timed reverse
 
     if (motorState == AUTO_OPERATION) {
       strip.setPixelColor(button_auto_turn.getButtonIndex(),0,MAXBRIGHT,0);
@@ -484,16 +525,16 @@ void loop()
 
         if (motorDirection == CLOCKWISE){
           if (button_clk_wise.getFlasherState() == false) {
-            button_clk_wise.setFlasherState(true, 255,35,0);
-            strip.setPixelColor(button_clk_wise.getButtonIndex(),255,35,0); //orange
+            button_clk_wise.setFlasherState(true, 255,50,0);
+            strip.setPixelColor(button_clk_wise.getButtonIndex(),255,50,0); //orange
             strip.show();
           }
           motor1.drive(motorSpeed);
         }
         else {
           if (button_cnt_clk_wise.getFlasherState() == false) {
-            button_cnt_clk_wise.setFlasherState(true, 255,35,0);
-            strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),255,35,0); //orange
+            button_cnt_clk_wise.setFlasherState(true, 255,50,0);
+            strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),255,50,0); //orange
             strip.show();
           }
           motor1.drive(-(motorSpeed));
@@ -566,14 +607,14 @@ void loop()
 
           if (motorDirection == CLOCKWISE){
             motorDirection = COUNTERCLOCKWISE;
-            button_cnt_clk_wise.setFlasherState(true, 255,35,0);
-            strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),255,35,0); //orange formally 255, 165,0
+            button_cnt_clk_wise.setFlasherState(true, 255,50,0);
+            strip.setPixelColor(button_cnt_clk_wise.getButtonIndex(),255,50,0); //orange formally 255, 165,0
             strip.show();
           }
           else {
             motorDirection = CLOCKWISE;
-            button_clk_wise.setFlasherState(true, 255,35,0);
-            strip.setPixelColor(button_clk_wise.getButtonIndex(),255,35,0); //orange
+            button_clk_wise.setFlasherState(true, 255,50,0);
+            strip.setPixelColor(button_clk_wise.getButtonIndex(),255,50,0); //orange
             strip.show();
           }
           motorState = AUTO_OPERATION;
