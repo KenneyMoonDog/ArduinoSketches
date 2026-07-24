@@ -110,19 +110,19 @@ void loop() {
   Serial.print(" - ");
   Serial.println(images[imageToShow]); */
   
-  if (images[imageToShow] != "") {
-    Serial.print("attempting to show: ");
-    Serial.println(images[imageToShow]);
-    bmh.loadBitmap(images[imageToShow]);
-    bmh.serialPrintHeaders();
-    //tft.fillScreen(ILI9341_BLACK);
-    bmh.renderImage(&tft,0,0);
-    delay(3000);
-  }
+    if (images[imageToShow] != "") {
+      Serial.print("attempting to show: ");
+      Serial.println(images[imageToShow]);
+      bmh.loadBitmap(images[imageToShow]);
+      bmh.serialPrintHeaders();
+      //tft.fillScreen(ILI9341_BLACK);
+      bmh.renderImage(&tft,0,0);
+      delay(3000);
+    }
 
-  imageToShow ++;
-  if (imageToShow >= MAX_IMAGES){
-    imageToShow = 0;
-  } 
+    imageToShow ++;
+    if (imageToShow >= MAX_IMAGES){
+      imageToShow = 0;
+    } 
   }//if not failed
 }

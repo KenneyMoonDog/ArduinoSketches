@@ -5,14 +5,14 @@
 #include "JBitmapHandler.h"
 #include "SD.h"
 
-volatile unsigned long previousMillis = millis();
+volatile unsigned long displayImageTime = millis();
 volatile unsigned long currentMillis = millis();
 
 unsigned long stateDebounceDelay = 20;
 unsigned long debounceTime = millis();
 
 //defines for video control buttons
-#define BUTTON_PIN_PREVIOUS_PICTURE 10
+#define BUTTON_PIN_HOMESCREEN 10
 #define BUTTON_PIN_AUTO_SHOW 11
 #define BUTTON_PIN_NEXT_PICTURE 12
 #define INTERRUPT_PIN 7
@@ -48,7 +48,7 @@ int imageToShow = 0;
 
 JBitmapHandler bmh = JBitmapHandler();
 
-volatile JButton button_homescreen(BUTTON_PIN_PREVIOUS_PICTURE, 0);
+volatile JButton button_homescreen(BUTTON_PIN_HOMESCREEN, 0);
 volatile JButton button_auto_show(BUTTON_PIN_AUTO_SHOW, 1);
 volatile JButton button_next_picture(BUTTON_PIN_NEXT_PICTURE, 2);
 
@@ -100,16 +100,9 @@ void setup() {
       if (!nextFile.isDirectory()) {
         // not a directory - check if bmp
         nextFileName = nextFile.name();
-
-        //Serial.println(nextFileName.indexOf(".BMP"));
-        //Serial.print(nextFileName);
-        //Serial.println(" found");
-
         if (nextFileName.indexOf(".BMP") != -1) {
           // bmp found
-          //Serial.println("Bitmap");
           images[imageCount] = String("/" + nextFileName);
-          //Serial.println(images[imageCount]);
           imageCount ++;
         }
       }
@@ -129,39 +122,50 @@ void setup() {
   Serial.println("SETUP COMPLETE");
 }
 
+void printToDisplay(char* pMessage) {
+    tft.setTextColor(ILI9341_RED);
+    tft.setTextSize(1);
+    tft.setCursor(5, 5);
+    tft.print(pMessage);
+}
+
+void printToDisplay(char* pMessage, int16_t background_color){
+    tft.setTextColor(ILI9341_RED, background_color);
+    tft.setTextSize(1);
+    tft.setCursor(5, 5);
+    tft.print(pMessage);
+}
+
 void buttonChangeHandler() {  //handles Down Events Only
   
   //once detected, act on the first occurance only and ignore any spurious signals for 'stateDebounceDelay' ms
   if ((millis() - debounceTime) > stateDebounceDelay) {
-
     debounceTime = millis();
   
-    if(button_homescreen.hasStateChanged()){
+    if (button_homescreen.onButtonChange()){
       auto_show = false;
       show_next = false;
       show_homescreen = true;
-      Serial.println("SHOW_HOMESCREEN");
       return;
     } 
 
-    if(button_auto_show.hasStateChanged()){
-      previousMillis = 0;
-
+    if (button_auto_show.onButtonChange()){
       show_homescreen = false;
       show_next = false;
       auto_show = !auto_show;
-      Serial.println("AUTO:");
-      Serial.println(auto_show);
-      return;
-    } 
 
-    if(button_next_picture.hasStateChanged()){
+      if (auto_show == false) {
+        printToDisplay("Auto Display OFF", ILI9341_BLACK);
+      }
+      return;
+    }
+
+    if (button_next_picture.onButtonChange()){
       auto_show = false;
       show_homescreen = false;
       show_next = true;
-      Serial.println("SHOW_NEXT");
       return;
-    } 
+    }
   } 
 }
 
@@ -170,12 +174,16 @@ void loop() {
   if (!StartupFailed) {
 
     if (show_homescreen==true){
-      noInterrupts();
       tft.fillScreen(ILI9341_BLACK);
+      printToDisplay("Returning to Homescreen...", ILI9341_BLACK);
+      delay(2000);
+
+      noInterrupts();
       bmh.loadBitmap("/UFP.BMP");
       bmh.renderImage(&tft,0,0);
       show_homescreen = false;
       interrupts();
+      
       return;
     }
 
@@ -184,13 +192,15 @@ void loop() {
       imageToShow ++;
       
       if (imageToShow >= MAX_IMAGES){
-          imageToShow = 0;
+         imageToShow = 1;
       } 
 
       if (images[imageToShow] != "") {
         tft.fillScreen(ILI9341_BLACK);
+        printToDisplay("Show Next...");
         bmh.loadBitmap(images[imageToShow]);
         bmh.renderImage(&tft,0,0);
+        printToDisplay("Show Next...");
       }
       show_next = false;
       interrupts();
@@ -199,26 +209,27 @@ void loop() {
 
     if (auto_show==true) { //and timer is cleared or expired
       currentMillis = millis();
-      if (currentMillis > (previousMillis + DISPLAY_INTERVAL) ||
-          (previousMillis == 0)){
+
+      if (currentMillis > (displayImageTime + DISPLAY_INTERVAL) ||
+          (displayImageTime == 0)){
 
         noInterrupts();
 
         if (images[imageToShow] != "") {
           tft.fillScreen(ILI9341_BLACK);
+          printToDisplay("Auto Display ON ");
           bmh.loadBitmap(images[imageToShow]);
           bmh.renderImage(&tft,0,0);
-          previousMillis=millis();
-
+          printToDisplay("Auto Display ON ");
+          displayImageTime=millis();
         }
 
         imageToShow ++;
         if (imageToShow >= MAX_IMAGES){
-          imageToShow = 0;
+          imageToShow = 1;
         } 
-
         interrupts();
-      }
+      } //end rendering
     } //if auto_show is on
   }//if not failed
 }

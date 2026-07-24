@@ -34,7 +34,7 @@
     }
 
     bool JButton::onButtonChange(){  //read the digital pin for its value.  Note this assumes the signal is debounced properly
-      delay(20);
+      delay(40);
       if ( digitalRead(PIN) == LOW ){
         return true;
       }

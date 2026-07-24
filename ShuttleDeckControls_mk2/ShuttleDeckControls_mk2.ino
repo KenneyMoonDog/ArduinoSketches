@@ -17,6 +17,7 @@ const int maxSpeed = 175;
 #define COUNTERCLOCKWISE_LIMITED 24
 #define TIMED_REVERSE 26
 #define SPEED_INCREMENT 10
+#define TIMER_BACKUP_TIME 3500
 
 #define CONSOLE_POLLING_FREQUENCY 100 //ms  how often we'll check for a change in state
 #define FLASH_PERIOD 250
@@ -331,7 +332,7 @@ void buttonChangeHandler() {
 
     debounceTime = millis();
 
-    if (motorState == TIMED_REVERSE){
+    if (motorState == TIMED_REVERSE || motorState == BRAKING){
        return;
     }
   
@@ -364,6 +365,14 @@ void buttonChangeHandler() {
 
     if(button_clk_wise.hasStateChanged()){
 
+      if (motorState == AUTO_OPERATION ) {
+        return;
+      }
+
+      if (motorState == RUNNING && motorDirection ==  COUNTERCLOCKWISE){  //button was hit while motor was in opposite direction
+        return;
+      }
+
       if (button_clk_wise.readButtonState()){
         Serial.println("CLOCKWISE DOWN");
         reverseDirectionOnStop = false;
@@ -380,6 +389,14 @@ void buttonChangeHandler() {
    }
 
     if(button_cnt_clk_wise.hasStateChanged()){
+
+      if (motorState == AUTO_OPERATION ) {
+        return;
+      }
+
+      if (motorState == RUNNING && motorDirection ==  CLOCKWISE){  //button was hit while motor was in opposite direction
+        return;
+      }
 
       if (button_cnt_clk_wise.readButtonState()){
         Serial.println("COUNTER CLOCKWISE DOWN");
@@ -510,7 +527,7 @@ void loop()
            }
         }
         else {
-           setTimer(5000);
+           setTimer(TIMER_BACKUP_TIME);
            return;
         }
       }
