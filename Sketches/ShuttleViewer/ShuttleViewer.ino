@@ -7,6 +7,7 @@
 
 volatile unsigned long displayImageTime = millis();
 volatile unsigned long currentMillis = millis();
+volatile unsigned long doubleClickTimer = 0;
 
 unsigned long stateDebounceDelay = 20;
 unsigned long debounceTime = millis();
@@ -17,6 +18,7 @@ unsigned long debounceTime = millis();
 #define BUTTON_PIN_NEXT_PICTURE 12
 #define INTERRUPT_PIN 7
 #define STATUS_LED 2
+#define DOUBLE_CLICK_PERIOD 500
 
 #define DISPLAY_INTERVAL 8000
 
@@ -57,6 +59,9 @@ volatile bool auto_show=false;
 volatile bool show_homescreen=false;
 volatile bool show_next=false;
 volatile bool show_previous=false;
+
+volatile bool homescreenSingleClick=false;
+volatile bool homescreenDoubleClick=false;
 
 void setup() {
   
@@ -137,42 +142,69 @@ void printToDisplay(char* pMessage, int16_t background_color){
     tft.print(pMessage);
 }
 
-void buttonChangeHandler() {  //handles Down Events Only
-  
+
+void goToHomeScreen(){
+  auto_show = false;
+  show_next = false;
+  show_previous = false;
+  show_homescreen = true;
+}
+
+void switchToAutoMode(){
+  show_homescreen = false;
+  show_next = false;
+  show_previous = false;
+  auto_show = true;
+}
+
+void buttonChangeHandler() {  
+
   //once detected, act on the first occurance only and ignore any spurious signals for 'stateDebounceDelay' ms
   if ((millis() - debounceTime) > stateDebounceDelay) {
     debounceTime = millis();
   
-    //if(button_homescreen.hasStateChanged()){
-      //if (button_homescreen.readButtonState()){
     if (button_homescreen.onButtonChange()){
-        auto_show = false;
-        show_next = false;
-        show_previous = false;
-        show_homescreen = true;
-        return;
-      //} 
-    }
 
-    //if(button_auto_show.hasStateChanged()){
-     // if (button_auto_show.readButtonState()){
-    if (button_auto_show.onButtonChange()){
-        show_homescreen = false;
-        show_next = false;
-        show_previous = false;
-        auto_show = !auto_show;
-
-        if (auto_show == false) {
-          printToDisplay("Auto Display OFF", ILI9341_BLACK);
+      if (homescreenSingleClick==true) { //this may be a double click if within a certain time
+        if (millis() < (doubleClickTimer + DOUBLE_CLICK_PERIOD)) {  //then you have a double click on this button and set mode to AUTO
+          homescreenSingleClick = false;
+          homescreenDoubleClick = true;
+          doubleClickTimer = 0;
+          return;
+        }  
+        else {  //doubleClick has timed out.. Treat as a single click
+          homescreenSingleClick = true;
+          homescreenDoubleClick = false;
+          doubleClickTimer = 0;
+          return;
         }
+      }
+      else { //first time click
+        doubleClickTimer = millis();
+        homescreenSingleClick = true;
+        homescreenDoubleClick = false;
+
+        //goToHomeScreen();
+        //auto_show = false;
+        //show_next = false;
+        //show_previous = false;
+        //show_homescreen = true;*/
         return;
-      //}
+      }
     }
 
-    //if(button_next_picture.hasStateChanged()){
-     // Serial.println("NEXT STATE HAS CHANGED");
-     // if (button_next_picture.readButtonState()){
-     //   Serial.println("NEXT IS DOWN");
+    if (button_auto_show.onButtonChange()){
+      show_homescreen = false;
+      show_next = false;
+      show_previous = false;
+      auto_show = !auto_show;
+
+      if (auto_show == false) {
+        printToDisplay("Auto Display OFF", ILI9341_BLACK);
+      }
+      return;
+    }
+
     if (button_next_picture.onButtonChange()){
       auto_show = false;
       show_homescreen = false;
@@ -180,10 +212,6 @@ void buttonChangeHandler() {  //handles Down Events Only
       show_next = true;
       return;
     }
-     else {
-      Serial.println("NEXT IS UP");
-    }
-//
   } 
 }
 
@@ -191,7 +219,18 @@ void loop() {
   
   if (!StartupFailed) {
 
-    if (show_homescreen==true){
+    if (homescreenDoubleClick) {
+      switchToAutoMode();
+      homescreenDoubleClick = false;
+    }
+    else if( homescreenSingleClick ) {
+      if (millis() > (doubleClickTimer + DOUBLE_CLICK_PERIOD)) {
+        goToHomeScreen();
+        homescreenSingleClick = false;
+      }
+    }
+
+    if (show_homescreen==true ){
       tft.fillScreen(ILI9341_BLACK);
       printToDisplay("Returning to Homescreen...", ILI9341_BLACK);
       delay(2000);
