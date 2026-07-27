@@ -212,8 +212,6 @@ void setup() {
   pinMode(INTERRUPT_PIN, INPUT_PULLUP);
   pinMode(POWER_PIN, OUTPUT);
   digitalWrite(POWER_PIN, HIGH);
-  //pinMode(INTERRUPT_LIMIT_PIN, INPUT);
-  //interrupt time0 roughly halfway throuh 
   OCR0A = 0xAF;
   TIMSK0 |= _BV(OCIE0A);
   
@@ -271,12 +269,6 @@ void showStartupSequence() {
     delay(10);
   }
 }
-
-/*void setAndShowPixel(byte pixelNumber, int R, int G, int B){
-  strip.setPixelColor(pixelNumber, (R,G,B));
-  strip.show()
-}*/
-
 
 void resetDirectionButtonLights(){
     button_clk_wise.setFlasherState(false);
@@ -519,8 +511,6 @@ void loop()
         }
       }
       else { 
-        //delay(3000);
-        //motorState = BRAKING;
         if ( isTimerEnabled() ) {
            if (isTimerExpired() ) {
              motorState = BRAKING;
