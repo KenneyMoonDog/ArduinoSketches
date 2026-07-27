@@ -6,11 +6,11 @@
 #include "SD.h"
 
 volatile unsigned long displayImageTime = millis();
-volatile unsigned long currentMillis = millis();
+volatile unsigned long autoFlashTime = millis();
 volatile unsigned long doubleClickTimer = 0;
+volatile unsigned long debounceTime = millis();
 
-unsigned long stateDebounceDelay = 20;
-unsigned long debounceTime = millis();
+#define stateDebounceDelay 20
 
 #define BUTTON_PIN_PREVIOUS_PICTURE 10  //top button
 #define PREVIOUS_X_POS  300
@@ -61,7 +61,6 @@ int imageCount = 0;
 
 JBitmapHandler bmh = JBitmapHandler();
 
-//volatile JButton button_homescreen(BUTTON_PIN_HOMESCREEN, 0);
 volatile JButton button_previous_picture(BUTTON_PIN_PREVIOUS_PICTURE, 0);
 volatile JButton button_homescreen(BUTTON_PIN_HOMESCREEN, 1);
 volatile JButton button_next_picture(BUTTON_PIN_NEXT_PICTURE, 2);
@@ -70,8 +69,9 @@ volatile bool auto_show=false;
 volatile bool show_homescreen=false;
 volatile bool show_next=false;
 volatile bool show_previous=false;
+volatile bool secondClick=false;
 
-volatile bool secondClick = false;
+bool autoFlashOn= false;
 
 void setup() {
   
@@ -143,13 +143,6 @@ void printToDisplay(char* pMessage, int16_t foreground_color, int16_t background
     tft.print(pMessage);
 }
 
-void eraseFromDisplay(char* pMessage) {
-    tft.setTextColor(ILI9341_BLACK, ILI9341_BLACK);
-    tft.setTextSize(1);
-    tft.setCursor(5, 5);
-    tft.print(pMessage);
-}
-
 void goToHomeScreen(){
   auto_show = false;
   show_next = false;
@@ -161,12 +154,8 @@ void switchToAutoMode(){
   show_homescreen = false;
   show_next = false;
   show_previous = false;
+  printToDisplay("AU", ILI9341_GREEN, ILI9341_BLACK, BUTTON_ICON_SIZE, HOMESCREEN_X_POS, HOMESCREEN_Y_POS);
   auto_show = !auto_show;
-
-  //if (!auto_show){
-  //  eraseFromDisplay("Auto Display ON  ");
-  //  printToDisplay("Auto Display OFF ", ILI9341_GREEN, ILI9341_BLACK, 1, 5, 5);
-  //}
 }
 
 void buttonChangeHandler() {  
@@ -183,7 +172,6 @@ void buttonChangeHandler() {
       else { 
         secondClick=true;
       }
-
       return;
     }
 
@@ -211,7 +199,8 @@ void showButtonIcons(byte activeButtonIndex) {
   int16_t buttonThreeColor = ILI9341_RED;
 
   switch (activeButtonIndex) {
-    
+    case 1:
+      buttonOneColor = ILI9341_GREEN;
       break;
     case 2:
       buttonTwoColor = ILI9341_GREEN;
@@ -243,8 +232,9 @@ void loop() {
       }
 
       doubleClickTimer = 0;
-      secondClick=false;
     }
+
+    secondClick=false;
 
     if (show_homescreen==true ){
       tft.fillScreen(ILI9341_BLACK);
@@ -292,9 +282,20 @@ void loop() {
     }
 
     if (auto_show==true) { //and timer is cleared or expired
-      currentMillis = millis();
 
-      if (currentMillis > (displayImageTime + DISPLAY_INTERVAL) ||
+      if (millis() > (autoFlashTime + 800)){ //alternate the color of the button icon
+        autoFlashTime = millis();
+        if (autoFlashOn) {
+          printToDisplay("AU", ILI9341_DARKGREEN, ILI9341_BLACK, BUTTON_ICON_SIZE, HOMESCREEN_X_POS, HOMESCREEN_Y_POS);
+        }
+        else {
+
+          printToDisplay("AU", ILI9341_GREEN, ILI9341_BLACK, BUTTON_ICON_SIZE, HOMESCREEN_X_POS, HOMESCREEN_Y_POS);
+        }
+        autoFlashOn = !autoFlashOn;
+      }
+
+      if (millis() > (displayImageTime + DISPLAY_INTERVAL) ||  //sh0w the next image
           (displayImageTime == 0)){
 
         noInterrupts();
@@ -303,7 +304,6 @@ void loop() {
           tft.fillScreen(ILI9341_BLACK);
           bmh.loadBitmap(images[imageToShow]);
           bmh.renderImage(&tft,0,0);
-          //printToDisplay("Auto Display ON ", ILI9341_GREEN, ILI9341_BLACK, 1, 5, 5);
           showButtonIcons(2);
           displayImageTime=millis();
         }
@@ -312,6 +312,7 @@ void loop() {
         if (imageToShow >= MAX_IMAGES){
           imageToShow = 1;
         } 
+
         interrupts();
       } //end rendering
     } //if auto_show is on
